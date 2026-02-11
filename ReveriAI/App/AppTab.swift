@@ -6,10 +6,17 @@ enum AppTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var icon: String {
+    var activeIcon: String {
         switch self {
-        case .record: "moon.stars.fill"
-        case .journal: "book.fill"
+        case .record: "MoonIconActive"
+        case .journal: "JournalIconActive"
+        }
+    }
+
+    var inactiveIcon: String {
+        switch self {
+        case .record: "MoonIconInactive"
+        case .journal: "JournalIconInactive"
         }
     }
 

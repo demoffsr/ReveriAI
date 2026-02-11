@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct TabBarItem: View {
-    let icon: String
+    let activeIcon: String
+    let inactiveIcon: String
     let label: String
     let isSelected: Bool
     let isExpanded: Bool
@@ -11,13 +12,14 @@ struct TabBarItem: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(isSelected ? accentColor : .secondary)
+                Image(isSelected ? activeIcon : inactiveIcon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 26, height: 26)
 
                 if isExpanded {
                     Text(label)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(accentColor)
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
@@ -26,7 +28,7 @@ struct TabBarItem: View {
             .padding(.vertical, 10)
             .background(
                 Capsule()
-                    .fill(isSelected ? accentColor.opacity(0.12) : .clear)
+                    .fill(isSelected ? accentColor.opacity(0.15) : .clear)
             )
         }
         .buttonStyle(.plain)

@@ -4,12 +4,14 @@ struct ReveriTabBar: View {
     @Binding var selectedTab: AppTab
     @Environment(\.theme) private var theme
     @State private var expandedTab: AppTab?
+    @State private var collapseTask: Task<Void, Never>?
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(AppTab.allCases) { tab in
                 TabBarItem(
-                    icon: tab.icon,
+                    activeIcon: tab.activeIcon,
+                    inactiveIcon: tab.inactiveIcon,
                     label: tab.label,
                     isSelected: selectedTab == tab,
                     isExpanded: expandedTab == tab,
@@ -21,32 +23,29 @@ struct ReveriTabBar: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
+        .glassEffect(.clear, in: .capsule)
+        .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
         .padding(.bottom, 8)
     }
 
     private func handleTap(_ tab: AppTab) {
-        if selectedTab == tab {
-            // Already selected — expand to show label, then collapse
+        collapseTask?.cancel()
+
+        if expandedTab == tab {
+            expandedTab = nil
+        }
+
+        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+            selectedTab = tab
+            expandedTab = tab
+        }
+
+        collapseTask = Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
             withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
-                expandedTab = tab
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
-                    expandedTab = nil
-                }
-            }
-        } else {
-            withAnimation(.spring(duration: 0.3)) {
-                selectedTab = tab
-                expandedTab = tab
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
-                    expandedTab = nil
-                }
+                expandedTab = nil
             }
         }
     }

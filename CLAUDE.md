@@ -39,7 +39,7 @@ ReveriAI/
 ├── Theme/                  # ThemeManager, ThemeColors, ThemeEnvironment
 ├── Models/                 # Dream, DreamEmotion, MockData
 ├── Extensions/             # Color+Hex, Date+Helpers
-└── Assets.xcassets/        # AppIcon, SunIcon, VoiceModeIcon, TextModeIcon (SVG), AccentColor
+└── Assets.xcassets/        # AppIcon, SunIcon, VoiceModeIcon, TextModeIcon, MoonIcon{Active,Inactive}, JournalIcon{Active,Inactive} (SVG), AccentColor
 ```
 
 ## Key Patterns
@@ -48,7 +48,8 @@ ReveriAI/
 - **CelestialIcon:** 2 glow rings (102pt/84pt) + main circle (65pt) with gradient stroke + warm shadow. Day = custom SVG sun (`SunIcon` asset), Night = SF Symbol `moon.fill`.
 - **Header layout:** Layered ZStack in RecordView — background, content, gradient header, title+icon, clouds+pill. Title shifts up on keyboard focus.
 - **Mode switch pill:** `.glassEffect(.clear.interactive(), in: .capsule)` with white stroke overlay. Shows the *opposite* mode (i.e. what you can switch to). Custom SVG icons: `VoiceModeIcon`, `TextModeIcon`.
-- **Assets:** SVG icons stored as template images with `preserves-vector-representation` for vector scaling.
+- **Tab bar:** Glass effect (`.glassEffect(.clear, in: .capsule)`) + white stroke overlay. Custom SVG icons with `original` rendering (colors baked in SVG: active = #FFAA00, inactive = black@0.3). `AppTab` has `activeIcon`/`inactiveIcon` properties. Selected tab has `accentColor.opacity(0.15)` capsule background. Label: SF Pro 15 medium, accentColor. Animation: expand on tap → collapse after 1.5s via cancellable `Task`. No `.interactive()` on glass (causes yellow flash).
+- **Assets:** SVG icons stored with `preserves-vector-representation`. Tab icons use `template-rendering-intent: original` (colors in SVG). Header/mode icons use `template` rendering.
 
 ## Conventions
 
