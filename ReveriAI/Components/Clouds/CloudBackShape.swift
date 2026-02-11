@@ -142,8 +142,8 @@ struct CloudBackShape: Shape {
             control1: CGPoint(x: 0.921687 * w, y: 0.073421 * h),
             control2: CGPoint(x: 0.953810 * w, y: -0.025746 * h)
         )
-        path.addLine(to: CGPoint(x: 1.002564 * w, y: 0.987421 * h))
-        path.addLine(to: CGPoint(x: 0.000000 * w, y: 0.987421 * h))
+        path.addLine(to: CGPoint(x: 1.002564 * w, y: 1.0 * h))
+        path.addLine(to: CGPoint(x: 0.000000 * w, y: 1.0 * h))
         path.addLine(to: CGPoint(x: 0.000000 * w, y: 0.211741 * h))
         path.closeSubpath()
 

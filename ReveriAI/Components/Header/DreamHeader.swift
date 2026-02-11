@@ -23,45 +23,15 @@ struct StarsCanvas: View {
 
 struct DreamHeader: View {
     @Environment(\.theme) private var theme
-    let compressionRatio: CGFloat
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack {
             // Gradient background
             theme.headerGradient
                 .ignoresSafeArea(edges: .top)
 
             // Stars
             StarsCanvas()
-                .opacity(Double(compressionRatio))
-
-            // Content
-            HStack(alignment: .top) {
-                // Title
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("What did")
-                        .font(.system(size: 36 * compressionRatio, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("you dream")
-                        .font(.system(size: 36 * compressionRatio, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("about...?")
-                        .font(.system(size: 36 * compressionRatio, weight: .bold))
-                        .foregroundStyle(theme.accent)
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .padding(.top, 60 * compressionRatio)
-                .padding(.leading, 20)
-
-                Spacer(minLength: 0)
-
-                // Celestial icon
-                CelestialIcon()
-                    .padding(.top, 50 * compressionRatio)
-                    .padding(.trailing, 12)
-                    .scaleEffect(compressionRatio)
-            }
         }
     }
 }

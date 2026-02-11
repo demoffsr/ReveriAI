@@ -92,8 +92,8 @@ struct CloudMidShape: Shape {
             control1: CGPoint(x: 0.976023 * w, y: 0.546357 * h),
             control2: CGPoint(x: 0.995000 * w, y: 0.559868 * h)
         )
-        path.addLine(to: CGPoint(x: 1.002562 * w, y: 0.993711 * h))
-        path.addLine(to: CGPoint(x: 0.000000 * w, y: 0.993711 * h))
+        path.addLine(to: CGPoint(x: 1.002562 * w, y: 1.0 * h))
+        path.addLine(to: CGPoint(x: 0.000000 * w, y: 1.0 * h))
         path.addLine(to: CGPoint(x: 0.000000 * w, y: 0.771006 * h))
         path.addCurve(
             to: CGPoint(x: 0.128779 * w, y: 0.633415 * h),

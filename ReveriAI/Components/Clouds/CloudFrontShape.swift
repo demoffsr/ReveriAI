@@ -92,8 +92,8 @@ struct CloudFrontShape: Shape {
             control1: CGPoint(x: 0.908879 * w, y: 0.474967 * h),
             control2: CGPoint(x: 0.970092 * w, y: 0.466896 * h)
         )
-        path.addLine(to: CGPoint(x: 1.002562 * w, y: 0.996855 * h))
-        path.addLine(to: CGPoint(x: 0.000000 * w, y: 0.996855 * h))
+        path.addLine(to: CGPoint(x: 1.002562 * w, y: 1.0 * h))
+        path.addLine(to: CGPoint(x: 0.000000 * w, y: 1.0 * h))
         path.addLine(to: CGPoint(x: 0.000000 * w, y: 0.499455 * h))
         path.closeSubpath()
 

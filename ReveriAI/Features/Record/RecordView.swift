@@ -10,10 +10,10 @@ struct RecordView: View {
     var onDreamSaved: ((Dream) -> Void)?
 
     private let cloudHeight: CGFloat = 159
-    private let baseHeaderHeight: CGFloat = 220
+    private let baseHeaderHeight: CGFloat = 330
 
     private var headerRatio: CGFloat {
-        isTextFocused ? 0.45 : 1.0
+        isTextFocused ? 0.38 : 1.0
     }
 
     private var headerHeight: CGFloat {
@@ -35,12 +35,20 @@ struct RecordView: View {
 
                 // Layer 1: Content (below header + cloud zone)
                 contentArea
+                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
 
-                // Layer 2: Header + clouds (on top, clouds bridge the boundary)
-                headerWithClouds
+                // Layer 2: Header gradient background (animated)
+                headerGradientBackground
+                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+
+                // Layer 3: Title + icon (STATIC — never moves)
+                headerTitle
+
+                // Layer 4: Clouds + pill (animated, on top of title)
+                cloudLayer
+                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
             }
             .ignoresSafeArea(edges: .top)
-            .animation(.easeOut(duration: 0.3), value: isTextFocused)
 
             // Bottom action bar
             bottomActionBar
@@ -67,16 +75,63 @@ struct RecordView: View {
         .animation(.spring(duration: 0.4), value: viewModel.showHowDidItFeel)
     }
 
-    // MARK: - Header + Clouds
+    // MARK: - Header Gradient Background (animated)
 
-    private var headerWithClouds: some View {
-        DreamHeader(compressionRatio: headerRatio)
+    private var headerGradientBackground: some View {
+        DreamHeader()
+            .frame(height: headerHeight)
+            .background(alignment: .bottom) {
+                // Extend header color behind clouds so no white gap shows
+                theme.headerBottom
+                    .frame(height: cloudHeight)
+                    .offset(y: cloudOverhang)
+            }
+    }
+
+    // MARK: - Header Title (static — never moves)
+
+    private var headerTitle: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("What did")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("you dream")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("about...?")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(theme.accent)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.top, 60)
+            .padding(.leading, 20)
+
+            Spacer(minLength: 0)
+
+            CelestialIcon()
+                .padding(.top, 50)
+                .padding(.trailing, 12)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Cloud Layer + Pill (animated, on top of title)
+
+    private var cloudLayer: some View {
+        Color.clear
             .frame(height: headerHeight)
             .overlay(alignment: .bottom) {
                 CloudSeparator()
                     .frame(height: cloudHeight)
                     .offset(y: cloudOverhang)
                     .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                modeSwitchPill
+                    .padding(.trailing, 16)
+                    .offset(y: cloudOverhang + 5)
             }
     }
 
@@ -87,14 +142,6 @@ struct RecordView: View {
             // Reserve space for header + cloud overhang
             Color.clear
                 .frame(height: headerHeight + cloudOverhang)
-
-            // Mode pill, right-aligned
-            HStack {
-                Spacer()
-                modeSwitchPill
-                    .padding(.trailing, 16)
-            }
-            .padding(.top, 8)
 
             // Text editor or voice placeholder
             if viewModel.mode == .text {

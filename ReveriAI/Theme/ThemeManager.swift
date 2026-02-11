@@ -40,6 +40,8 @@ final class ThemeManager {
         isDayTime ? .dayHeaderGradient : .nightHeaderGradient
     }
 
+    var headerBottom: Color { isDayTime ? .headerLightBrown : .headerLightNavy }
+
     // MARK: - Clouds
 
     var cloudBack: Color { isDayTime ? .cloudBackDay : .cloudBackNight }
