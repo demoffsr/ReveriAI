@@ -10,7 +10,7 @@ struct RecordView: View {
     var onDreamSaved: ((Dream) -> Void)?
 
     private let cloudHeight: CGFloat = 159
-    private let baseHeaderHeight: CGFloat = 330
+    private let baseHeaderHeight: CGFloat = 255
 
     private var headerRatio: CGFloat {
         isTextFocused ? 0.38 : 1.0
@@ -41,8 +41,10 @@ struct RecordView: View {
                 headerGradientBackground
                     .animation(.easeOut(duration: 0.3), value: isTextFocused)
 
-                // Layer 3: Title + icon (STATIC — never moves)
+                // Layer 3: Title + icon (shifts up slightly when keyboard appears)
                 headerTitle
+                    .offset(y: isTextFocused ? -25 : 0)
+                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
 
                 // Layer 4: Clouds + pill (animated, on top of title)
                 cloudLayer
@@ -92,15 +94,15 @@ struct RecordView: View {
 
     private var headerTitle: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("What did")
-                    .font(.system(size: 36, weight: .bold))
+                    .font(.system(size: 36, weight: .heavy))
                     .foregroundStyle(.white)
                 Text("you dream")
-                    .font(.system(size: 36, weight: .bold))
+                    .font(.system(size: 36, weight: .heavy))
                     .foregroundStyle(.white)
                 Text("about...?")
-                    .font(.system(size: 36, weight: .bold))
+                    .font(.system(size: 36, weight: .heavy))
                     .foregroundStyle(theme.accent)
             }
             .lineLimit(1)

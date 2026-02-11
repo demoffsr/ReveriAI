@@ -5,32 +5,54 @@ struct CelestialIcon: View {
 
     var body: some View {
         ZStack {
-            // Outer glow rings
-            ForEach(0..<3, id: \.self) { i in
-                Circle()
-                    .stroke(theme.accent.opacity(0.12 - Double(i) * 0.03), lineWidth: 1)
-                    .frame(
-                        width: 56 + CGFloat(i) * 18,
-                        height: 56 + CGFloat(i) * 18
-                    )
-            }
-
-            // Soft glow
+            // Outer ring: blurred fill+stroke + crisp stroke on top
             Circle()
-                .fill(theme.accent.opacity(0.3))
-                .frame(width: 48, height: 48)
-                .blur(radius: 16)
+                .fill(theme.accent.opacity(0.1))
+                .overlay(Circle().stroke(theme.accent.opacity(0.5), lineWidth: 0.8))
+                .frame(width: 102, height: 102)
+                .blur(radius: 2)
+            Circle()
+                .stroke(theme.accent.opacity(0.5), lineWidth: 0.8)
+                .frame(width: 102, height: 102)
 
-            // Icon circle background
+            // Inner ring: blurred fill+stroke + crisp stroke on top
+            Circle()
+                .fill(theme.accent.opacity(0.2))
+                .overlay(Circle().stroke(theme.accent.opacity(0.5), lineWidth: 0.6))
+                .frame(width: 84, height: 84)
+                .blur(radius: 1.5)
+            Circle()
+                .stroke(theme.accent.opacity(0.5), lineWidth: 0.6)
+                .frame(width: 84, height: 84)
+
+            // Main circle with gradient stroke and warm drop shadow
             Circle()
                 .fill(theme.accent)
-                .frame(width: 40, height: 40)
+                .frame(width: 65, height: 65)
+                .overlay(
+                    Circle().stroke(
+                        LinearGradient(
+                            colors: [theme.accent, theme.accent.opacity(0)],
+                            startPoint: .top, endPoint: .bottom
+                        ), lineWidth: 2.3
+                    )
+                )
+                .shadow(color: theme.accent.opacity(0.7), radius: 28)
 
-            // SF Symbol
-            Image(systemName: theme.celestialIconName)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.white)
+            // Icon (theme-aware: custom sun SVG / SF Symbol moon)
+            Group {
+                if theme.isDayTime {
+                    Image("SunIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30, height: 30)
+                } else {
+                    Image(systemName: "moon.fill")
+                        .font(.system(size: 30, weight: .semibold))
+                }
+            }
+            .foregroundStyle(.white)
         }
-        .frame(width: 90, height: 90)
+        .frame(width: 120, height: 120)
     }
 }
