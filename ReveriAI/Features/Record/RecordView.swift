@@ -181,18 +181,20 @@ struct RecordView: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: viewModel.mode == .voice ? "waveform" : "pencil.line")
-                    .font(.caption)
+                Image(viewModel.mode == .voice ? "TextModeIcon" : "VoiceModeIcon")
+                    .renderingMode(.template)
                     .foregroundStyle(theme.accent)
-                Text(viewModel.mode == .voice ? "Voice Mode" : "Text Mode")
+                Text(viewModel.mode == .voice ? "Text Mode" : "Voice Mode")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(.white)
-            .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+            .overlay(
+                Capsule()
+                    .stroke(.white.opacity(0.7), lineWidth: 1)
+            )
+            .glassEffect(.clear.interactive(), in: .capsule)
         }
         .buttonStyle(.plain)
     }
