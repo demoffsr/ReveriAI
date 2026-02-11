@@ -1,17 +1,15 @@
-//
-//  ReveriAIApp.swift
-//  ReveriAI
-//
-//  Created by Dmitry Demidov on 10.02.2026.
-//
-
 import SwiftUI
+import SwiftData
 
 @main
 struct ReveriAIApp: App {
+    @State private var theme = ThemeManager()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(\.theme, theme)
         }
+        .modelContainer(for: Dream.self)
     }
 }
