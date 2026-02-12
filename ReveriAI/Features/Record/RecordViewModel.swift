@@ -41,8 +41,8 @@ final class RecordViewModel {
         }
     }
 
-    func saveAudioDream(audioPath: String, context: ModelContext) {
-        let dream = Dream(text: "", audioFilePath: audioPath)
+    func saveAudioDream(audioPath: String, transcript: String = "", context: ModelContext) {
+        let dream = Dream(text: transcript, audioFilePath: audioPath)
         context.insert(dream)
         try? context.save()
 

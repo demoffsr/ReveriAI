@@ -8,6 +8,7 @@ struct RootView: View {
     @State private var isPaused = false
     @State private var isReviewing = false
     @State private var audioRecorder = AudioRecorder()
+    @State private var speechService = SpeechRecognitionService()
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -19,7 +20,8 @@ struct RootView: View {
                         isRecording: $isRecording,
                         isPaused: $isPaused,
                         isReviewing: $isReviewing,
-                        audioRecorder: audioRecorder
+                        audioRecorder: audioRecorder,
+                        speechService: speechService
                     ) { dream in
                         savedDreamForEmotion = dream
                         showEmotionPicker = true
@@ -51,6 +53,7 @@ struct RootView: View {
                 },
                 onDelete: {
                     audioRecorder.deleteRecording()
+                    speechService.resetTranscription()
                     withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                         isReviewing = false
                     }

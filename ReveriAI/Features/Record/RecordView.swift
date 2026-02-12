@@ -15,6 +15,7 @@ struct RecordView: View {
     @State private var totalRecordingSeconds: Int = 0
     @State private var timerTask: Task<Void, Never>?
     var audioRecorder: AudioRecorder
+    var speechService: SpeechRecognitionService
 
     var onDreamSaved: ((Dream) -> Void)?
 
@@ -23,12 +24,14 @@ struct RecordView: View {
         isPaused: Binding<Bool>,
         isReviewing: Binding<Bool>,
         audioRecorder: AudioRecorder,
+        speechService: SpeechRecognitionService,
         onDreamSaved: ((Dream) -> Void)? = nil
     ) {
         self._isRecording = isRecording
         self._isPaused = isPaused
         self._isReviewing = isReviewing
         self.audioRecorder = audioRecorder
+        self.speechService = speechService
         self.onDreamSaved = onDreamSaved
     }
 
@@ -291,9 +294,9 @@ struct RecordView: View {
     private var voicePlaceholder: some View {
         VStack(alignment: .leading, spacing: 0) {
             if isRecording || isReviewing {
-                AudioWaveformView(
+                LiveWaveformView(
                     isAnimating: isRecording && !isPaused,
-                    level: isRecording ? audioRecorder.currentLevel : 0
+                    audioRecorder: audioRecorder
                 )
                 .padding(.bottom, 24)
             } else {
@@ -323,14 +326,40 @@ struct RecordView: View {
                 .padding(.bottom, 12)
             }
 
-            // Live Captions placeholder
-            Text("Live Captions will appear here")
-                .font(.system(size: 15))
-                .foregroundStyle(.black.opacity(0.3))
-                .frame(width: 348, alignment: .topLeading)
+            // Live Captions
+            if speechService.transcribedText.isEmpty {
+                Text("Live Captions will appear here")
+                    .font(.system(size: 15))
+                    .tracking(-0.23)
+                    .foregroundStyle(.black.opacity(0.3))
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            } else {
+                liveCaptionsText
+                    .font(.system(size: 15))
+                    .tracking(-0.23)
+                    .lineSpacing(5)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 44)
+    }
+
+    // MARK: - Live Captions Text
+
+    private var liveCaptionsText: Text {
+        let gradient = LinearGradient(
+            colors: [.primary, theme.accent],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+
+        if speechService.latestText.isEmpty {
+            return Text(speechService.stableText)
+                .foregroundStyle(.primary)
+        }
+
+        return Text("\(Text(speechService.stableText).foregroundStyle(.primary))\(Text(speechService.latestText).foregroundStyle(gradient))")
     }
 
     // MARK: - Recording
@@ -339,7 +368,8 @@ struct RecordView: View {
         AVAudioApplication.requestRecordPermission { granted in
             Task { @MainActor in
                 guard granted else { return }
-                audioRecorder.startRecording()
+                let audioStream = audioRecorder.startRecording()
+                speechService.startTranscription(audioStream: audioStream)
                 withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                     isRecording = true
                 }
@@ -352,22 +382,43 @@ struct RecordView: View {
 
     private func handleStop() {
         let url = audioRecorder.stopRecording()
+        speechService.stopTranscription()
         timerTask?.cancel()
         timerTask = nil
 
-        if elapsedSeconds > 1, url != nil {
+        guard elapsedSeconds > 1 else {
+            // Too short — auto-discard
+            audioRecorder.deleteRecording()
+            speechService.resetTranscription()
+            elapsedSeconds = 0
+            return
+        }
+
+        let transcript = speechService.transcribedText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !transcript.isEmpty {
+            // Transfer transcript to text mode for editing
+            viewModel.dreamText = transcript
+            viewModel.mode = .text
+            speechService.resetTranscription()
+            audioRecorder.deleteRecording()
+            elapsedSeconds = 0
+            totalRecordingSeconds = 0
+        } else if url != nil {
+            // No transcript — fall back to audio review
             totalRecordingSeconds = elapsedSeconds
             withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                 isReviewing = true
             }
         } else {
-            // Too short — auto-discard
-            audioRecorder.deleteRecording()
+            speechService.resetTranscription()
             elapsedSeconds = 0
         }
     }
 
     private func handleDelete() {
+        speechService.resetTranscription()
         elapsedSeconds = 0
         totalRecordingSeconds = 0
     }
@@ -376,7 +427,9 @@ struct RecordView: View {
         audioRecorder.stopPlayback()
         guard let url = audioRecorder.recordedFileURL else { return }
         let relativePath = url.lastPathComponent
-        viewModel.saveAudioDream(audioPath: relativePath, context: modelContext)
+        let transcript = speechService.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.saveAudioDream(audioPath: relativePath, transcript: transcript, context: modelContext)
+        speechService.resetTranscription()
 
         // Reset review state
         elapsedSeconds = 0
@@ -399,5 +452,21 @@ struct RecordView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - LiveWaveformView (isolates audioRecorder.currentLevel observation)
+
+/// Wrapper that observes `audioRecorder.currentLevel` in its own body,
+/// preventing RecordView from re-evaluating ~43 times/sec.
+private struct LiveWaveformView: View {
+    let isAnimating: Bool
+    var audioRecorder: AudioRecorder
+
+    var body: some View {
+        AudioWaveformView(
+            isAnimating: isAnimating,
+            level: isAnimating ? audioRecorder.currentLevel : 0
+        )
     }
 }

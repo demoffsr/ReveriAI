@@ -5,34 +5,38 @@ struct AudioWaveformView: View {
     let level: Float // 0...1 normalized audio level
     @Environment(\.theme) private var theme
     @State private var bars: [CGFloat] = []
-    // Monotonic offset — drives smooth scroll in Canvas without state churn
-    @State private var scrollOffset: CGFloat = 0
-    @State private var displayLink: Task<Void, Never>?
+    /// Reference time when current animation segment started
+    @State private var animationStartTime: TimeInterval = 0
+    /// Accumulated scroll distance from previous animation segments (pause/resume, tab switch)
+    @State private var accumulatedOffset: CGFloat = 0
 
     private static let barWidth: CGFloat = 2
     private static let barSpacing: CGFloat = 3.6
     private static let barSlot: CGFloat = barWidth + barSpacing
     private static let minHeight: CGFloat = 4
     private static let maxHeight: CGFloat = 100
-    // Speed: pixels per second the waveform scrolls left
     private static let scrollSpeed: CGFloat = barSlot * 20 // 20 bars/sec
 
     var body: some View {
         TimelineView(.animation(paused: !isAnimating)) { timeline in
-            let _ = timeline.date // force redraw each frame
+            // Compute scroll offset from timeline — no separate Task needed
+            let elapsed = isAnimating
+                ? timeline.date.timeIntervalSinceReferenceDate - animationStartTime
+                : 0
+            let scrollOffset = accumulatedOffset + Self.scrollSpeed * CGFloat(max(0, elapsed))
+
             Canvas { context, size in
-                let accentColor = theme.accent
                 let totalBars = bars.count
                 guard totalBars > 0 else { return }
 
-                // rightEdge = where the newest bar sits
+                let accentColor = theme.accent
                 let rightEdge = size.width
                 let subBarOffset = scrollOffset.truncatingRemainder(dividingBy: Self.barSlot)
 
                 for i in stride(from: totalBars - 1, through: 0, by: -1) {
                     let reverseIndex = totalBars - 1 - i
                     let x = rightEdge - CGFloat(reverseIndex) * Self.barSlot - subBarOffset
-                    if x + Self.barWidth < 0 { break } // off-screen left
+                    if x + Self.barWidth < 0 { break }
                     if x > size.width { continue }
 
                     let height = bars[i]
@@ -44,9 +48,14 @@ struct AudioWaveformView: View {
             }
         }
         .frame(height: Self.maxHeight + 20)
-        .onChange(of: isAnimating) { _, on in
-            if on { startScroll() }
-            else { stopScroll() }
+        .onChange(of: isAnimating) { _, animating in
+            if animating {
+                animationStartTime = Date.now.timeIntervalSinceReferenceDate
+            } else {
+                // Save progress so next segment continues smoothly
+                let elapsed = Date.now.timeIntervalSinceReferenceDate - animationStartTime
+                accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
+            }
         }
         .onChange(of: level) { _, newLevel in
             guard isAnimating else { return }
@@ -58,30 +67,15 @@ struct AudioWaveformView: View {
             }
         }
         .onAppear {
-            if isAnimating { startScroll() }
-        }
-        .onDisappear { stopScroll() }
-    }
-
-    // MARK: - Smooth scroll via CADisplayLink-style loop
-
-    private func startScroll() {
-        displayLink?.cancel()
-        var lastTime = CACurrentMediaTime()
-        displayLink = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(8)) // ~120 checks/sec, capped by display
-                guard !Task.isCancelled else { break }
-                let now = CACurrentMediaTime()
-                let dt = now - lastTime
-                lastTime = now
-                scrollOffset += Self.scrollSpeed * CGFloat(dt)
+            if isAnimating {
+                animationStartTime = Date.now.timeIntervalSinceReferenceDate
             }
         }
-    }
-
-    private func stopScroll() {
-        displayLink?.cancel()
-        displayLink = nil
+        .onDisappear {
+            if isAnimating {
+                let elapsed = Date.now.timeIntervalSinceReferenceDate - animationStartTime
+                accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
+            }
+        }
     }
 }

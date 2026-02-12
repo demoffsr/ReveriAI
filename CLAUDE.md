@@ -37,7 +37,7 @@ ReveriAI/
 │   ├── AudioWaveform/      # AudioWaveformView (Canvas + TimelineView)
 │   ├── Toast/              # ToastView, ToastModifier
 │   └── EmotionPicker/      # EmotionBadge, EmotionGrid
-├── Services/               # AudioRecorder (AVAudioRecorder + AVAudioPlayer wrapper)
+├── Services/               # AudioRecorder, SpeechRecognitionService
 ├── Theme/                  # ThemeManager, ThemeColors, ThemeEnvironment
 ├── Models/                 # Dream, DreamEmotion, MockData
 ├── Extensions/             # Color+Hex, Date+Helpers
@@ -54,11 +54,14 @@ ReveriAI/
 - **Save Dream button:** Appears in text mode when `canSave` is true, and in review mode at `bottomTrailing`. Glass effect + white stroke (same style as mode pill). Background: `theme.accent.opacity(0.1)`, text: `theme.accent` (100%). Icon: `CheckmarkIconAction` (original rendering, orange SVG).
 - **Text input:** `TextModeView` uses `.tint(theme.accent)` for orange cursor/selection. Top padding `36pt` to clear the pill buttons.
 - **Tab bar:** Glass effect (`.glassEffect(.clear, in: .capsule)`) + white stroke overlay. Custom SVG icons with `original` rendering (colors baked in SVG: active = #FFAA00, inactive = black@0.3). `AppTab` has `activeIcon`/`inactiveIcon` properties. Selected tab has `accentColor.opacity(0.15)` capsule background. Label: SF Pro 15 medium, accentColor. Animation: expand on tap → collapse after 1.5s via cancellable `Task`. No `.interactive()` on glass (causes yellow flash). Three-state body: normal tabs / recording controls / review controls.
-- **Recording state machine:** `idle → recording → reviewing → idle`. States `isRecording`/`isPaused`/`isReviewing` live in `RootView`, flow via `@Binding` to `RecordView` and as values + closures to `ReveriTabBar`. `AudioRecorder` also lives in `RootView` (shared between RecordView and tab bar). Recording < 1s auto-discards (no review).
+- **Recording state machine:** `idle → recording → (transcript? text mode : reviewing) → idle`. States `isRecording`/`isPaused`/`isReviewing` live in `RootView`, flow via `@Binding` to `RecordView` and as values + closures to `ReveriTabBar`. `AudioRecorder` and `SpeechRecognitionService` also live in `RootView` (shared between RecordView and tab bar). Recording < 1s auto-discards.
+- **Voice → text flow:** After recording stops, if transcript exists → copy to `viewModel.dreamText`, switch to text mode, delete audio file. User edits and saves as text dream. If no transcript → fall back to audio review mode.
 - **Recording mode:** Tab bar shows Stop (red) + Pause/Resume (3D flip). Mode pill hidden, timer text at `bottomLeading`. Waveform in content area.
-- **Review mode:** Tab bar shows Preview (accent, Play/Pause with 3D flip) + Delete (red trash icon). Cloud layer: review timer at `bottomLeading` (`00:00:00 — 00:05:23`), Save Dream button at `bottomTrailing`. Waveform frozen (`isAnimating: false, level: 0`).
+- **Review mode (audio only):** Tab bar shows Preview (accent, Play/Pause with 3D flip) + Delete (red trash icon). Cloud layer: review timer at `bottomLeading` (`00:00:00 — 00:05:23`), Save Dream button at `bottomTrailing`. Waveform frozen (`isAnimating: false, level: 0`).
 - **Audio recording:** `AudioRecorder` service (`@Observable`, NSObject, AVAudioPlayerDelegate). AVAudioRecorder for recording (AAC 44.1kHz, `Documents/recordings/`). AVAudioPlayer for playback preview. Metering every 50ms: peak/avg blend (70/30), `pow(10, dB/20)` amplitude conversion, `cbrtf` curve, asymmetric smoothing (fast attack 0.3/0.7, slow decay 0.6/0.4). `NSMicrophoneUsageDescription` in project build settings.
-- **Audio waveform:** `AudioWaveformView` uses `Canvas` + `TimelineView(.animation)` for 60fps rendering. Bars fed via `onChange(of: level)` (NOT via Task — struct `let` properties get captured by value in closures). Scroll right-to-left via `CACurrentMediaTime()` delta. Bar width 2pt, spacing 3.6pt, height 4–100pt (frame 120pt). No SwiftUI view per bar — pure imperative draw for performance.
+- **Speech recognition:** `SpeechRecognitionService` (`@Observable`) uses `SFSpeechRecognizer()` without explicit locale (uses device's Siri/dictation language — supports Russian/English/etc.). Exposes `stableText` (confirmed) and `latestText` (in-progress word) for gradient styling. Receives `AsyncStream<AVAudioPCMBuffer>` from `AudioRecorder`.
+- **Live captions:** SF Pro 15pt, tracking -0.23, lineSpacing 5. Latest in-progress word styled with `LinearGradient` (black → accent). Uses `Text` string interpolation with embedded styled `Text` views (NOT `Text + Text` which is deprecated in iOS 26).
+- **Audio waveform:** `AudioWaveformView` uses `Canvas` + `TimelineView(.animation)` for 60fps rendering. Scroll offset computed from `timeline.date` (no separate Task). Bars fed via `onChange(of: level)`. Bar width 2pt, spacing 3.6pt, height 4–100pt (frame 120pt). **Observation isolation:** `LiveWaveformView` wrapper in RecordView isolates `audioRecorder.currentLevel` subscription so only the small wrapper re-evaluates ~43 times/sec, not the entire RecordView.
 - **Assets:** SVG icons stored with `preserves-vector-representation`. Tab icons use `template-rendering-intent: original` (colors in SVG). Header/mode icons use `template` rendering. `CheckmarkIconAction`, `StopIcon`, `PauseIcon`, `PlayIcon`, `DeleteIcon` use `original` rendering.
 
 ## Conventions
@@ -67,3 +70,5 @@ ReveriAI/
 - Theme colors defined in `ThemeColors.swift` as static Color extensions
 - Figma designs may be at ~1.6× scale relative to iPhone @1x (390pt width)
 - **SwiftUI struct pitfall:** Never read `let` properties inside long-running `Task` closures — they capture the value at creation time. Use `onChange(of:)` instead for reactive updates.
+- **Observation isolation:** When an `@Observable` property updates frequently (e.g. audio metering ~43Hz), wrap consumers in a small private struct to prevent heavy parent views from re-evaluating. Pattern: `LiveWaveformView` wrapper.
+- **Text concatenation (iOS 26):** Use `Text("\(Text(...).style)\(Text(...).style)")` string interpolation, NOT `Text + Text` (deprecated).

@@ -13,61 +13,113 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
     private(set) var playbackCurrentTime: TimeInterval = 0
     private(set) var playbackDuration: TimeInterval = 0
 
-    private var audioRecorder: AVAudioRecorder?
+    private var audioEngine: AVAudioEngine?
+    private var audioFile: AVAudioFile?
+    private var audioBufferContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
     private var audioPlayer: AVAudioPlayer?
-    private var meteringTask: Task<Void, Never>?
     private var playbackTimerTask: Task<Void, Never>?
 
-    func startRecording() {
+    /// Start recording. Returns a stream of raw PCM buffers for speech recognition.
+    @discardableResult
+    func startRecording() -> AsyncStream<AVAudioPCMBuffer> {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
         } catch {
             print("AudioRecorder: failed to configure session — \(error)")
-            return
+            return AsyncStream { $0.finish() }
         }
 
+        let engine = AVAudioEngine()
+        let inputNode = engine.inputNode
+        let inputFormat = inputNode.outputFormat(forBus: 0)
+
         let url = Self.newRecordingURL()
-        let settings: [String: Any] = [
+
+        // AAC file with PCM processing format matching the mic input
+        let fileSettings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44100,
-            AVNumberOfChannelsKey: 1,
+            AVSampleRateKey: inputFormat.sampleRate,
+            AVNumberOfChannelsKey: inputFormat.channelCount,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
 
         do {
-            let recorder = try AVAudioRecorder(url: url, settings: settings)
-            recorder.isMeteringEnabled = true
-            recorder.record()
-            audioRecorder = recorder
+            audioFile = try AVAudioFile(
+                forWriting: url,
+                settings: fileSettings,
+                commonFormat: inputFormat.commonFormat,
+                interleaved: inputFormat.isInterleaved
+            )
+        } catch {
+            print("AudioRecorder: failed to create audio file — \(error)")
+            return AsyncStream { $0.finish() }
+        }
+
+        let (stream, continuation) = AsyncStream<AVAudioPCMBuffer>.makeStream()
+        audioBufferContinuation = continuation
+
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
+            guard let self, !self.isPaused else { return }
+
+            // Write to file
+            do {
+                try self.audioFile?.write(from: buffer)
+            } catch {
+                print("AudioRecorder: write error — \(error)")
+            }
+
+            // Forward for speech recognition
+            self.audioBufferContinuation?.yield(buffer)
+
+            // Compute level from raw samples
+            let level = Self.computeLevel(from: buffer)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let curved = cbrtf(level)
+                if curved > self.currentLevel {
+                    self.currentLevel = self.currentLevel * 0.3 + curved * 0.7
+                } else {
+                    self.currentLevel = self.currentLevel * 0.6 + curved * 0.4
+                }
+            }
+        }
+
+        do {
+            try engine.start()
+            audioEngine = engine
             recordedFileURL = url
             isRecording = true
             isPaused = false
-            startMetering()
         } catch {
-            print("AudioRecorder: failed to start — \(error)")
+            print("AudioRecorder: failed to start engine — \(error)")
+            inputNode.removeTap(onBus: 0)
+            continuation.finish()
+            return AsyncStream { $0.finish() }
         }
+
+        return stream
     }
 
     func pauseRecording() {
-        audioRecorder?.pause()
         isPaused = true
-        stopMetering()
         currentLevel = 0
     }
 
     func resumeRecording() {
-        audioRecorder?.record()
         isPaused = false
-        startMetering()
     }
 
     func stopRecording() -> URL? {
-        audioRecorder?.stop()
-        stopMetering()
+        audioEngine?.inputNode.removeTap(onBus: 0)
+        audioEngine?.stop()
+        audioEngine = nil
+        audioFile = nil
+        audioBufferContinuation?.finish()
+        audioBufferContinuation = nil
+
         let url = recordedFileURL
-        audioRecorder = nil
         isRecording = false
         isPaused = false
         currentLevel = 0
@@ -160,39 +212,24 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
 
     // MARK: - Metering
 
-    private func startMetering() {
-        meteringTask?.cancel()
-        meteringTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(50))
-                guard !Task.isCancelled else { break }
-                guard let self, let recorder = self.audioRecorder, recorder.isRecording else { continue }
-                recorder.updateMeters()
-                // Peak power is more responsive than average for visual feedback
-                let peak = recorder.peakPower(forChannel: 0)
-                let avg = recorder.averagePower(forChannel: 0)
-                // Blend: mostly peak for responsiveness, touch of average for body
-                let db = peak * 0.7 + avg * 0.3
-                // Proper amplitude conversion: dB → linear (0...1)
-                // -160 dB = silence, 0 dB = max. Clamp floor at -50 dB.
-                let amplitude = db > -50 ? powf(10, db / 20) : 0
-                // Power curve to spread the speech range (~0.01–0.5 amplitude)
-                // across visible heights. Cube root expands low-mid range nicely.
-                let curved = cbrtf(amplitude)
-                // Responsive smoothing: fast attack, slower decay
-                let target = curved
-                if target > self.currentLevel {
-                    self.currentLevel = self.currentLevel * 0.3 + target * 0.7
-                } else {
-                    self.currentLevel = self.currentLevel * 0.6 + target * 0.4
-                }
-            }
-        }
-    }
+    private static func computeLevel(from buffer: AVAudioPCMBuffer) -> Float {
+        guard let channelData = buffer.floatChannelData else { return 0 }
+        let samples = channelData[0]
+        let count = Int(buffer.frameLength)
+        guard count > 0 else { return 0 }
 
-    private func stopMetering() {
-        meteringTask?.cancel()
-        meteringTask = nil
+        var peak: Float = 0
+        var sumSquares: Float = 0
+
+        for i in 0..<count {
+            let s = abs(samples[i])
+            if s > peak { peak = s }
+            sumSquares += s * s
+        }
+
+        let rms = sqrtf(sumSquares / Float(count))
+        // Blend peak and RMS (70/30) — same ratio as previous dB-based approach
+        return peak * 0.7 + rms * 0.3
     }
 
     // MARK: - File URL
