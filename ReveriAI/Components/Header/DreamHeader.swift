@@ -26,9 +26,20 @@ struct DreamHeader: View {
 
     var body: some View {
         ZStack {
-            // Gradient background
-            theme.headerGradient
-                .ignoresSafeArea(edges: .top)
+            // Background image (future: user-selected photo)
+            Image("BackgroundDaylight")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+
+            // Darkening gradient overlay for text readability
+            LinearGradient(
+                stops: [
+                    Gradient.Stop(color: .black, location: 0.00),
+                    Gradient.Stop(color: .black.opacity(0), location: 1.00),
+                ],
+                startPoint: UnitPoint(x: 0.5, y: -0.36),
+                endPoint: UnitPoint(x: 0.5, y: 1)
+            )
 
             // Stars
             StarsCanvas()

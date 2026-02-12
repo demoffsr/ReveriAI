@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TextModeView: View {
+    @Environment(\.theme) private var theme
     @Binding var text: String
     @FocusState.Binding var isFocused: Bool
 
@@ -9,6 +10,7 @@ struct TextModeView: View {
             .focused($isFocused)
             .font(.body)
             .foregroundStyle(.primary)
+            .tint(theme.accent)
             .scrollContentBackground(.hidden)
             .padding(.horizontal, 16)
             .padding(.top, 8)

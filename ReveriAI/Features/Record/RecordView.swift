@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 struct RecordView: View {
     @Environment(\.theme) private var theme
@@ -7,7 +8,29 @@ struct RecordView: View {
     @State private var viewModel = RecordViewModel()
     @FocusState private var isTextFocused: Bool
 
+    @Binding var isRecording: Bool
+    @Binding var isPaused: Bool
+    @Binding var isReviewing: Bool
+    @State private var elapsedSeconds: Int = 0
+    @State private var totalRecordingSeconds: Int = 0
+    @State private var timerTask: Task<Void, Never>?
+    var audioRecorder: AudioRecorder
+
     var onDreamSaved: ((Dream) -> Void)?
+
+    init(
+        isRecording: Binding<Bool>,
+        isPaused: Binding<Bool>,
+        isReviewing: Binding<Bool>,
+        audioRecorder: AudioRecorder,
+        onDreamSaved: ((Dream) -> Void)? = nil
+    ) {
+        self._isRecording = isRecording
+        self._isPaused = isPaused
+        self._isReviewing = isReviewing
+        self.audioRecorder = audioRecorder
+        self.onDreamSaved = onDreamSaved
+    }
 
     private let cloudHeight: CGFloat = 159
     private let baseHeaderHeight: CGFloat = 255
@@ -52,10 +75,6 @@ struct RecordView: View {
             }
             .ignoresSafeArea(edges: .top)
 
-            // Bottom action bar
-            bottomActionBar
-                .padding(.bottom, 90)
-
             // "How did it feel?" card
             if viewModel.showHowDidItFeel {
                 HowDidItFeelCard(
@@ -75,19 +94,31 @@ struct RecordView: View {
         }
         .toast(isPresented: $viewModel.showToast, message: "Dream saved")
         .animation(.spring(duration: 0.4), value: viewModel.showHowDidItFeel)
+        .onChange(of: isRecording) { _, newValue in
+            if !newValue { handleStop() }
+        }
+        .onChange(of: isPaused) { _, paused in
+            if isRecording {
+                if paused {
+                    audioRecorder.pauseRecording()
+                } else {
+                    audioRecorder.resumeRecording()
+                }
+            }
+        }
+        .onChange(of: isReviewing) { _, newValue in
+            if !newValue {
+                handleDelete()
+            }
+        }
     }
 
     // MARK: - Header Gradient Background (animated)
 
     private var headerGradientBackground: some View {
         DreamHeader()
-            .frame(height: headerHeight)
-            .background(alignment: .bottom) {
-                // Extend header color behind clouds so no white gap shows
-                theme.headerBottom
-                    .frame(height: cloudHeight)
-                    .offset(y: cloudOverhang)
-            }
+            .frame(height: headerHeight + cloudOverhang)
+            .clipped()
     }
 
     // MARK: - Header Title (static — never moves)
@@ -130,11 +161,45 @@ struct RecordView: View {
                     .offset(y: cloudOverhang)
                     .allowsHitTesting(false)
             }
-            .overlay(alignment: .bottomTrailing) {
-                modeSwitchPill
-                    .padding(.trailing, 16)
-                    .offset(y: cloudOverhang + 5)
+            .overlay(alignment: .bottomLeading) {
+                if isRecording {
+                    timerText
+                        .padding(.leading, 20)
+                        .offset(y: cloudOverhang + 30)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else if isReviewing {
+                    reviewTimerText
+                        .padding(.leading, 20)
+                        .offset(y: cloudOverhang + 30)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else if viewModel.mode == .text && viewModel.canSave {
+                    SaveDreamButton {
+                        viewModel.saveDream(context: modelContext)
+                        isTextFocused = false
+                    }
+                    .padding(.leading, 16)
+                    .offset(y: cloudOverhang + 30)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
             }
+            .overlay(alignment: .bottomTrailing) {
+                if isReviewing {
+                    SaveDreamButton {
+                        handleSaveAudio()
+                    }
+                    .padding(.trailing, 16)
+                    .offset(y: cloudOverhang + 30)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else if !isRecording {
+                    modeSwitchPill
+                        .padding(.trailing, 16)
+                        .offset(y: cloudOverhang + 30)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
+            }
+            .animation(.easeOut(duration: 0.25), value: viewModel.canSave)
+            .animation(.spring(duration: 0.35, bounce: 0.15), value: isRecording)
+            .animation(.spring(duration: 0.35, bounce: 0.15), value: isReviewing)
     }
 
     // MARK: - Content
@@ -151,20 +216,13 @@ struct RecordView: View {
                     text: $viewModel.dreamText,
                     isFocused: $isTextFocused
                 )
-                .padding(.top, 12)
+                .padding(.top, 36)
             } else {
                 voicePlaceholder
             }
 
             Spacer()
 
-            // Live captions placeholder
-            if viewModel.mode == .voice {
-                Text("Live Captions will appear here")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-                    .padding(.bottom, 160)
-            }
         }
     }
 
@@ -199,68 +257,147 @@ struct RecordView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Bottom Action Bar
+    // MARK: - Timer Text
 
-    private var bottomActionBar: some View {
-        HStack(spacing: 16) {
-            // Record / Save button
-            Button {
-                if viewModel.mode == .text && viewModel.canSave {
-                    viewModel.saveDream(context: modelContext)
-                    isTextFocused = false
-                    if let dream = viewModel.savedDream {
-                        onDreamSaved?(dream)
-                    }
-                }
-            } label: {
-                ZStack {
-                    // Warm glow
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    theme.accent.opacity(0.35),
-                                    theme.accent.opacity(0.0)
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 28
-                            )
-                        )
-                        .frame(width: 56, height: 56)
+    private var timerText: some View {
+        let h = elapsedSeconds / 3600
+        let m = (elapsedSeconds % 3600) / 60
+        let s = elapsedSeconds % 60
 
-                    Image(systemName: "moon.fill")
-                        .font(.title2)
-                        .foregroundStyle(theme.accent)
-                }
-            }
-            .buttonStyle(.plain)
+        return Text(String(format: "%02d:%02d:%02d", h, m, s))
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.black.opacity(0.3))
+    }
 
-            // Attach / Clipboard button
-            Button {
-                // Attachment — future implementation
-            } label: {
-                Image(systemName: "doc.on.clipboard")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 10)
-        .background(
-            Capsule()
-                .fill(.white)
-                .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
-        )
+    // MARK: - Review Timer Text
+
+    private var reviewTimerText: some View {
+        let currentSeconds = Int(audioRecorder.playbackCurrentTime)
+        let ch = currentSeconds / 3600
+        let cm = (currentSeconds % 3600) / 60
+        let cs = currentSeconds % 60
+
+        let th = totalRecordingSeconds / 3600
+        let tm = (totalRecordingSeconds % 3600) / 60
+        let ts = totalRecordingSeconds % 60
+
+        return Text(String(format: "%02d:%02d:%02d — %02d:%02d:%02d", ch, cm, cs, th, tm, ts))
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.black.opacity(0.3))
     }
 
     // MARK: - Voice Placeholder
 
     private var voicePlaceholder: some View {
-        VStack {
-            Spacer()
-            Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            if isRecording || isReviewing {
+                AudioWaveformView(
+                    isAnimating: isRecording && !isPaused,
+                    level: isRecording ? audioRecorder.currentLevel : 0
+                )
+                .padding(.bottom, 24)
+            } else {
+                // Start Recording button
+                Button {
+                    requestMicAndRecord()
+                } label: {
+                    HStack(spacing: 8) {
+                        // Orange circle with glass effect + mic icon
+                        ZStack {
+                            Circle()
+                                .fill(theme.accent)
+                                .frame(width: 36, height: 36)
+                            Image("VoiceModeButtonIcon")
+                                .renderingMode(.original)
+                        }
+                        .frame(width: 40, height: 40)
+                        .glassEffect(.regular, in: .circle)
+
+                        Text("Start Recording")
+                            .font(.system(size: 15, weight: .medium))
+                            .tracking(-0.23)
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 12)
+            }
+
+            // Live Captions placeholder
+            Text("Live Captions will appear here")
+                .font(.system(size: 15))
+                .foregroundStyle(.black.opacity(0.3))
+                .frame(width: 348, alignment: .topLeading)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 44)
+    }
+
+    // MARK: - Recording
+
+    private func requestMicAndRecord() {
+        AVAudioApplication.requestRecordPermission { granted in
+            Task { @MainActor in
+                guard granted else { return }
+                audioRecorder.startRecording()
+                withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
+                    isRecording = true
+                }
+                isPaused = false
+                elapsedSeconds = 0
+                startTimer()
+            }
+        }
+    }
+
+    private func handleStop() {
+        let url = audioRecorder.stopRecording()
+        timerTask?.cancel()
+        timerTask = nil
+
+        if elapsedSeconds > 1, url != nil {
+            totalRecordingSeconds = elapsedSeconds
+            withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
+                isReviewing = true
+            }
+        } else {
+            // Too short — auto-discard
+            audioRecorder.deleteRecording()
+            elapsedSeconds = 0
+        }
+    }
+
+    private func handleDelete() {
+        elapsedSeconds = 0
+        totalRecordingSeconds = 0
+    }
+
+    private func handleSaveAudio() {
+        audioRecorder.stopPlayback()
+        guard let url = audioRecorder.recordedFileURL else { return }
+        let relativePath = url.lastPathComponent
+        viewModel.saveAudioDream(audioPath: relativePath, context: modelContext)
+
+        // Reset review state
+        elapsedSeconds = 0
+        totalRecordingSeconds = 0
+        withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
+            isReviewing = false
+        }
+    }
+
+    // MARK: - Timer
+
+    private func startTimer() {
+        timerTask?.cancel()
+        timerTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { break }
+                if !isPaused {
+                    elapsedSeconds += 1
+                }
+            }
         }
     }
 }

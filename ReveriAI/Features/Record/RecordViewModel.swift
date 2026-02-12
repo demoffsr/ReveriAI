@@ -41,6 +41,20 @@ final class RecordViewModel {
         }
     }
 
+    func saveAudioDream(audioPath: String, context: ModelContext) {
+        let dream = Dream(text: "", audioFilePath: audioPath)
+        context.insert(dream)
+        try? context.save()
+
+        savedDream = dream
+        state = .saved
+        showToast = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
+            self?.showHowDidItFeel = true
+        }
+    }
+
     func reset() {
         state = .idle
         showHowDidItFeel = false
