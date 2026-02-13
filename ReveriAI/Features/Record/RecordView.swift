@@ -5,6 +5,7 @@ import AVFoundation
 struct RecordView: View {
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("speechRecognitionLocale") private var selectedLocaleId: String = SpeechLocale.defaultLocale.identifier
     @State private var viewModel = RecordViewModel()
     @FocusState private var isTextFocused: Bool
 
@@ -223,9 +224,6 @@ struct RecordView: View {
             } else {
                 voicePlaceholder
             }
-
-            Spacer()
-
         }
     }
 
@@ -327,19 +325,24 @@ struct RecordView: View {
             }
 
             // Live Captions
-            if speechService.transcribedText.isEmpty {
-                Text("Live Captions will appear here")
-                    .font(.system(size: 15))
-                    .tracking(-0.23)
-                    .foregroundStyle(.black.opacity(0.3))
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            } else {
-                liveCaptionsText
-                    .font(.system(size: 15))
-                    .tracking(-0.23)
-                    .lineSpacing(5)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            ScrollView {
+                if speechService.transcribedText.isEmpty {
+                    Text("Live Captions will appear here")
+                        .font(.system(size: 15))
+                        .tracking(-0.23)
+                        .foregroundStyle(.black.opacity(0.3))
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                } else {
+                    liveCaptionsText
+                        .font(.system(size: 15))
+                        .tracking(-0.23)
+                        .lineSpacing(5)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
             }
+            .scrollIndicators(.hidden)
+            .defaultScrollAnchor(.bottom)
+            .padding(.bottom, 100)
         }
         .padding(.horizontal, 20)
         .padding(.top, 44)
@@ -369,7 +372,8 @@ struct RecordView: View {
             Task { @MainActor in
                 guard granted else { return }
                 let audioStream = audioRecorder.startRecording()
-                speechService.startTranscription(audioStream: audioStream)
+                let locale = Locale(identifier: selectedLocaleId)
+                speechService.startTranscription(locale: locale, audioStream: audioStream)
                 withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                     isRecording = true
                 }
