@@ -1,3 +1,4 @@
+import Accelerate
 import AVFoundation
 import Foundation
 
@@ -73,16 +74,11 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
             // Forward for speech recognition
             self.audioBufferContinuation?.yield(buffer)
 
-            // Compute level from raw samples
-            let level = Self.computeLevel(from: buffer)
+            // Compute level from raw samples — raw curved value,
+            // WaveformBuffer handles its own smoothing inside Canvas
+            let level = cbrtf(Self.computeLevel(from: buffer))
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                let curved = cbrtf(level)
-                if curved > self.currentLevel {
-                    self.currentLevel = self.currentLevel * 0.3 + curved * 0.7
-                } else {
-                    self.currentLevel = self.currentLevel * 0.6 + curved * 0.4
-                }
+                self?.currentLevel = level
             }
         }
 
@@ -214,21 +210,16 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
 
     private static func computeLevel(from buffer: AVAudioPCMBuffer) -> Float {
         guard let channelData = buffer.floatChannelData else { return 0 }
-        let samples = channelData[0]
         let count = Int(buffer.frameLength)
         guard count > 0 else { return 0 }
 
+        let samples = channelData[0]
         var peak: Float = 0
-        var sumSquares: Float = 0
+        var rms: Float = 0
+        // vDSP: O(1)-ish vectorized ops instead of O(n) loop
+        vDSP_maxmgv(samples, 1, &peak, vDSP_Length(count))
+        vDSP_rmsqv(samples, 1, &rms, vDSP_Length(count))
 
-        for i in 0..<count {
-            let s = abs(samples[i])
-            if s > peak { peak = s }
-            sumSquares += s * s
-        }
-
-        let rms = sqrtf(sumSquares / Float(count))
-        // Blend peak and RMS (70/30) — same ratio as previous dB-based approach
         return peak * 0.7 + rms * 0.3
     }
 

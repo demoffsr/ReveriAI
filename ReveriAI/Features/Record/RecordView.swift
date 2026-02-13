@@ -296,7 +296,7 @@ struct RecordView: View {
                     isAnimating: isRecording && !isPaused,
                     audioRecorder: audioRecorder
                 )
-                .padding(.bottom, 24)
+                .padding(.bottom, 8)
             } else {
                 // Start Recording button
                 Button {
@@ -341,8 +341,7 @@ struct RecordView: View {
                 }
             }
             .scrollIndicators(.hidden)
-            .defaultScrollAnchor(.bottom)
-            .padding(.bottom, 100)
+            .padding(.bottom, 100) // clearance for tab bar
         }
         .padding(.horizontal, 20)
         .padding(.top, 44)

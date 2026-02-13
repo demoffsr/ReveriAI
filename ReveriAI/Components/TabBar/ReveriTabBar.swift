@@ -57,8 +57,10 @@ struct ReveriTabBar: View {
     private var recordingControls: some View {
         let stopColor = Color(hex: "FF3F42")
 
+        // Icons NEVER change positions: Stop is always left, Pause/Play is always right.
+        // Only the labels migrate: recording → "Stop" on left; paused → "Resume" on right.
         return HStack(spacing: 4) {
-            // Stop button — always shows label
+            // Left: Stop button — labeled when recording, icon-only when paused
             Button {
                 onStop?()
             } label: {
@@ -66,40 +68,57 @@ struct ReveriTabBar: View {
                     Image("StopIcon")
                         .renderingMode(.original)
                         .frame(width: 22, height: 22)
-                    Text("Stop")
-                        .font(.system(size: 13, weight: .medium))
-                        .tracking(-0.08)
-                        .foregroundStyle(stopColor)
+                    if !isPaused {
+                        Text("Stop")
+                            .font(.system(size: 13, weight: .medium))
+                            .tracking(-0.08)
+                            .foregroundStyle(stopColor)
+                            .transition(.blurReplace)
+                    }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, isPaused ? 12 : 16)
                 .padding(.vertical, 10)
                 .background(
                     Capsule()
-                        .fill(stopColor.opacity(0.1))
+                        .fill(isPaused ? .clear : stopColor.opacity(0.1))
                 )
             }
             .buttonStyle(.plain)
 
-            // Pause/Resume button
+            // Right: Pause/Resume button — icon-only when recording, labeled when paused
             Button {
-                withAnimation(.spring(duration: 0.7, bounce: 0.1)) {
+                withAnimation(.spring(duration: 0.5, bounce: 0.15)) {
                     onTogglePause?()
                     pauseFlipCount += 1
                 }
             } label: {
-                Image(isPaused ? "PlayIcon" : "PauseIcon")
-                    .renderingMode(.original)
-                    .frame(width: 22, height: 22)
-                    .rotation3DEffect(
-                        .degrees(Double(pauseFlipCount) * 360),
-                        axis: (x: 0, y: 1, z: 0),
-                        perspective: 0.4
-                    )
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                HStack(spacing: 6) {
+                    Image(isPaused ? "PlayIcon" : "PauseIcon")
+                        .renderingMode(.original)
+                        .frame(width: 22, height: 22)
+                        .rotation3DEffect(
+                            .degrees(Double(pauseFlipCount) * 360),
+                            axis: (x: 0, y: 1, z: 0),
+                            perspective: 0.4
+                        )
+                    if isPaused {
+                        Text("Resume")
+                            .font(.system(size: 13, weight: .medium))
+                            .tracking(-0.08)
+                            .foregroundStyle(theme.accent)
+                            .transition(.blurReplace)
+                    }
+                }
+                .padding(.horizontal, isPaused ? 16 : 12)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(isPaused ? theme.accent.opacity(0.1) : .clear)
+                )
             }
             .buttonStyle(.plain)
         }
+        .animation(.spring(duration: 0.4, bounce: 0.15), value: isPaused)
     }
 
     private var reviewControls: some View {
