@@ -10,6 +10,7 @@ struct RootView: View {
     @State private var audioRecorder = AudioRecorder()
     @State private var speechService = SpeechRecognitionService()
     @State private var selectedEmotionFilter: DreamEmotion?
+    @State private var emotionOrder: [DreamEmotion] = DreamEmotion.allCases
     @State private var showHowDidItFeel = false
     @State private var showEmotionGrid = false
     @State private var showDreamSaved = false
@@ -40,7 +41,7 @@ struct RootView: View {
                         }
                     )
                 case .journal:
-                    JournalView(selectedEmotion: $selectedEmotionFilter)
+                    JournalView(selectedEmotion: $selectedEmotionFilter, emotionOrder: $emotionOrder)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -3,6 +3,7 @@ import SwiftUI
 struct JournalHeader: View {
     @Binding var searchText: String
     @Binding var selectedEmotion: DreamEmotion?
+    @Binding var emotionOrder: [DreamEmotion]
     @Binding var selectedTimeRange: JournalViewModel.TimeRange
     var isFoldersTab: Bool
     @State private var isEmotionsExpanded = false
@@ -106,7 +107,7 @@ struct JournalHeader: View {
                         .reveriGlass(.capsule)
                     }
                 } else {
-                    EmotionFilterBar(selectedEmotion: $selectedEmotion, isExpanded: $isEmotionsExpanded)
+                    EmotionFilterBar(selectedEmotion: $selectedEmotion, emotionOrder: $emotionOrder, isExpanded: $isEmotionsExpanded)
                 }
             }
             .frame(height: 42)

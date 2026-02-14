@@ -73,19 +73,7 @@ struct DreamCard: View {
             if !dream.emotions.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(dream.emotions) { emotion in
-                        HStack(spacing: 4) {
-                            Image(emotion.iconName)
-                                .resizable()
-                                .frame(width: 16, height: 16)
-                            Text(emotion.displayName)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(emotion.color)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .frame(height: 24)
-                        .background(emotion.color.opacity(0.15))
-                        .clipShape(Capsule())
+                        EmotionTagBadge(emotion: emotion)
                     }
                 }
                 .padding(.top, -6)

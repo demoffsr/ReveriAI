@@ -56,18 +56,18 @@ struct ReveriTabBar: View {
     private var normalTabs: some View {
         HStack(spacing: 4) {
             ForEach(AppTab.allCases) { tab in
-                let isJournalFiltered = tab == .journal && emotionFilter != nil
-                let label: String = if let emotion = emotionFilter, tab == .journal {
+                let isJournalFiltered = tab == .journal && emotionFilter != nil && selectedTab == .journal
+                let label: String = if let emotion = emotionFilter, tab == .journal, selectedTab == .journal {
                     emotion.displayName
                 } else {
                     tab.label
                 }
-                let color: Color = if let emotion = emotionFilter, tab == .journal {
+                let color: Color = if let emotion = emotionFilter, tab == .journal, selectedTab == .journal {
                     emotion.color
                 } else {
                     theme.accent
                 }
-                let activeIcon: String = if let emotion = emotionFilter, tab == .journal {
+                let activeIcon: String = if let emotion = emotionFilter, tab == .journal, selectedTab == .journal {
                     emotion.journalIcon
                 } else {
                     tab.activeIcon
@@ -85,6 +85,7 @@ struct ReveriTabBar: View {
             }
         }
         .animation(.spring(duration: 0.3, bounce: 0.2), value: emotionFilter)
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: selectedTab)
     }
 
     private var recordingControls: some View {

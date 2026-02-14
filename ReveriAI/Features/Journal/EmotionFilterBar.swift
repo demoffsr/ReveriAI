@@ -2,9 +2,9 @@ import SwiftUI
 
 struct EmotionFilterBar: View {
     @Binding var selectedEmotion: DreamEmotion?
+    @Binding var emotionOrder: [DreamEmotion]
     @Binding var isExpanded: Bool
     @Environment(\.theme) private var theme
-    @State private var emotionOrder: [DreamEmotion] = DreamEmotion.allCases
 
     private let circleSize: CGFloat = 42
     private let collapsedOverlap: CGFloat = 16
@@ -31,6 +31,16 @@ struct EmotionFilterBar: View {
             }
             .scrollDisabled(!isExpanded)
             .scrollClipDisabled()
+            .mask(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: isExpanded ? 0.12 : 0)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
             .contentMargins(.leading, 0)
             .onChange(of: isExpanded) { _, newValue in
                 if !newValue {

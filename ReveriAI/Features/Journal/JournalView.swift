@@ -8,6 +8,7 @@ struct JournalView: View {
     }
 
     @Binding var selectedEmotion: DreamEmotion?
+    @Binding var emotionOrder: [DreamEmotion]
     @Environment(\.theme) private var theme
     @State private var viewModel = JournalViewModel()
     @State private var selectedTab: JournalTab = .dreams
@@ -25,6 +26,7 @@ struct JournalView: View {
                 JournalHeader(
                     searchText: $viewModel.searchText,
                     selectedEmotion: $selectedEmotion,
+                    emotionOrder: $emotionOrder,
                     selectedTimeRange: $viewModel.selectedTimeRange,
                     isFoldersTab: selectedTab == .folders
                 )
