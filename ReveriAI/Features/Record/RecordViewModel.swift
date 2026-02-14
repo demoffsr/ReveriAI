@@ -18,6 +18,7 @@ final class RecordViewModel {
     var state: RecordState = .idle
     var dreamText: String = ""
     var selectedEmotions: [DreamEmotion] = []
+    var speechLocaleRaw: String = SpeechLocale.defaultLocale.rawValue
     var savedDream: Dream?
     var onDreamSaved: ((Dream) -> Void)?
     var onShowHowDidItFeel: (() -> Void)?
@@ -32,6 +33,13 @@ final class RecordViewModel {
         context.insert(dream)
         try? context.save()
 
+        DreamAIService.generateTitleInBackground(
+            dreamID: dream.persistentModelID,
+            dreamText: dream.text,
+            locale: SpeechLocale(rawValue: speechLocaleRaw) ?? .russian,
+            modelContainer: context.container
+        )
+
         savedDream = dream
         onDreamSaved?(dream)
         dreamText = ""
@@ -43,6 +51,15 @@ final class RecordViewModel {
         let dream = Dream(text: transcript, emotions: selectedEmotions, audioFilePath: audioPath)
         context.insert(dream)
         try? context.save()
+
+        if !transcript.isEmpty {
+            DreamAIService.generateTitleInBackground(
+                dreamID: dream.persistentModelID,
+                dreamText: transcript,
+                locale: SpeechLocale(rawValue: speechLocaleRaw) ?? .russian,
+                modelContainer: context.container
+            )
+        }
 
         savedDream = dream
         onDreamSaved?(dream)

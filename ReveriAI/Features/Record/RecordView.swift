@@ -105,6 +105,9 @@ struct RecordView: View {
                 handleDelete()
             }
         }
+        .onChange(of: selectedLocaleId, initial: true) { _, newValue in
+            viewModel.speechLocaleRaw = newValue
+        }
     }
 
     // MARK: - Header Gradient Background (animated)
