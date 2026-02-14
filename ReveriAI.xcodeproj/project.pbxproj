@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D81345BD2F4116840055480B /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = F5957BCD1AF2452D80A2EF02 /* Functions */; };
+		D81345BE2F4116840055480B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B9C80B2D210B4F7F88088751 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		D832218B2F3BC14C009A1692 /* ReveriAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReveriAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D81345BE2F4116840055480B /* Supabase in Frameworks */,
+				D81345BD2F4116840055480B /* Functions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +72,8 @@
 			);
 			name = ReveriAI;
 			packageProductDependencies = (
+				F5957BCD1AF2452D80A2EF02 /* Functions */,
+				B9C80B2D210B4F7F88088751 /* Supabase */,
 			);
 			productName = ReveriAI;
 			productReference = D832218B2F3BC14C009A1692 /* ReveriAI.app */;
@@ -94,6 +103,9 @@
 			);
 			mainGroup = D83221822F3BC14C009A1692;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D832218C2F3BC14C009A1692 /* Products */;
 			projectDirPath = "";
@@ -336,6 +348,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.41.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B9C80B2D210B4F7F88088751 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		F5957BCD1AF2452D80A2EF02 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D83221832F3BC14C009A1692 /* Project object */;
 }
