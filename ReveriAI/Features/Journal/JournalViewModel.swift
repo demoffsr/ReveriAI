@@ -6,9 +6,10 @@ final class JournalViewModel {
         case today = "Today"
         case thisWeek = "This week"
         case thisMonth = "This month"
+        case allTime = "All time"
     }
 
-    var selectedTimeRange: TimeRange = .today
+    var selectedTimeRange: TimeRange = .allTime
     var selectedEmotion: DreamEmotion?
     var searchText: String = ""
 
@@ -18,6 +19,7 @@ final class JournalViewModel {
         case .today: dream.createdAt.isToday
         case .thisWeek: dream.createdAt.isThisWeek
         case .thisMonth: dream.createdAt.isThisMonth
+        case .allTime: true
         }
 
         guard passesTime else { return false }

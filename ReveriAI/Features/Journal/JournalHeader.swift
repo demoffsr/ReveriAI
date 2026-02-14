@@ -96,13 +96,13 @@ struct JournalHeader: View {
                             Image("FolderAddIcon")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 18, height: 18)
+                                .frame(width: 16, height: 16)
                             Text("New Folder")
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: 13, weight: .medium))
                         }
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(minHeight: 34)
                         .padding(.horizontal, 14)
-                        .frame(height: 42)
                         .reveriGlass(.capsule)
                     }
                 } else {
