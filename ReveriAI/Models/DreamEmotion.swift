@@ -47,6 +47,18 @@ enum DreamEmotion: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    var journalIcon: String {
+        switch self {
+        case .joyful: "JournalIconJoyful"
+        case .inLove: "JournalIconInLove"
+        case .calm: "JournalIconCalm"
+        case .confused: "JournalIconConfused"
+        case .anxious: "JournalIconAnxious"
+        case .scared: "JournalIconScared"
+        case .angry: "JournalIconAngry"
+        }
+    }
+
     var color: Color {
         switch self {
         case .joyful: Color(hex: "4CAF50")

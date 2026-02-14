@@ -11,7 +11,7 @@ struct JournalHeader: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 20) {
             // Profile + Search bar
             GlassEffectContainer(spacing: 12) {
                 HStack(spacing: 12) {
@@ -60,8 +60,9 @@ struct JournalHeader: View {
                 Text("My Dreams")
                     .font(.title.weight(.bold))
                     .foregroundStyle(.white)
+                    .fixedSize()
 
-                Spacer()
+                Spacer(minLength: 24)
 
                 EmotionFilterBar(selectedEmotion: $selectedEmotion)
             }

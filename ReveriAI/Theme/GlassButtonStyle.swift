@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Unified Liquid Glass modifier — native Apple glass with subtle white tint.
 /// Usage: `.reveriGlass(.circle)` or `.reveriGlass(.capsule)`
+/// Pass `interactive: false` for static glass (no press/drag movement).
 struct ReveriGlassModifier: ViewModifier {
     enum Shape {
         case circle
@@ -9,27 +10,25 @@ struct ReveriGlassModifier: ViewModifier {
     }
 
     let shape: Shape
+    let interactive: Bool
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        switch shape {
-        case .circle:
-            content
-                .glassEffect(
-                    .regular.tint(.white.opacity(0.15)).interactive(),
-                    in: .circle
-                )
-        case .capsule:
-            content
-                .glassEffect(
-                    .regular.tint(.white.opacity(0.15)).interactive(),
-                    in: .capsule
-                )
+        switch (shape, interactive) {
+        case (.circle, true):
+            content.glassEffect(.regular.tint(.white.opacity(0.15)).interactive(), in: .circle)
+        case (.circle, false):
+            content.glassEffect(.regular.tint(.white.opacity(0.15)), in: .circle)
+        case (.capsule, true):
+            content.glassEffect(.regular.tint(.white.opacity(0.15)).interactive(), in: .capsule)
+        case (.capsule, false):
+            content.glassEffect(.regular.tint(.white.opacity(0.15)), in: .capsule)
         }
     }
 }
 
 extension View {
-    func reveriGlass(_ shape: ReveriGlassModifier.Shape) -> some View {
-        modifier(ReveriGlassModifier(shape: shape))
+    func reveriGlass(_ shape: ReveriGlassModifier.Shape, interactive: Bool = true) -> some View {
+        modifier(ReveriGlassModifier(shape: shape, interactive: interactive))
     }
 }

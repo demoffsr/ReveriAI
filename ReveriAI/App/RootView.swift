@@ -9,6 +9,7 @@ struct RootView: View {
     @State private var isReviewing = false
     @State private var audioRecorder = AudioRecorder()
     @State private var speechService = SpeechRecognitionService()
+    @State private var selectedEmotionFilter: DreamEmotion?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -27,7 +28,7 @@ struct RootView: View {
                         showEmotionPicker = true
                     }
                 case .journal:
-                    JournalView()
+                    JournalView(selectedEmotion: $selectedEmotionFilter)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -35,6 +36,7 @@ struct RootView: View {
             // Custom tab bar
             ReveriTabBar(
                 selectedTab: $selectedTab,
+                emotionFilter: selectedEmotionFilter,
                 isRecording: isRecording,
                 isPaused: isPaused,
                 isReviewing: isReviewing,

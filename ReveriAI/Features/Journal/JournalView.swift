@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct JournalView: View {
+    @Binding var selectedEmotion: DreamEmotion?
     @Environment(\.theme) private var theme
     @State private var viewModel = JournalViewModel()
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
@@ -15,8 +16,11 @@ struct JournalView: View {
             // Header
             JournalHeader(
                 searchText: $viewModel.searchText,
-                selectedEmotion: $viewModel.selectedEmotion
+                selectedEmotion: $selectedEmotion
             )
+            .onChange(of: selectedEmotion) { _, newValue in
+                viewModel.selectedEmotion = newValue
+            }
 
             // Time range filter
             TimeRangeFilter(selected: $viewModel.selectedTimeRange)

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ReveriTabBar: View {
     @Binding var selectedTab: AppTab
+    var emotionFilter: DreamEmotion?
     @Environment(\.theme) private var theme
     @State private var expandedTab: AppTab?
     @State private var collapseTask: Task<Void, Never>?
@@ -49,18 +50,35 @@ struct ReveriTabBar: View {
     private var normalTabs: some View {
         HStack(spacing: 4) {
             ForEach(AppTab.allCases) { tab in
+                let isJournalFiltered = tab == .journal && emotionFilter != nil
+                let label: String = if let emotion = emotionFilter, tab == .journal {
+                    emotion.displayName
+                } else {
+                    tab.label
+                }
+                let color: Color = if let emotion = emotionFilter, tab == .journal {
+                    emotion.color
+                } else {
+                    theme.accent
+                }
+                let activeIcon: String = if let emotion = emotionFilter, tab == .journal {
+                    emotion.journalIcon
+                } else {
+                    tab.activeIcon
+                }
                 TabBarItem(
-                    activeIcon: tab.activeIcon,
+                    activeIcon: activeIcon,
                     inactiveIcon: tab.inactiveIcon,
-                    label: tab.label,
+                    label: label,
                     isSelected: selectedTab == tab,
-                    isExpanded: expandedTab == tab,
-                    accentColor: theme.accent
+                    isExpanded: expandedTab == tab || isJournalFiltered,
+                    accentColor: color
                 ) {
                     handleTap(tab)
                 }
             }
         }
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: emotionFilter)
     }
 
     private var recordingControls: some View {
