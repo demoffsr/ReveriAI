@@ -12,45 +12,47 @@ struct JournalHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Locale picker + Search bar
-            HStack(spacing: 12) {
-                // Locale picker
-                Menu {
-                    ForEach(SpeechLocale.allCases) { locale in
-                        Button {
-                            selectedLocaleId = locale.identifier
-                        } label: {
-                            HStack {
-                                Text(locale.displayName)
-                                if locale == selectedLocale {
-                                    Image(systemName: "checkmark")
+            // Profile + Search bar
+            GlassEffectContainer(spacing: 12) {
+                HStack(spacing: 12) {
+                    // Profile button with locale picker
+                    Menu {
+                        ForEach(SpeechLocale.allCases) { locale in
+                            Button {
+                                selectedLocaleId = locale.identifier
+                            } label: {
+                                HStack {
+                                    Text(locale.displayName)
+                                    if locale == selectedLocale {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 42, height: 42)
+                            .reveriGlass(.circle)
                     }
-                } label: {
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 36, height: 36)
-                        .overlay(
-                            Text(selectedLocale.shortCode)
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
-                }
 
-                // Search bar
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                    TextField("Search", text: $searchText)
-                        .font(.subheadline)
+                    // Search button
+                    Button {
+                        // TODO: open search
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 15, weight: .medium))
+                            Text("Search")
+                                .font(.system(size: 17, weight: .medium))
+                        }
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
+                        .padding(.leading, 14)
+                        .reveriGlass(.capsule)
+                    }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.white.opacity(0.15))
-                .clipShape(Capsule())
             }
 
             // Title + Emotion filters
@@ -65,8 +67,20 @@ struct JournalHeader: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 56)
+        .padding(.top, 68)
         .padding(.bottom, 16)
-        .background(theme.headerGradient.ignoresSafeArea(edges: .top))
+        .background {
+            ZStack {
+                Color.black
+
+                // Blur gradient orb
+                (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
+                    .frame(width: 189, height: 196)
+                    .blur(radius: 100)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .drawingGroup()
+            .ignoresSafeArea(edges: .top)
+        }
     }
 }
