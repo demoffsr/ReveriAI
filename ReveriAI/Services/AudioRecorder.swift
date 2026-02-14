@@ -159,6 +159,16 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
         }
     }
 
+    func skipForward(seconds: TimeInterval = 5) {
+        guard let player = audioPlayer else { return }
+        player.currentTime = min(player.currentTime + seconds, player.duration)
+    }
+
+    func skipBackward(seconds: TimeInterval = 5) {
+        guard let player = audioPlayer else { return }
+        player.currentTime = max(player.currentTime - seconds, 0)
+    }
+
     func stopPlayback() {
         audioPlayer?.stop()
         audioPlayer = nil

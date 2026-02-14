@@ -57,6 +57,12 @@ struct RootView: View {
                     withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                         isReviewing = false
                     }
+                },
+                onSkipBack: {
+                    audioRecorder.skipBackward()
+                },
+                onSkipForward: {
+                    audioRecorder.skipForward()
                 }
             )
         }

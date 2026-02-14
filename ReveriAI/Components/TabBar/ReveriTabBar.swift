@@ -7,6 +7,7 @@ struct ReveriTabBar: View {
     @State private var collapseTask: Task<Void, Never>?
     @State private var pauseFlipCount: Int = 0
     @State private var previewFlipCount: Int = 0
+    @State private var showDeleteConfirmation = false
     var isRecording: Bool = false
     var isPaused: Bool = false
     var isReviewing: Bool = false
@@ -15,6 +16,8 @@ struct ReveriTabBar: View {
     var onTogglePause: (() -> Void)?
     var onTogglePreview: (() -> Void)?
     var onDelete: (() -> Void)?
+    var onSkipBack: (() -> Void)?
+    var onSkipForward: (() -> Void)?
 
     var body: some View {
         Group {
@@ -28,6 +31,12 @@ struct ReveriTabBar: View {
                 normalTabs
                     .transition(.blurReplace)
             }
+        }
+        .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) { onDelete?() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This action cannot be undone")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -122,6 +131,19 @@ struct ReveriTabBar: View {
     }
 
     private var reviewControls: some View {
+        Group {
+            if isPlayingPreview {
+                playbackControls
+                    .transition(.blurReplace)
+            } else {
+                reviewIdleControls
+                    .transition(.blurReplace)
+            }
+        }
+        .animation(.spring(duration: 0.4, bounce: 0.15), value: isPlayingPreview)
+    }
+
+    private var reviewIdleControls: some View {
         HStack(spacing: 4) {
             // Preview/Play button
             Button {
@@ -131,7 +153,7 @@ struct ReveriTabBar: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Image(isPlayingPreview ? "PauseIcon" : "PlayIcon")
+                    Image("PlayIcon")
                         .renderingMode(.original)
                         .frame(width: 22, height: 22)
                         .rotation3DEffect(
@@ -139,7 +161,7 @@ struct ReveriTabBar: View {
                             axis: (x: 0, y: 1, z: 0),
                             perspective: 0.4
                         )
-                    Text("Preview")
+                    Text("Play")
                         .font(.system(size: 13, weight: .medium))
                         .tracking(-0.08)
                         .foregroundStyle(theme.accent)
@@ -155,13 +177,62 @@ struct ReveriTabBar: View {
 
             // Delete button — icon only
             Button {
-                onDelete?()
+                showDeleteConfirmation = true
             } label: {
                 Image("DeleteIcon")
                     .renderingMode(.original)
                     .frame(width: 22, height: 22)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var playbackControls: some View {
+        HStack(spacing: 16) {
+            // Skip back 5s
+            Button {
+                onSkipBack?()
+            } label: {
+                Image("SkipBack5Icon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                    .padding(8)
+            }
+            .buttonStyle(.plain)
+
+            // Large pause/play button
+            Button {
+                withAnimation(.spring(duration: 0.7, bounce: 0.1)) {
+                    onTogglePreview?()
+                    previewFlipCount += 1
+                }
+            } label: {
+                Image(isPlayingPreview ? "PauseIcon" : "PlayIcon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                    .rotation3DEffect(
+                        .degrees(Double(previewFlipCount) * 360),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.4
+                    )
+                    .frame(width: 56, height: 56)
+                    .background(
+                        Circle()
+                            .fill(theme.accent.opacity(0.15))
+                    )
+            }
+            .buttonStyle(.plain)
+
+            // Skip forward 5s
+            Button {
+                onSkipForward?()
+            } label: {
+                Image("SkipForward5Icon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                    .padding(8)
             }
             .buttonStyle(.plain)
         }

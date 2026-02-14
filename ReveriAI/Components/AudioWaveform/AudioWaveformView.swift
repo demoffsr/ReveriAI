@@ -68,8 +68,11 @@ struct AudioWaveformView: View {
 
                 let accentColor = theme.accent
 
-                // Grows LEFT → RIGHT. Once full, scroll so newest stays at right edge.
-                let windowStart = max(0, offset - size.width)
+                // During playback/review, keep playhead near left edge so scrolling is visible immediately.
+                // During recording, scroll only once bars fill the screen width.
+                let isInPlayback = !isAnimating && totalRecordedOffset > 0
+                let visibleWidth = isInPlayback ? size.width * 0.2 : size.width
+                let windowStart = max(0, offset - visibleWidth)
 
                 for i in 0..<count {
                     let waveformX = CGFloat(i + buffer.trimOffset) * Self.barSlot
@@ -109,6 +112,14 @@ struct AudioWaveformView: View {
                     totalRecordedOffset
                 )
                 playbackAnimStartTime = nil
+            }
+        }
+        .onChange(of: playbackProgress) { oldVal, newVal in
+            guard playbackAnimStartTime != nil, totalRecordedOffset > 0 else { return }
+            let delta = abs(newVal - oldVal)
+            if delta > 0.02 {
+                playbackAnimStartOffset = totalRecordedOffset * newVal
+                playbackAnimStartTime = Date.now.timeIntervalSinceReferenceDate
             }
         }
         .onAppear {
