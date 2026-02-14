@@ -46,6 +46,7 @@ final class SpeechRecognitionService {
 
         transcriptionTask = Task {
             let engine = await selectEngine(for: locale)
+            print("🎤 SpeechRecognitionService: engine=\(engine.rawValue) locale=\(locale.identifier)")
 
             await MainActor.run {
                 self.currentEngine = engine
@@ -82,11 +83,30 @@ final class SpeechRecognitionService {
 
     /// Reset all text state.
     func resetTranscription() {
+        #if DEBUG
+        if !accumulatedFinalText.isEmpty {
+            print("🔴 resetTranscription() called while accumulated=[\(accumulatedFinalText)]")
+            Thread.callStackSymbols.prefix(10).forEach { print("   \($0)") }
+        }
+        #endif
         stableText = ""
         latestText = ""
         transcribedText = ""
         partialText = ""
         accumulatedFinalText = ""
+    }
+
+    // MARK: - Pause Support
+
+    /// Commits current volatile text into accumulatedFinalText so it's preserved on resume.
+    func pauseTranscription() {
+        guard !partialText.isEmpty else { return }
+        let separator = accumulatedFinalText.isEmpty ? "" : " "
+        accumulatedFinalText += separator + partialText
+        stableText = accumulatedFinalText
+        partialText = ""
+        latestText = ""
+        transcribedText = accumulatedFinalText
     }
 
     // MARK: - Engine Selection
@@ -122,6 +142,12 @@ final class SpeechRecognitionService {
         })
     }
 
+    private enum SASessionResult {
+        case sessionEnded
+        case audioEnded
+        case cancelled
+    }
+
     private func runSpeechAnalyzer(locale: Locale, audioStream: AsyncStream<AVAudioPCMBuffer>) async {
         // Find the best matching supported locale
         let supported = await SpeechTranscriber.supportedLocales
@@ -137,44 +163,98 @@ final class SpeechRecognitionService {
             return
         }
 
-        let transcriber = SpeechTranscriber(
+        let bufferConverter = BufferConverter()
+
+        // Get analyzer format once (shared across sessions)
+        let testTranscriber = SpeechTranscriber(
             locale: matchedLocale,
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults],
+            attributeOptions: []
+        )
+        guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
+            compatibleWith: [testTranscriber]
+        ) else {
+            print("SpeechRecognitionService: no compatible audio format for SpeechAnalyzer")
+            await runSFSpeechRecognizer(locale: locale, audioStream: audioStream)
+            return
+        }
+
+        // Relay fans out audio buffers to each session (same pattern as SFSpeechRecognizer)
+        let relay = AudioBufferRelay()
+        let mainFeedTask = Task.detached {
+            for await buffer in audioStream {
+                if Task.isCancelled { break }
+                relay.send(buffer)
+            }
+            relay.finish()
+        }
+
+        var audioEnded = false
+
+        while !audioEnded && !Task.isCancelled {
+            let sessionResult = await runSingleSpeechAnalyzerSession(
+                locale: matchedLocale,
+                analyzerFormat: analyzerFormat,
+                bufferConverter: bufferConverter,
+                relay: relay
+            )
+
+            switch sessionResult {
+            case .sessionEnded:
+                // SpeechTranscriber ended the segment — commit partial and restart
+                #if DEBUG
+                print("SpeechAnalyzer session ended, restarting...")
+                #endif
+                await MainActor.run { self.pauseTranscription() }
+                try? await Task.sleep(for: .milliseconds(200))
+
+            case .audioEnded, .cancelled:
+                audioEnded = true
+            }
+        }
+
+        mainFeedTask.cancel()
+    }
+
+    /// Runs a single SpeechAnalyzer session until transcriber.results ends or an error occurs.
+    private func runSingleSpeechAnalyzerSession(
+        locale: Locale,
+        analyzerFormat: AVAudioFormat,
+        bufferConverter: BufferConverter,
+        relay: AudioBufferRelay
+    ) async -> SASessionResult {
+        let transcriber = SpeechTranscriber(
+            locale: locale,
             transcriptionOptions: [],
             reportingOptions: [.volatileResults],
             attributeOptions: []
         )
 
         let analyzer = SpeechAnalyzer(modules: [transcriber])
-        let bufferConverter = BufferConverter()
+        let (inputStream, inputBuilder) = AsyncStream<AnalyzerInput>.makeStream()
+
+        // Subscribe to relay for this session
+        let (bufferStream, token) = relay.subscribe()
+        let sessionFeedTask = Task.detached { [bufferConverter] in
+            for await buffer in bufferStream {
+                if Task.isCancelled { break }
+                do {
+                    let converted = try bufferConverter.convert(buffer, to: analyzerFormat)
+                    inputBuilder.yield(AnalyzerInput(buffer: converted))
+                } catch {
+                    #if DEBUG
+                    print("SpeechRecognitionService: buffer conversion error: \(error)")
+                    #endif
+                }
+            }
+            inputBuilder.finish()
+        }
 
         do {
-            guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
-                compatibleWith: [transcriber]
-            ) else {
-                print("SpeechRecognitionService: no compatible audio format for SpeechAnalyzer")
-                await runSFSpeechRecognizer(locale: locale, audioStream: audioStream)
-                return
-            }
-
-            let (inputStream, inputBuilder) = AsyncStream<AnalyzerInput>.makeStream()
-
-            // Feed audio buffers in a detached task
-            let feedTask = Task.detached { [bufferConverter] in
-                for await buffer in audioStream {
-                    if Task.isCancelled { break }
-                    do {
-                        let converted = try bufferConverter.convert(buffer, to: analyzerFormat)
-                        inputBuilder.yield(AnalyzerInput(buffer: converted))
-                    } catch {
-                        print("SpeechRecognitionService: buffer conversion error: \(error)")
-                    }
-                }
-                inputBuilder.finish()
-            }
-
             try await analyzer.start(inputSequence: inputStream)
 
-            // Consume results
+            // Consume results until stream ends
             for try await result in transcriber.results {
                 if Task.isCancelled { break }
 
@@ -183,28 +263,61 @@ final class SpeechRecognitionService {
 
                 await MainActor.run {
                     if isFinal {
-                        self.accumulatedFinalText = text
+                        guard !text.isEmpty else { return }
+
+                        // ALWAYS APPEND — never replace, text can never be lost
+                        if self.accumulatedFinalText.isEmpty {
+                            self.accumulatedFinalText = text
+                        } else {
+                            self.accumulatedFinalText += " " + text
+                        }
                         self.partialText = ""
-                        self.stableText = text
+                        self.stableText = self.accumulatedFinalText
                         self.latestText = ""
+                        self.transcribedText = self.accumulatedFinalText
+                        #if DEBUG
+                        print("🟢 FINAL → transcribed=[\(self.transcribedText)]")
+                        #endif
                     } else {
+                        guard !text.isEmpty else { return }
+
                         self.partialText = text
-                        self.updateCaptionsFromText(text)
+                        let fullText: String
+                        if self.accumulatedFinalText.isEmpty {
+                            fullText = text
+                        } else {
+                            fullText = self.accumulatedFinalText + " " + text
+                        }
+                        self.updateCaptionsFromText(fullText)
+                        self.transcribedText = fullText
+                        #if DEBUG
+                        print("🔵 VOLATILE → transcribed=[\(self.transcribedText)]")
+                        #endif
                     }
-                    self.transcribedText = self.accumulatedFinalText + self.partialText
                 }
             }
 
-            feedTask.cancel()
+            #if DEBUG
+            print("⏹️ transcriber.results stream ended, accumulated: [\(await MainActor.run { self.accumulatedFinalText })]")
+            #endif
+
+            // Clean up BEFORE finalize to avoid deadlock
+            // (finalize waits for input to end, but feed is still running)
+            relay.unsubscribe(token)
+            sessionFeedTask.cancel()
             try? await analyzer.finalizeAndFinishThroughEndOfInput()
 
+            if Task.isCancelled { return .cancelled }
+            return .sessionEnded
+
         } catch {
-            if !Task.isCancelled {
-                print("SpeechRecognitionService: SpeechAnalyzer error: \(error)")
-                // Fall back to SFSpeechRecognizer
-                await MainActor.run { self.currentEngine = .sfSpeechRecognizer }
-                await runSFSpeechRecognizer(locale: locale, audioStream: audioStream)
-            }
+            relay.unsubscribe(token)
+            sessionFeedTask.cancel()
+            if Task.isCancelled { return .cancelled }
+            #if DEBUG
+            print("❌ SpeechAnalyzer session error: \(error)")
+            #endif
+            return .sessionEnded
         }
     }
 
@@ -236,11 +349,9 @@ final class SpeechRecognitionService {
             self.isTranscribing = true
         }
 
-        // Use a relay to fan-out audio buffers to the current recognition request.
-        // When the 1-min limit hits, we create a new request and the relay feeds it instead.
+        // Relay fans out audio buffers to each session (allows restart on pause/time limit)
         let relay = AudioBufferRelay()
 
-        // Feed audio from the source stream into the relay
         let feedTask = Task.detached {
             for await buffer in audioStream {
                 if Task.isCancelled { break }
@@ -255,21 +366,20 @@ final class SpeechRecognitionService {
             let sessionResult = await runSingleSFSession(recognizer: recognizer, relay: relay)
 
             switch sessionResult {
-            case .timeLimitReached:
-                // Save partial text as stable before restarting
-                await MainActor.run {
-                    if !self.partialText.isEmpty {
-                        let stitched = self.accumulatedFinalText.isEmpty
-                            ? self.partialText
-                            : self.accumulatedFinalText + " " + self.partialText
-                        self.accumulatedFinalText = stitched
-                        self.partialText = ""
-                    }
+            case .sessionEnded:
+                // SF session ended (speech pause or time limit) — commit partial and restart
+                print("🔄 SF session ended, restarting... relay.isActive=\(relay.isActive)")
+                await MainActor.run { self.pauseTranscription() }
+                guard relay.isActive else {
+                    audioEnded = true
+                    break
                 }
-                // Small delay before restarting to avoid hammering
                 try? await Task.sleep(for: .milliseconds(300))
 
-            case .audioEnded, .cancelled:
+            case .audioEnded:
+                audioEnded = true
+
+            case .cancelled:
                 audioEnded = true
             }
         }
@@ -278,8 +388,8 @@ final class SpeechRecognitionService {
     }
 
     private enum SFSessionResult {
-        case timeLimitReached
-        case audioEnded
+        case sessionEnded  // speech pause or time limit — can restart
+        case audioEnded    // relay finished — recording stopped
         case cancelled
     }
 
@@ -295,7 +405,6 @@ final class SpeechRecognitionService {
         }
 
         let (resultStream, resultContinuation) = AsyncStream<SFSpeechRecognitionResult?>.makeStream()
-        var endedDueToLimit = false
 
         let recognitionTask = recognizer.recognitionTask(with: request) { result, error in
             if let result {
@@ -304,17 +413,12 @@ final class SpeechRecognitionService {
                     resultContinuation.finish()
                 }
             }
-            if let error {
-                // Error code 1101 = "Retry" / time limit reached
-                let nsError = error as NSError
-                if nsError.domain == "kAFAssistantErrorDomain" && nsError.code == 1101 {
-                    endedDueToLimit = true
-                }
+            if error != nil {
                 resultContinuation.finish()
             }
         }
 
-        // Subscribe to the relay and feed buffers to this session's request
+        // Subscribe to relay for this session
         let (bufferStream, token) = relay.subscribe()
         let relayTask = Task.detached {
             for await buffer in bufferStream {
@@ -324,28 +428,71 @@ final class SpeechRecognitionService {
             request.endAudio()
         }
 
-        let baseText = self.accumulatedFinalText
+        var baseText = self.accumulatedFinalText
+        var lastSessionText = ""
 
-        // Consume results
+        // Consume results — SF gives CUMULATIVE text within an utterance,
+        // but silently resets when it detects a new utterance (no isFinal sent!)
         for await result in resultStream {
             guard let result, !Task.isCancelled else { break }
 
             let sessionText = result.bestTranscription.formattedString
+            guard !sessionText.isEmpty else { continue }
+
+            // Detect SF silent reset: text changed in a way that's NOT a continuation
+            if !lastSessionText.isEmpty
+                && !sessionText.hasPrefix(lastSessionText)
+                && !lastSessionText.hasPrefix(sessionText)
+            {
+                // Check first character (case-insensitive) — different = new utterance
+                // Same first char (Но/Ну) = SF correction within same utterance
+                let firstCharSame: Bool
+                if let old = lastSessionText.first, let new = sessionText.first {
+                    firstCharSame = old.lowercased() == new.lowercased()
+                } else {
+                    firstCharSame = true
+                }
+                let textShrunk = sessionText.count * 2 < lastSessionText.count
+
+                if !firstCharSame || textShrunk {
+                    // SF started new utterance — commit previous text
+                    await MainActor.run {
+                        if baseText.isEmpty {
+                            baseText = lastSessionText
+                        } else {
+                            baseText += " " + Self.lowercaseFirst(lastSessionText)
+                        }
+                        self.accumulatedFinalText = baseText
+                        self.partialText = ""
+                        print("🟡 SF auto-commit → accumulated=[\(baseText)]")
+                    }
+                }
+            }
+            lastSessionText = sessionText
 
             await MainActor.run {
-                if result.isFinal {
-                    let finalText = baseText.isEmpty ? sessionText : baseText + " " + sessionText
-                    self.accumulatedFinalText = finalText
-                    self.partialText = ""
-                    self.stableText = finalText
-                    self.latestText = ""
+                // Lowercase first char when appending to existing text (natural flow)
+                let fullText: String
+                if baseText.isEmpty {
+                    fullText = sessionText
                 } else {
-                    let fullText = baseText.isEmpty ? sessionText : baseText + " " + sessionText
+                    fullText = baseText + " " + Self.lowercaseFirst(sessionText)
+                }
+
+                if result.isFinal {
+                    self.accumulatedFinalText = fullText
+                    baseText = fullText
+                    lastSessionText = ""
+                    self.partialText = ""
+                    self.stableText = fullText
+                    self.latestText = ""
+                    self.transcribedText = fullText
+                    print("🟢 SF FINAL → transcribed=[\(fullText)]")
+                } else {
                     self.partialText = sessionText
                     self.updateCaptionsFromText(fullText)
+                    self.transcribedText = fullText
                 }
-                self.transcribedText = self.accumulatedFinalText +
-                    (self.partialText.isEmpty ? "" : " " + self.partialText)
             }
         }
 
@@ -354,11 +501,18 @@ final class SpeechRecognitionService {
         relayTask.cancel()
 
         if Task.isCancelled { return .cancelled }
-        if endedDueToLimit { return .timeLimitReached }
+        // If relay is still active, recording continues — this was just a speech pause
+        if relay.isActive { return .sessionEnded }
         return .audioEnded
     }
 
     // MARK: - Live Captions Helpers
+
+    /// Lowercase the first character of a string (for natural flow after auto-commit).
+    private static func lowercaseFirst(_ text: String) -> String {
+        guard let first = text.first, first.isUppercase else { return text }
+        return text.prefix(1).lowercased() + text.dropFirst()
+    }
 
     /// Split text into stableText (all except last word) and latestText (last word) for gradient styling.
     private func updateCaptionsFromText(_ fullText: String) {
@@ -421,6 +575,14 @@ private final class AudioBufferRelay: @unchecked Sendable {
 
     struct SubscriptionToken: Sendable {
         fileprivate let id: UInt64
+    }
+
+    /// Whether the relay is still accepting buffers (recording still active).
+    nonisolated var isActive: Bool {
+        lock.lock()
+        let active = !isFinished
+        lock.unlock()
+        return active
     }
 
     nonisolated func send(_ buffer: AVAudioPCMBuffer) {

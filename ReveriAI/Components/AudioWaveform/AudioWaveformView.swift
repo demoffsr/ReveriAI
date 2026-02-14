@@ -44,7 +44,7 @@ struct AudioWaveformView: View {
                 let windowStart = max(0, scrollOffset - size.width)
 
                 for i in 0..<count {
-                    let waveformX = CGFloat(i) * Self.barSlot
+                    let waveformX = CGFloat(i + buffer.trimOffset) * Self.barSlot
                     let canvasX = waveformX - windowStart
                     if canvasX > size.width { break }
                     if canvasX + Self.barWidth < 0 { continue }
@@ -87,6 +87,7 @@ struct AudioWaveformView: View {
 /// Mutations here do NOT trigger SwiftUI state diffs — only TimelineView drives redraws.
 private final class WaveformBuffer {
     var bars: [CGFloat] = []
+    var trimOffset: Int = 0
     private var lastBarIndex: Int = -1
     private var smoothedLevel: Float = 0
 
@@ -124,7 +125,9 @@ private final class WaveformBuffer {
 
             // Trim old bars that scrolled off-screen
             if bars.count > 500 {
-                bars.removeFirst(bars.count - 500)
+                let excess = bars.count - 500
+                bars.removeFirst(excess)
+                trimOffset += excess
             }
         }
         return added

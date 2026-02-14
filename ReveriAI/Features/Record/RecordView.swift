@@ -15,6 +15,7 @@ struct RecordView: View {
     @State private var elapsedSeconds: Int = 0
     @State private var totalRecordingSeconds: Int = 0
     @State private var timerTask: Task<Void, Never>?
+    @State private var reviewText: String = ""
     var audioRecorder: AudioRecorder
     var speechService: SpeechRecognitionService
 
@@ -105,6 +106,7 @@ struct RecordView: View {
             if isRecording {
                 if paused {
                     audioRecorder.pauseRecording()
+                    speechService.pauseTranscription()
                 } else {
                     audioRecorder.resumeRecording()
                 }
@@ -324,24 +326,53 @@ struct RecordView: View {
                 .padding(.bottom, 12)
             }
 
-            // Live Captions
-            ScrollView {
-                if speechService.transcribedText.isEmpty {
-                    Text("Live Captions will appear here")
-                        .font(.system(size: 15))
-                        .tracking(-0.23)
-                        .foregroundStyle(.black.opacity(0.3))
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                } else {
-                    liveCaptionsText
-                        .font(.system(size: 15))
-                        .tracking(-0.23)
-                        .lineSpacing(5)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+            // Captions: editable in review mode, read-only during recording
+            if isReviewing {
+                TextEditor(text: $reviewText)
+                    .font(.system(size: 15))
+                    .tracking(-0.23)
+                    .lineSpacing(5)
+                    .tint(theme.accent)
+                    .scrollContentBackground(.hidden)
+                    .padding(.bottom, 100)
+                    .overlay(alignment: .topLeading) {
+                        if reviewText.isEmpty {
+                            Text("Add dream description...")
+                                .font(.system(size: 15))
+                                .tracking(-0.23)
+                                .foregroundStyle(.black.opacity(0.3))
+                                .padding(.top, 8)
+                                .padding(.leading, 5)
+                                .allowsHitTesting(false)
+                        }
+                    }
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        if speechService.transcribedText.isEmpty {
+                            Text("Live Captions will appear here")
+                                .font(.system(size: 15))
+                                .tracking(-0.23)
+                                .foregroundStyle(.black.opacity(0.3))
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                        } else {
+                            liveCaptionsText
+                                .font(.system(size: 15))
+                                .tracking(-0.23)
+                                .lineSpacing(5)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                        }
+                        Color.clear.frame(height: 1).id("captionsBottom")
+                    }
+                    .scrollIndicators(.hidden)
+                    .padding(.bottom, 100)
+                    .onChange(of: speechService.transcribedText) {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            proxy.scrollTo("captionsBottom", anchor: .bottom)
+                        }
+                    }
                 }
             }
-            .scrollIndicators(.hidden)
-            .padding(.bottom, 100) // clearance for tab bar
         }
         .padding(.horizontal, 20)
         .padding(.top, 44)
@@ -400,20 +431,21 @@ struct RecordView: View {
         let transcript = speechService.transcribedText
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if !transcript.isEmpty {
-            // Transfer transcript to text mode for editing
-            viewModel.dreamText = transcript
-            viewModel.mode = .text
-            speechService.resetTranscription()
-            audioRecorder.deleteRecording()
-            elapsedSeconds = 0
-            totalRecordingSeconds = 0
-        } else if url != nil {
-            // No transcript — fall back to audio review
+        if url != nil {
+            // Enter review mode with editable transcript
+            reviewText = transcript
             totalRecordingSeconds = elapsedSeconds
+            speechService.resetTranscription()
             withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                 isReviewing = true
             }
+        } else if !transcript.isEmpty {
+            // No audio file but have transcript — fall back to text mode
+            viewModel.dreamText = transcript
+            viewModel.mode = .text
+            speechService.resetTranscription()
+            elapsedSeconds = 0
+            totalRecordingSeconds = 0
         } else {
             speechService.resetTranscription()
             elapsedSeconds = 0
@@ -422,6 +454,7 @@ struct RecordView: View {
 
     private func handleDelete() {
         speechService.resetTranscription()
+        reviewText = ""
         elapsedSeconds = 0
         totalRecordingSeconds = 0
     }
@@ -430,11 +463,11 @@ struct RecordView: View {
         audioRecorder.stopPlayback()
         guard let url = audioRecorder.recordedFileURL else { return }
         let relativePath = url.lastPathComponent
-        let transcript = speechService.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let transcript = reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
         viewModel.saveAudioDream(audioPath: relativePath, transcript: transcript, context: modelContext)
-        speechService.resetTranscription()
 
         // Reset review state
+        reviewText = ""
         elapsedSeconds = 0
         totalRecordingSeconds = 0
         withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
