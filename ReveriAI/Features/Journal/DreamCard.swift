@@ -3,6 +3,7 @@ import SwiftData
 
 struct DreamCard: View {
     let dream: Dream
+    var onTap: () -> Void = {}
     @Environment(\.modelContext) private var modelContext
     @Environment(\.theme) private var theme
     @State private var showDeleteConfirmation = false
@@ -13,8 +14,11 @@ struct DreamCard: View {
         return words.joined(separator: " ")
     }
 
-    private var hasAudio: Bool {
-        dream.audioFilePath != nil
+    private var audioURL: URL? {
+        guard let path = dream.audioFilePath else { return nil }
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("recordings")
+        return dir.appendingPathComponent(path)
     }
 
     private static let dateFormatter: DateFormatter = {
@@ -36,24 +40,32 @@ struct DreamCard: View {
                 Spacer()
 
                 Menu {
+                    Button {
+                        // Rename — no-op for now
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    Button {
+                        // Add to Folder — no-op for now
+                    } label: {
+                        Label("Add to Folder", systemImage: "folder.badge.plus")
+                    }
+                    Button {
+                        // Share — no-op for now
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
                     } label: {
                         Label("Delete", systemImage: "trash")
-                    }
-                    Button {
-                        // Edit — no-op for now
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 14))
                         .foregroundStyle(.black.opacity(0.4))
                         .frame(width: 32, height: 32)
-                        .background(Color(white: 0.95))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(.black.opacity(0.05), lineWidth: 1))
+                        .reveriGlass(.circle)
                 }
             }
 
@@ -66,42 +78,22 @@ struct DreamCard: View {
                                 .resizable()
                                 .frame(width: 16, height: 16)
                             Text(emotion.displayName)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(emotion.color)
                         }
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .frame(height: 24)
                         .background(emotion.color.opacity(0.15))
                         .clipShape(Capsule())
                     }
                 }
+                .padding(.top, -6)
             }
 
-            // Content
-            if hasAudio {
-                HStack(spacing: 10) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
-                        .background(theme.accent)
-                        .clipShape(Circle())
-
-                    HStack(spacing: 2) {
-                        ForEach(0..<20, id: \.self) { _ in
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(.black.opacity(0.15))
-                                .frame(width: 2, height: .random(in: 6...18))
-                        }
-                    }
-
-                    Spacer()
-
-                    Text("0:00")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.black.opacity(0.35))
-                }
+            // Audio waveform player
+            if let audioURL {
+                DreamCardPlayer(audioURL: audioURL)
             }
 
             if !dream.text.isEmpty {
@@ -118,10 +110,11 @@ struct DreamCard: View {
 
             // Date row
             HStack(spacing: 4) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 12))
-                Text(Self.dateFormatter.string(from: dream.createdAt).lowercased())
-                    .font(.system(size: 12, weight: .medium))
+                Image("CalendarSmallIcon")
+                    .resizable()
+                    .frame(width: 16, height: 16)
+                Text(Self.dateFormatter.string(from: dream.createdAt))
+                    .font(.system(size: 13))
             }
             .foregroundStyle(.black.opacity(0.35))
         }
@@ -132,6 +125,10 @@ struct DreamCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .stroke(.black.opacity(0.1), lineWidth: 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 24))
+        .onTapGesture {
+            onTap()
+        }
         .confirmationDialog("Удалить сон?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Удалить", role: .destructive) {
                 modelContext.delete(dream)
