@@ -81,13 +81,13 @@ struct JournalHeader: View {
                 }
             }
 
-            // Bottom row: title + filters
+            // Bottom row: title + filters/actions (fixed 42pt to match emotion circles)
             HStack(spacing: 24) {
+                Text("My Dreams")
+                    .font(.title.weight(.bold))
+                    .foregroundStyle(.white)
+                    .fixedSize()
                 if isFoldersTab {
-                    Text("Folders")
-                        .font(.title.weight(.bold))
-                        .foregroundStyle(.white)
-                        .fixedSize()
                     Spacer(minLength: 0)
                     Button {
                         // TODO: create new folder
@@ -98,21 +98,18 @@ struct JournalHeader: View {
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 18, height: 18)
                             Text("New Folder")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.system(size: 15, weight: .medium))
                         }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .reveriGlass(.capsule, interactive: false)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.horizontal, 14)
+                        .frame(height: 42)
+                        .reveriGlass(.capsule)
                     }
                 } else {
-                    Text("My Dreams")
-                        .font(.title.weight(.bold))
-                        .foregroundStyle(.white)
-                        .fixedSize()
                     EmotionFilterBar(selectedEmotion: $selectedEmotion, isExpanded: $isEmotionsExpanded)
                 }
             }
+            .frame(height: 42)
         }
         .padding(.horizontal, 20)
         .padding(.top, 68)

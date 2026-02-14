@@ -11,24 +11,33 @@ struct EmotionFilterBar: View {
     private let expandedSpacing: CGFloat = 6
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: isExpanded ? expandedSpacing : -collapsedOverlap) {
-                ForEach(Array(emotionOrder.enumerated()), id: \.element.id) { index, emotion in
-                    emotionCircle(emotion)
-                        .zIndex(isExpanded ? 0 : Double(emotionOrder.count - index))
-                        .onTapGesture {
-                            if isExpanded {
-                                selectEmotion(emotion)
-                            } else {
-                                isExpanded = true
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: isExpanded ? expandedSpacing : -collapsedOverlap) {
+                    ForEach(Array(emotionOrder.enumerated()), id: \.element.id) { index, emotion in
+                        emotionCircle(emotion)
+                            .id(emotion.id)
+                            .zIndex(isExpanded ? 0 : Double(emotionOrder.count - index))
+                            .onTapGesture {
+                                if isExpanded {
+                                    selectEmotion(emotion)
+                                } else {
+                                    isExpanded = true
+                                }
                             }
-                        }
+                    }
+                }
+                .padding(.trailing, isExpanded ? 20 : 0)
+            }
+            .scrollDisabled(!isExpanded)
+            .scrollClipDisabled()
+            .contentMargins(.leading, 0)
+            .onChange(of: isExpanded) { _, newValue in
+                if !newValue {
+                    proxy.scrollTo(emotionOrder.first?.id, anchor: .leading)
                 }
             }
-            .padding(.trailing, isExpanded ? 20 : 0)
         }
-        .scrollDisabled(!isExpanded)
-        .contentMargins(.leading, 0)
         .contentShape(Rectangle())
         .onTapGesture {
             if !isExpanded {
