@@ -3,6 +3,9 @@ import SwiftUI
 struct JournalHeader: View {
     @Binding var searchText: String
     @Binding var selectedEmotion: DreamEmotion?
+    @Binding var selectedTimeRange: JournalViewModel.TimeRange
+    var isFoldersTab: Bool
+    @State private var isEmotionsExpanded = false
     @AppStorage("speechRecognitionLocale") private var selectedLocaleId: String = SpeechLocale.defaultLocale.identifier
     @Environment(\.theme) private var theme
 
@@ -12,7 +15,7 @@ struct JournalHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // Profile + Search bar
+            // Profile + Search bar + Calendar
             GlassEffectContainer(spacing: 12) {
                 HStack(spacing: 12) {
                     // Profile button with locale picker
@@ -33,7 +36,7 @@ struct JournalHeader: View {
                         Image(systemName: "person.fill")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundStyle(.white.opacity(0.9))
-                            .frame(width: 42, height: 42)
+                            .frame(width: 44, height: 44)
                             .reveriGlass(.circle)
                     }
 
@@ -48,23 +51,67 @@ struct JournalHeader: View {
                                 .font(.system(size: 17, weight: .medium))
                         }
                         .foregroundStyle(.white.opacity(0.7))
-                        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         .padding(.leading, 14)
                         .reveriGlass(.capsule)
+                    }
+
+                    // Calendar filter button
+                    Menu {
+                        ForEach(JournalViewModel.TimeRange.allCases, id: \.self) { range in
+                            Button {
+                                selectedTimeRange = range
+                            } label: {
+                                HStack {
+                                    Text(range.rawValue)
+                                    if range == selectedTimeRange {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Image("CalendarIcon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 22, height: 22)
+                            .frame(width: 44, height: 44)
+                            .reveriGlass(.circle)
                     }
                 }
             }
 
-            // Title + Emotion filters
-            HStack {
-                Text("My Dreams")
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(.white)
-                    .fixedSize()
-
-                Spacer(minLength: 24)
-
-                EmotionFilterBar(selectedEmotion: $selectedEmotion)
+            // Bottom row: title + filters
+            HStack(spacing: 24) {
+                if isFoldersTab {
+                    Text("Folders")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(.white)
+                        .fixedSize()
+                    Spacer(minLength: 0)
+                    Button {
+                        // TODO: create new folder
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image("FolderAddIcon")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 18, height: 18)
+                            Text("New Folder")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .reveriGlass(.capsule, interactive: false)
+                    }
+                } else {
+                    Text("My Dreams")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(.white)
+                        .fixedSize()
+                    EmotionFilterBar(selectedEmotion: $selectedEmotion, isExpanded: $isEmotionsExpanded)
+                }
             }
         }
         .padding(.horizontal, 20)

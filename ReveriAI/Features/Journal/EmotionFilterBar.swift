@@ -2,72 +2,53 @@ import SwiftUI
 
 struct EmotionFilterBar: View {
     @Binding var selectedEmotion: DreamEmotion?
+    @Binding var isExpanded: Bool
     @Environment(\.theme) private var theme
-    @State private var isExpanded = false
-    /// Persistent dynamic order — most recently selected bubbles to front
     @State private var emotionOrder: [DreamEmotion] = DreamEmotion.allCases
 
     private let circleSize: CGFloat = 42
-    private let collapsedSpacing: CGFloat = -14
-    private let expandedSpacing: CGFloat = 4
-
-    /// Fixed collapsed width so layout doesn't shift
-    private var collapsedWidth: CGFloat {
-        let count = CGFloat(DreamEmotion.allCases.count)
-        return circleSize + (count - 1) * (circleSize + collapsedSpacing)
-    }
+    private let collapsedOverlap: CGFloat = 16
+    private let expandedSpacing: CGFloat = 6
 
     var body: some View {
-        Group {
-            if isExpanded {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: expandedSpacing) {
-                        ForEach(emotionOrder) { emotion in
-                            emotionCircle(emotion)
-                                .id(emotion)
-                                .onTapGesture {
-                                    selectEmotion(emotion)
-                                }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: isExpanded ? expandedSpacing : -collapsedOverlap) {
+                ForEach(Array(emotionOrder.enumerated()), id: \.element.id) { index, emotion in
+                    emotionCircle(emotion)
+                        .zIndex(isExpanded ? 0 : Double(emotionOrder.count - index))
+                        .onTapGesture {
+                            if isExpanded {
+                                selectEmotion(emotion)
+                            } else {
+                                isExpanded = true
+                            }
                         }
-                    }
                 }
-                .transition(.blurReplace)
-            } else {
-                HStack(spacing: collapsedSpacing) {
-                    ForEach(Array(emotionOrder.enumerated()), id: \.element.id) { index, emotion in
-                        emotionCircle(emotion)
-                            .id(emotion)
-                            .zIndex(Double(emotionOrder.count - index))
-                    }
-                }
-                .onTapGesture {
-                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                        isExpanded = true
-                    }
-                }
-                .transition(.blurReplace)
+            }
+            .padding(.trailing, isExpanded ? 20 : 0)
+        }
+        .scrollDisabled(!isExpanded)
+        .contentMargins(.leading, 0)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isExpanded {
+                isExpanded = true
             }
         }
-        .frame(width: collapsedWidth, alignment: .trailing)
-        .mask(
-            HStack(spacing: 0) {
-                Rectangle()
-                Rectangle().frame(width: 40).padding(.trailing, -40)
-            }
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: circleSize)
+        .animation(.spring(duration: 0.4, bounce: 0.15), value: isExpanded)
     }
 
     private func selectEmotion(_ emotion: DreamEmotion) {
-        withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
-            if selectedEmotion == emotion {
-                selectedEmotion = nil
-            } else {
-                selectedEmotion = emotion
-                emotionOrder.removeAll { $0 == emotion }
-                emotionOrder.insert(emotion, at: 0)
-            }
-            isExpanded = false
+        if selectedEmotion == emotion {
+            selectedEmotion = nil
+        } else {
+            selectedEmotion = emotion
+            emotionOrder.removeAll { $0 == emotion }
+            emotionOrder.insert(emotion, at: 0)
         }
+        isExpanded = false
     }
 
     private func emotionCircle(_ emotion: DreamEmotion) -> some View {
@@ -75,29 +56,39 @@ struct EmotionFilterBar: View {
         let isDimmed = selectedEmotion != nil && !isSelected
 
         return ZStack {
-            // Solid dark base — normalizes glass appearance regardless of background
             Circle()
-                .fill(Color(white: 0.15))
+                .fill(.ultraThinMaterial)
                 .frame(width: circleSize, height: circleSize)
 
             Image(emotion.iconName)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 30, height: 30)
-                .frame(width: circleSize, height: circleSize)
-                .background {
-                    if isSelected {
-                        Circle().fill(emotion.color.opacity(0.25))
-                    }
-                }
-                .reveriGlass(.circle, interactive: false)
+
+            if isSelected {
+                Circle()
+                    .fill(emotion.color.opacity(0.25))
+                    .frame(width: circleSize, height: circleSize)
+            }
 
             Circle()
                 .fill(.black.opacity(isDimmed ? 0.55 : 0))
                 .frame(width: circleSize, height: circleSize)
                 .allowsHitTesting(false)
                 .id("dim-\(emotion.id)-\(selectedEmotion?.id ?? "none")")
+
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.4), .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.75
+                )
+                .frame(width: circleSize - 0.75, height: circleSize - 0.75)
         }
+        .frame(width: circleSize, height: circleSize)
         .clipShape(Circle())
     }
 }
