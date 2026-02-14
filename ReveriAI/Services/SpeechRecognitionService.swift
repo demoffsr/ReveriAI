@@ -101,8 +101,9 @@ final class SpeechRecognitionService {
     /// Commits current volatile text into accumulatedFinalText so it's preserved on resume.
     func pauseTranscription() {
         guard !partialText.isEmpty else { return }
+        let punctuated = Self.punctuateSegment(partialText)
         let separator = accumulatedFinalText.isEmpty ? "" : " "
-        accumulatedFinalText += separator + partialText
+        accumulatedFinalText += separator + punctuated
         stableText = accumulatedFinalText
         partialText = ""
         latestText = ""
@@ -266,10 +267,11 @@ final class SpeechRecognitionService {
                         guard !text.isEmpty else { return }
 
                         // ALWAYS APPEND — never replace, text can never be lost
+                        let punctuated = Self.punctuateSegment(text)
                         if self.accumulatedFinalText.isEmpty {
-                            self.accumulatedFinalText = text
+                            self.accumulatedFinalText = punctuated
                         } else {
-                            self.accumulatedFinalText += " " + text
+                            self.accumulatedFinalText += " " + punctuated
                         }
                         self.partialText = ""
                         self.stableText = self.accumulatedFinalText
@@ -400,6 +402,7 @@ final class SpeechRecognitionService {
     ) async -> SFSessionResult {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
+        request.addsPunctuation = true
         if recognizer.supportsOnDeviceRecognition {
             request.requiresOnDeviceRecognition = true
         }
@@ -455,12 +458,14 @@ final class SpeechRecognitionService {
                 let textShrunk = sessionText.count * 2 < lastSessionText.count
 
                 if !firstCharSame || textShrunk {
-                    // SF started new utterance — commit previous text
+                    // SF started new utterance — commit previous text with punctuation
                     await MainActor.run {
+                        let punctuated = Self.punctuateSegment(lastSessionText)
                         if baseText.isEmpty {
-                            baseText = lastSessionText
+                            baseText = punctuated
                         } else {
-                            baseText += " " + Self.lowercaseFirst(lastSessionText)
+                            let next = Self.endsWithSentencePunctuation(baseText) ? punctuated : Self.lowercaseFirst(punctuated)
+                            baseText += " " + next
                         }
                         self.accumulatedFinalText = baseText
                         self.partialText = ""
@@ -471,24 +476,33 @@ final class SpeechRecognitionService {
             lastSessionText = sessionText
 
             await MainActor.run {
-                // Lowercase first char when appending to existing text (natural flow)
-                let fullText: String
-                if baseText.isEmpty {
-                    fullText = sessionText
-                } else {
-                    fullText = baseText + " " + Self.lowercaseFirst(sessionText)
-                }
-
                 if result.isFinal {
-                    self.accumulatedFinalText = fullText
-                    baseText = fullText
+                    // Punctuate the finalized session text
+                    let punctuated = Self.punctuateSegment(sessionText)
+                    let finalText: String
+                    if baseText.isEmpty {
+                        finalText = punctuated
+                    } else {
+                        let next = Self.endsWithSentencePunctuation(baseText) ? punctuated : Self.lowercaseFirst(punctuated)
+                        finalText = baseText + " " + next
+                    }
+                    self.accumulatedFinalText = finalText
+                    baseText = finalText
                     lastSessionText = ""
                     self.partialText = ""
-                    self.stableText = fullText
+                    self.stableText = finalText
                     self.latestText = ""
-                    self.transcribedText = fullText
-                    print("🟢 SF FINAL → transcribed=[\(fullText)]")
+                    self.transcribedText = finalText
+                    print("🟢 SF FINAL → transcribed=[\(finalText)]")
                 } else {
+                    // Volatile — no punctuation, live captions only
+                    let fullText: String
+                    if baseText.isEmpty {
+                        fullText = sessionText
+                    } else {
+                        let next = Self.endsWithSentencePunctuation(baseText) ? sessionText : Self.lowercaseFirst(sessionText)
+                        fullText = baseText + " " + next
+                    }
                     self.partialText = sessionText
                     self.updateCaptionsFromText(fullText)
                     self.transcribedText = fullText
@@ -512,6 +526,63 @@ final class SpeechRecognitionService {
     private static func lowercaseFirst(_ text: String) -> String {
         guard let first = text.first, first.isUppercase else { return text }
         return text.prefix(1).lowercased() + text.dropFirst()
+    }
+
+    /// Whether the next segment should keep its capital letter (previous text ends with sentence punctuation).
+    private static func endsWithSentencePunctuation(_ text: String) -> Bool {
+        guard let last = text.last else { return false }
+        return ".?!".contains(last)
+    }
+
+    /// Adds ending punctuation to a committed speech segment.
+    /// Skips Russian filler words to find the first meaningful word, then checks for question patterns.
+    /// No-op if text already ends with punctuation (e.g. English with addsPunctuation).
+    private static func punctuateSegment(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return text }
+
+        // Already has ending punctuation (English addsPunctuation, etc.)
+        if let last = trimmed.last, ".?!…".contains(last) {
+            return text
+        }
+
+        let lower = trimmed.lowercased()
+        let words = lower.split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return text + "." }
+
+        // Question particles anywhere in text — always questions
+        if lower.contains(" ли ") || lower.hasSuffix(" ли") { return text + "?" }
+        if words.contains("неужели") || words.contains("разве") { return text + "?" }
+
+        // Skip filler words to find the first significant word
+        let fillers: Set<String> = [
+            "а", "ну", "и", "но", "да", "так", "вот", "ведь", "же",
+            "ой", "эй", "ну-ка", "слушай", "слушайте", "скажи", "скажите",
+            "well", "so", "and", "but", "oh", "hey",
+        ]
+        guard let firstSignificant = words.drop(while: { fillers.contains($0) }).first else {
+            return text + "."
+        }
+
+        // Question words — match as first significant word
+        let questionWords: Set<String> = [
+            "почему", "зачем", "откуда", "куда", "сколько",
+            "кто", "кого", "кому", "кем",
+            "что", "чего", "чему", "чем",
+            "где", "когда",
+            "какой", "какая", "какое", "какие", "каким", "каких",
+            "чей", "чья", "чьё", "чьи",
+            // English
+            "why", "how", "what", "where", "when", "who", "which",
+            "do", "does", "did", "is", "are", "was", "were",
+            "will", "can", "could", "should", "would",
+        ]
+
+        if questionWords.contains(firstSignificant) {
+            return text + "?"
+        }
+
+        return text + "."
     }
 
     /// Split text into stableText (all except last word) and latestText (last word) for gradient styling.

@@ -3,11 +3,20 @@ import SwiftUI
 struct AudioWaveformView: View {
     let isAnimating: Bool
     let level: Float // 0...1 normalized audio level
+    var isPlayingBack: Bool = false
+    var playbackProgress: CGFloat = 0 // 0...1 current playback position
+    var playbackDuration: TimeInterval = 0
+
     @Environment(\.theme) private var theme
     /// Reference-type buffer — mutations don't trigger SwiftUI state diffs
     @State private var buffer = WaveformBuffer()
     @State private var animationStartTime: TimeInterval?
     @State private var accumulatedOffset: CGFloat = 0
+    /// Total scroll distance captured when recording ends — used as 100% for playback
+    @State private var totalRecordedOffset: CGFloat = 0
+    /// Playback animation state
+    @State private var playbackAnimStartTime: TimeInterval?
+    @State private var playbackAnimStartOffset: CGFloat = 0
 
     private static let barWidth: CGFloat = 2
     private static let barSpacing: CGFloat = 3.6
@@ -17,21 +26,40 @@ struct AudioWaveformView: View {
     private static let barsPerSecond: Double = 20
     private static let scrollSpeed: CGFloat = barSlot * CGFloat(barsPerSecond)
 
-    var body: some View {
-        TimelineView(.animation(paused: !isAnimating)) { timeline in
-            let now = timeline.date.timeIntervalSinceReferenceDate
-            let elapsed = isAnimating ? now - (animationStartTime ?? now) : 0
-            let scrollOffset = accumulatedOffset + Self.scrollSpeed * CGFloat(max(0, elapsed))
+    private var isTimelinePaused: Bool {
+        !isAnimating && playbackAnimStartTime == nil
+    }
 
-            // Update buffer in TimelineView closure (not inside Canvas)
-            // so `level` is read here where Observation tracking works.
-            let _ = buffer.update(
-                scrollOffset: scrollOffset,
+    /// Compute scroll offset based on current mode (playback, review, or recording).
+    private func scrollOffset(now: TimeInterval) -> CGFloat {
+        if let pStart = playbackAnimStartTime, playbackDuration > 0, totalRecordedOffset > 0 {
+            // Playback: smooth 60fps scroll driven by timeline
+            let elapsed = now - pStart
+            let speed = totalRecordedOffset / CGFloat(playbackDuration)
+            return min(playbackAnimStartOffset + speed * CGFloat(elapsed), totalRecordedOffset)
+        } else if totalRecordedOffset > 0 && !isAnimating {
+            // Review mode (paused or before play): static position from progress
+            return totalRecordedOffset * playbackProgress
+        } else {
+            // Recording or idle
+            let elapsed = isAnimating ? now - (animationStartTime ?? now) : 0
+            return accumulatedOffset + Self.scrollSpeed * CGFloat(max(0, elapsed))
+        }
+    }
+
+    var body: some View {
+        TimelineView(.animation(paused: isTimelinePaused)) { timeline in
+            let now = timeline.date.timeIntervalSinceReferenceDate
+            let offset = scrollOffset(now: now)
+
+            // Only generate new bars during recording (ternary avoids ViewBuilder ambiguity)
+            let _ = isAnimating ? buffer.update(
+                scrollOffset: offset,
                 barSlot: Self.barSlot,
                 currentLevel: level,
                 minHeight: Self.minHeight,
                 maxHeight: Self.maxHeight
-            )
+            ) : false
 
             Canvas { context, size in
                 let bars = buffer.bars
@@ -41,7 +69,7 @@ struct AudioWaveformView: View {
                 let accentColor = theme.accent
 
                 // Grows LEFT → RIGHT. Once full, scroll so newest stays at right edge.
-                let windowStart = max(0, scrollOffset - size.width)
+                let windowStart = max(0, offset - size.width)
 
                 for i in 0..<count {
                     let waveformX = CGFloat(i + buffer.trimOffset) * Self.barSlot
@@ -64,6 +92,23 @@ struct AudioWaveformView: View {
                 let elapsed = Date.now.timeIntervalSinceReferenceDate - start
                 accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
                 animationStartTime = nil
+                totalRecordedOffset = accumulatedOffset
+            }
+        }
+        .onChange(of: isPlayingBack) { _, playing in
+            if playing {
+                // Start/resume: sync with external playback position
+                playbackAnimStartOffset = totalRecordedOffset * playbackProgress
+                playbackAnimStartTime = Date.now.timeIntervalSinceReferenceDate
+            } else if let start = playbackAnimStartTime {
+                // Pause: capture current animated position
+                let elapsed = Date.now.timeIntervalSinceReferenceDate - start
+                let speed = playbackDuration > 0 ? totalRecordedOffset / CGFloat(playbackDuration) : 0
+                playbackAnimStartOffset = min(
+                    playbackAnimStartOffset + speed * CGFloat(elapsed),
+                    totalRecordedOffset
+                )
+                playbackAnimStartTime = nil
             }
         }
         .onAppear {
@@ -122,13 +167,6 @@ private final class WaveformBuffer {
             }
             lastBarIndex = currentBarIndex
             added = true
-
-            // Trim old bars that scrolled off-screen
-            if bars.count > 500 {
-                let excess = bars.count - 500
-                bars.removeFirst(excess)
-                trimOffset += excess
-            }
         }
         return added
     }

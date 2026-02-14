@@ -296,6 +296,7 @@ struct RecordView: View {
             if isRecording || isReviewing {
                 LiveWaveformView(
                     isAnimating: isRecording && !isPaused,
+                    isReviewing: isReviewing,
                     audioRecorder: audioRecorder
                 )
                 .padding(.bottom, 8)
@@ -495,14 +496,21 @@ struct RecordView: View {
 
 /// Wrapper that observes `audioRecorder.currentLevel` in its own body,
 /// preventing RecordView from re-evaluating ~43 times/sec.
+/// Also isolates playback progress observation during review.
 private struct LiveWaveformView: View {
     let isAnimating: Bool
+    let isReviewing: Bool
     var audioRecorder: AudioRecorder
 
     var body: some View {
         AudioWaveformView(
             isAnimating: isAnimating,
-            level: isAnimating ? audioRecorder.currentLevel : 0
+            level: isAnimating ? audioRecorder.currentLevel : 0,
+            isPlayingBack: audioRecorder.isPlaying,
+            playbackProgress: isReviewing && audioRecorder.playbackDuration > 0
+                ? CGFloat(audioRecorder.playbackCurrentTime / audioRecorder.playbackDuration)
+                : 0,
+            playbackDuration: audioRecorder.playbackDuration
         )
     }
 }
