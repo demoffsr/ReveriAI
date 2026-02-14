@@ -25,8 +25,12 @@ final class JournalViewModel {
         guard passesTime else { return false }
 
         // Emotion filter
-        if let emotion = selectedEmotion, dream.emotion != emotion {
-            return false
+        if let emotion = selectedEmotion {
+            let matchesNew = dream.emotionValues.contains(emotion.rawValue)
+            let matchesLegacy = dream.emotionRawValue == emotion.rawValue
+            if !matchesNew && !matchesLegacy {
+                return false
+            }
         }
 
         // Search filter

@@ -4,16 +4,23 @@ import SwiftData
 @Model
 final class Dream {
     var id: UUID
+    var title: String = ""
     var text: String
+    // Legacy — keep for backwards compatibility
     var emotionRawValue: String?
+    var emotionValues: [String] = []
     var createdAt: Date
     var audioFilePath: String?
     var isTranslated: Bool
 
+    var emotions: [DreamEmotion] {
+        get { emotionValues.compactMap { DreamEmotion(rawValue: $0) } }
+        set { emotionValues = newValue.map(\.rawValue) }
+    }
+
     var emotion: DreamEmotion? {
         get {
-            guard let raw = emotionRawValue else { return nil }
-            return DreamEmotion(rawValue: raw)
+            emotions.first ?? DreamEmotion(rawValue: emotionRawValue ?? "")
         }
         set {
             emotionRawValue = newValue?.rawValue
@@ -22,14 +29,17 @@ final class Dream {
 
     init(
         text: String,
-        emotion: DreamEmotion? = nil,
+        title: String = "",
+        emotions: [DreamEmotion] = [],
         createdAt: Date = .now,
         audioFilePath: String? = nil,
         isTranslated: Bool = false
     ) {
         self.id = UUID()
+        self.title = title
         self.text = text
-        self.emotionRawValue = emotion?.rawValue
+        self.emotionValues = emotions.map(\.rawValue)
+        self.emotionRawValue = emotions.first?.rawValue
         self.createdAt = createdAt
         self.audioFilePath = audioFilePath
         self.isTranslated = isTranslated

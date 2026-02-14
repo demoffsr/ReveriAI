@@ -3,30 +3,52 @@ import SwiftUI
 struct HowDidItFeelCard: View {
     let onTap: () -> Void
     let onDismiss: () -> Void
+    var showSavedState: Bool = false
+    @Environment(\.theme) private var theme
+
+    private let savedColor = Color(hex: "4CAF50")
 
     var body: some View {
-        HStack(spacing: 12) {
-            Text("How did it feel?")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.primary)
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                if showSavedState {
+                    // "Dream saved" capsule (green)
+                    Text("Dream saved")
+                        .font(.subheadline.weight(.medium))
+                        .tracking(-0.23)
+                        .foregroundStyle(savedColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(savedColor.opacity(0.1)))
+                        .reveriGlass(.capsule, interactive: false)
+                        .transition(.blurReplace)
+                } else {
+                    // "How did it feel?" capsule
+                    Button(action: onTap) {
+                        Text("How did it feel?")
+                            .font(.subheadline.weight(.medium))
+                            .tracking(-0.23)
+                            .foregroundStyle(Color.black.opacity(0.6))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                    .reveriGlass(.capsule)
+                    .transition(.blurReplace)
 
-            Spacer()
-
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(.quaternary))
+                    // Close button
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.black.opacity(0.6))
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+                    .reveriGlass(.circle)
+                    .transition(.blurReplace)
+                }
             }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
-        .padding(.horizontal, 20)
-        .onTapGesture(perform: onTap)
+        .animation(.spring(duration: 0.4), value: showSavedState)
     }
 }

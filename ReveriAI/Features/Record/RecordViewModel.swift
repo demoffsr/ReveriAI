@@ -17,9 +17,10 @@ final class RecordViewModel {
     var mode: Mode = .voice
     var state: RecordState = .idle
     var dreamText: String = ""
-    var showToast: Bool = false
-    var showHowDidItFeel: Bool = false
+    var selectedEmotions: [DreamEmotion] = []
     var savedDream: Dream?
+    var onDreamSaved: ((Dream) -> Void)?
+    var onShowHowDidItFeel: (() -> Void)?
 
     var canSave: Bool {
         !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -27,41 +28,31 @@ final class RecordViewModel {
 
     func saveDream(context: ModelContext) {
         guard canSave else { return }
-        let dream = Dream(text: dreamText.trimmingCharacters(in: .whitespacesAndNewlines))
+        let dream = Dream(text: dreamText.trimmingCharacters(in: .whitespacesAndNewlines), emotions: selectedEmotions)
         context.insert(dream)
         try? context.save()
 
         savedDream = dream
+        onDreamSaved?(dream)
         dreamText = ""
         state = .saved
-        showToast = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
-            self?.showHowDidItFeel = true
-        }
+        onShowHowDidItFeel?()
     }
 
     func saveAudioDream(audioPath: String, transcript: String = "", context: ModelContext) {
-        let dream = Dream(text: transcript, audioFilePath: audioPath)
+        let dream = Dream(text: transcript, emotions: selectedEmotions, audioFilePath: audioPath)
         context.insert(dream)
         try? context.save()
 
         savedDream = dream
+        onDreamSaved?(dream)
         state = .saved
-        showToast = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
-            self?.showHowDidItFeel = true
-        }
+        onShowHowDidItFeel?()
     }
 
     func reset() {
         state = .idle
-        showHowDidItFeel = false
+        selectedEmotions = []
         savedDream = nil
-    }
-
-    func dismissHowDidItFeel() {
-        showHowDidItFeel = false
     }
 }

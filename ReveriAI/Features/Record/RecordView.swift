@@ -20,6 +20,7 @@ struct RecordView: View {
     var speechService: SpeechRecognitionService
 
     var onDreamSaved: ((Dream) -> Void)?
+    var onShowHowDidItFeel: (() -> Void)?
 
     init(
         isRecording: Binding<Bool>,
@@ -27,7 +28,8 @@ struct RecordView: View {
         isReviewing: Binding<Bool>,
         audioRecorder: AudioRecorder,
         speechService: SpeechRecognitionService,
-        onDreamSaved: ((Dream) -> Void)? = nil
+        onDreamSaved: ((Dream) -> Void)? = nil,
+        onShowHowDidItFeel: (() -> Void)? = nil
     ) {
         self._isRecording = isRecording
         self._isPaused = isPaused
@@ -35,6 +37,7 @@ struct RecordView: View {
         self.audioRecorder = audioRecorder
         self.speechService = speechService
         self.onDreamSaved = onDreamSaved
+        self.onShowHowDidItFeel = onShowHowDidItFeel
     }
 
     private let cloudHeight: CGFloat = 159
@@ -79,26 +82,11 @@ struct RecordView: View {
                     .animation(.easeOut(duration: 0.3), value: isTextFocused)
             }
             .ignoresSafeArea(edges: .top)
-
-            // "How did it feel?" card
-            if viewModel.showHowDidItFeel {
-                HowDidItFeelCard(
-                    onTap: {
-                        if let dream = viewModel.savedDream {
-                            onDreamSaved?(dream)
-                        }
-                        viewModel.dismissHowDidItFeel()
-                    },
-                    onDismiss: {
-                        viewModel.dismissHowDidItFeel()
-                    }
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .padding(.bottom, 80)
-            }
         }
-        .toast(isPresented: $viewModel.showToast, message: "Dream saved")
-        .animation(.spring(duration: 0.4), value: viewModel.showHowDidItFeel)
+        .onAppear {
+            viewModel.onDreamSaved = onDreamSaved
+            viewModel.onShowHowDidItFeel = onShowHowDidItFeel
+        }
         .onChange(of: isRecording) { _, newValue in
             if !newValue { handleStop() }
         }

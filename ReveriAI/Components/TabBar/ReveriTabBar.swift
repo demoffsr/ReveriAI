@@ -13,12 +13,15 @@ struct ReveriTabBar: View {
     var isPaused: Bool = false
     var isReviewing: Bool = false
     var isPlayingPreview: Bool = false
+    var isSavingFeelings: Bool = false
+    var canSaveFeelings: Bool = false
     var onStop: (() -> Void)?
     var onTogglePause: (() -> Void)?
     var onTogglePreview: (() -> Void)?
     var onDelete: (() -> Void)?
     var onSkipBack: (() -> Void)?
     var onSkipForward: (() -> Void)?
+    var onSaveFeelings: (() -> Void)?
 
     var body: some View {
         Group {
@@ -27,6 +30,9 @@ struct ReveriTabBar: View {
                     .transition(.blurReplace)
             } else if isReviewing {
                 reviewControls
+                    .transition(.blurReplace)
+            } else if isSavingFeelings {
+                savingFeelingsControls
                     .transition(.blurReplace)
             } else {
                 normalTabs
@@ -254,6 +260,32 @@ struct ReveriTabBar: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var savingFeelingsControls: some View {
+        // Save feelings button only — no journal icon during emotion selection
+        Button {
+            onSaveFeelings?()
+        } label: {
+            HStack(spacing: 6) {
+                Image("CheckmarkBigIcon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                Text("Save feelings")
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(-0.08)
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(canSaveFeelings ? theme.accent.opacity(0.1) : .clear)
+                )
+            .opacity(canSaveFeelings ? 1.0 : 0.4)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSaveFeelings)
     }
 
     private func handleTap(_ tab: AppTab) {
