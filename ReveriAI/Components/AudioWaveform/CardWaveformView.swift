@@ -17,12 +17,20 @@ struct CardWaveformView: View {
             let playedColor = theme.accent
             let unplayedColor = Color(hex: "C3C3C3")
 
-            // Fixed 2pt spacing, bars fill available width
-            let barSlot = Self.barWidth + 2
+            // Calculate how many bars fit, then space evenly
+            let minSpacing: CGFloat = 2
+            let barSlot = Self.barWidth + minSpacing
+            let maxBars = min(count, Int(size.width / barSlot))
+            guard maxBars > 0 else { return }
 
-            for i in 0..<count {
-                let barProgress = CGFloat(i) / CGFloat(max(count - 1, 1))
-                let canvasX = CGFloat(i) * barSlot
+            // Distribute bars evenly across full width
+            let totalBarWidth = CGFloat(maxBars) * Self.barWidth
+            let spacing = maxBars > 1 ? (size.width - totalBarWidth) / CGFloat(maxBars - 1) : 0
+            let slot = Self.barWidth + spacing
+
+            for i in 0..<maxBars {
+                let barProgress = CGFloat(i) / CGFloat(max(maxBars - 1, 1))
+                let canvasX = CGFloat(i) * slot
 
                 let height = bars[i]
                 let y = (size.height - height) / 2
