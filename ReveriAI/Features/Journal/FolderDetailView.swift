@@ -132,12 +132,18 @@ struct AddDreamsToFolderSheet: View {
     @Environment(\.theme) private var theme
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
     @State private var searchText = ""
+    @State private var cachedFilteredDreams: [Dream] = []
+    @State private var searchDebounceTask: Task<Void, Never>?
 
-    private var filteredDreams: [Dream] {
-        if searchText.isEmpty { return allDreams }
-        return allDreams.filter {
-            $0.text.localizedCaseInsensitiveContains(searchText) ||
-            $0.title.localizedCaseInsensitiveContains(searchText)
+    private func updateFilteredDreams() {
+        // allDreams is already sorted by @Query(sort: \Dream.createdAt, order: .reverse)
+        if searchText.isEmpty {
+            cachedFilteredDreams = allDreams
+        } else {
+            cachedFilteredDreams = allDreams.filter {
+                $0.text.localizedCaseInsensitiveContains(searchText) ||
+                $0.title.localizedCaseInsensitiveContains(searchText)
+            }
         }
     }
 
@@ -152,13 +158,13 @@ struct AddDreamsToFolderSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
-                if filteredDreams.isEmpty {
+                if cachedFilteredDreams.isEmpty {
                     ContentUnavailableView("No dreams", systemImage: "moon.zzz")
                         .frame(maxHeight: .infinity)
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            ForEach(filteredDreams, id: \.id) { dream in
+                            ForEach(cachedFilteredDreams, id: \.id) { dream in
                                 dreamRow(dream)
                             }
                         }
@@ -171,6 +177,20 @@ struct AddDreamsToFolderSheet: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Add Dreams")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                updateFilteredDreams()
+            }
+            .onChange(of: searchText) { _, _ in
+                searchDebounceTask?.cancel()
+                searchDebounceTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    updateFilteredDreams()
+                }
+            }
+            .onChange(of: allDreams.count) { _, _ in
+                updateFilteredDreams()
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Done") { dismiss() }

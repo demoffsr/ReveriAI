@@ -279,6 +279,73 @@ struct ReveriTabBar: View {
     }
 
     private var detailDreamControls: some View {
+        DetailDreamControlsView(
+            detailState: detailState,
+            isGeneratingImage: isGeneratingImage,
+            onGenerateImage: onGenerateImage
+        )
+    }
+
+    private var savingFeelingsControls: some View {
+        // Save feelings button only — no journal icon during emotion selection
+        Button {
+            onSaveFeelings?()
+        } label: {
+            HStack(spacing: 6) {
+                Image("CheckmarkBigIcon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                Text("Save feelings")
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(-0.08)
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(canSaveFeelings ? theme.accent.opacity(0.1) : .clear)
+                )
+            .opacity(canSaveFeelings ? 1.0 : 0.4)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSaveFeelings)
+    }
+
+    private func handleTap(_ tab: AppTab) {
+        collapseTask?.cancel()
+
+        if expandedTab == tab {
+            expandedTab = nil
+        }
+
+        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+            selectedTab = tab
+            expandedTab = tab
+        }
+
+        collapseTask = Task {
+            try? await Task.sleep(for: .seconds(0.8))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                expandedTab = nil
+            }
+        }
+    }
+}
+
+// MARK: - Detail Dream Controls Wrapper
+
+/// Isolates DetailDreamState observation to prevent ReveriTabBar rebuilds
+/// when unrelated properties (interpretationError, hasInterpretation) change.
+/// Pattern: same as LiveWaveformView for audioRecorder.currentLevel isolation.
+private struct DetailDreamControlsView: View {
+    var detailState: DetailDreamState?
+    var isGeneratingImage: Bool
+    var onGenerateImage: (() -> Void)?
+    @Environment(\.theme) private var theme
+
+    var body: some View {
         let mode = detailState?.tabBarMode ?? .generateImage
         let isGenerating = isGeneratingImage || (detailState?.isGeneratingInterpretation ?? false)
         return Group {
@@ -340,53 +407,6 @@ struct ReveriTabBar: View {
                 .opacity(isGenerating ? 0.6 : 1.0)
             case .none:
                 EmptyView()
-            }
-        }
-    }
-
-    private var savingFeelingsControls: some View {
-        // Save feelings button only — no journal icon during emotion selection
-        Button {
-            onSaveFeelings?()
-        } label: {
-            HStack(spacing: 6) {
-                Image("CheckmarkBigIcon")
-                    .renderingMode(.original)
-                    .frame(width: 22, height: 22)
-                Text("Save feelings")
-                    .font(.system(size: 13, weight: .medium))
-                    .tracking(-0.08)
-                    .foregroundStyle(theme.accent)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(canSaveFeelings ? theme.accent.opacity(0.1) : .clear)
-                )
-            .opacity(canSaveFeelings ? 1.0 : 0.4)
-        }
-        .buttonStyle(.plain)
-        .disabled(!canSaveFeelings)
-    }
-
-    private func handleTap(_ tab: AppTab) {
-        collapseTask?.cancel()
-
-        if expandedTab == tab {
-            expandedTab = nil
-        }
-
-        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-            selectedTab = tab
-            expandedTab = tab
-        }
-
-        collapseTask = Task {
-            try? await Task.sleep(for: .seconds(0.8))
-            guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
-                expandedTab = nil
             }
         }
     }

@@ -147,6 +147,13 @@ struct DreamDetailView: View {
             }
             updateTabBarMode()
         }
+        .onChange(of: dream.interpretation) { _, newInterpretation in
+            if let text = newInterpretation {
+                cachedInterpretationSections = parseInterpretation(text)
+            }
+            detailState.hasInterpretation = newInterpretation != nil
+            updateTabBarMode()
+        }
         .fullScreenCover(isPresented: $showFullscreenImage) {
             fullscreenImageView
         }
@@ -386,16 +393,14 @@ struct DreamDetailView: View {
 
     private func boldInlineText(_ text: String) -> Text {
         // Parse **bold** markers into styled Text using string interpolation (iOS 26+)
+        // Use reduce instead of for-loop to avoid N intermediate Text allocations
         let segments = parseBoldSegments(text)
-        var result = Text("")
-        for segment in segments {
-            if segment.isBold {
-                result = Text("\(result)\(Text(segment.text).font(.system(size: 15, weight: .semibold)).foregroundStyle(.black))")
-            } else {
-                result = Text("\(result)\(Text(segment.text).font(.subheadline).foregroundStyle(.black.opacity(0.8)))")
-            }
+        return segments.reduce(Text("")) { accumulated, segment in
+            let segmentText = segment.isBold
+                ? Text(segment.text).font(.system(size: 15, weight: .semibold)).foregroundStyle(.black)
+                : Text(segment.text).font(.subheadline).foregroundStyle(.black.opacity(0.8))
+            return Text("\(accumulated)\(segmentText)")
         }
-        return result
     }
 
     private struct TextSegment {

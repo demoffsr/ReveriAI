@@ -16,6 +16,7 @@ struct RootView: View {
     @State private var showDreamSaved = false
     @State private var pendingEmotions: Set<DreamEmotion> = []
     @State private var autoDismissTask: Task<Void, Never>?
+    @State private var dismissTask: Task<Void, Never>?
     @State private var isInDetailDreamTab = false
     @State private var detailDreamHasImage = false
     @State private var detailDreamIsGenerating = false
@@ -95,14 +96,13 @@ struct RootView: View {
                 .padding(.bottom, 100)
             }
 
-            // Custom tab bar
-            ReveriTabBar(
+            // Custom tab bar (isolated audio state observation)
+            TabBarWithAudioState(
                 selectedTab: $selectedTab,
                 emotionFilter: selectedEmotionFilter,
                 isRecording: isRecording,
                 isPaused: isPaused,
                 isReviewing: isReviewing,
-                isPlayingPreview: audioRecorder.isPlaying,
                 isSavingFeelings: showEmotionGrid,
                 canSaveFeelings: !pendingEmotions.isEmpty,
                 onStop: {
@@ -139,7 +139,8 @@ struct RootView: View {
                 onGenerateImage: {
                     detailDreamGenerateTrigger.toggle()
                 },
-                detailState: detailDreamState
+                detailState: detailDreamState,
+                audioRecorder: audioRecorder  // Reference only — NO property read in RootView
             )
         }
         .ignoresSafeArea(.keyboard)
@@ -158,6 +159,7 @@ struct RootView: View {
                     showHowDidItFeel = false
                 }
                 autoDismissTask?.cancel()
+                dismissTask?.cancel()
             }
         }
     }
@@ -192,16 +194,71 @@ struct RootView: View {
     }
 
     private func dismissWithSaved() {
+        dismissTask?.cancel()
         withAnimation(.spring(duration: 0.4)) {
             showDreamSaved = true
         }
-        Task {
+        dismissTask = Task {
             try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
             withAnimation(.easeOut(duration: 0.35)) {
                 showHowDidItFeel = false
             }
             try? await Task.sleep(for: .seconds(0.4))
+            guard !Task.isCancelled else { return }
             showDreamSaved = false
         }
+    }
+}
+
+// MARK: - TabBarWithAudioState (isolates audioRecorder.isPlaying observation)
+
+/// Wrapper that observes `audioRecorder.isPlaying` in its own body,
+/// preventing RootView from re-evaluating ~43 times/sec.
+private struct TabBarWithAudioState: View {
+    @Binding var selectedTab: AppTab
+    let emotionFilter: DreamEmotion?
+    let isRecording: Bool
+    let isPaused: Bool
+    let isReviewing: Bool
+    let isSavingFeelings: Bool
+    let canSaveFeelings: Bool
+    let onStop: () -> Void
+    let onTogglePause: () -> Void
+    let onTogglePreview: () -> Void
+    let onDelete: () -> Void
+    let onSkipBack: () -> Void
+    let onSkipForward: () -> Void
+    let onSaveFeelings: () -> Void
+    let isInDetailDreamTab: Bool
+    let hasGeneratedImage: Bool
+    let isGeneratingImage: Bool
+    let onGenerateImage: () -> Void
+    let detailState: DetailDreamState
+    var audioRecorder: AudioRecorder  // Reference only — read .isPlaying inside body
+
+    var body: some View {
+        ReveriTabBar(
+            selectedTab: $selectedTab,
+            emotionFilter: emotionFilter,
+            isRecording: isRecording,
+            isPaused: isPaused,
+            isReviewing: isReviewing,
+            isPlayingPreview: audioRecorder.isPlaying,  // ← Observation happens HERE, not in RootView
+            isSavingFeelings: isSavingFeelings,
+            canSaveFeelings: canSaveFeelings,
+            onStop: onStop,
+            onTogglePause: onTogglePause,
+            onTogglePreview: onTogglePreview,
+            onDelete: onDelete,
+            onSkipBack: onSkipBack,
+            onSkipForward: onSkipForward,
+            onSaveFeelings: onSaveFeelings,
+            isInDetailDreamTab: isInDetailDreamTab,
+            hasGeneratedImage: hasGeneratedImage,
+            isGeneratingImage: isGeneratingImage,
+            onGenerateImage: onGenerateImage,
+            detailState: detailState
+        )
     }
 }

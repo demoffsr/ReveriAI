@@ -44,5 +44,6 @@ struct DreamHeader: View {
             // Stars
             StarsCanvas()
         }
+        .drawingGroup()
     }
 }
