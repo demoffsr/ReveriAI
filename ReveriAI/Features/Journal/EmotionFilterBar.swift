@@ -14,7 +14,8 @@ struct EmotionFilterBar: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: isExpanded ? expandedSpacing : -collapsedOverlap) {
-                    ForEach(Array(emotionOrder.enumerated()), id: \.element.id) { index, emotion in
+                    ForEach(emotionOrder.indices, id: \.self) { index in
+                        let emotion = emotionOrder[index]
                         emotionCircle(emotion)
                             .id(emotion.id)
                             .zIndex(isExpanded ? 0 : Double(emotionOrder.count - index))

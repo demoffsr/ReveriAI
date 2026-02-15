@@ -12,8 +12,13 @@ final class JournalViewModel {
     var selectedTimeRange: TimeRange = .allTime
     var selectedEmotion: DreamEmotion?
     var searchText: String = ""
+    private(set) var filteredDreams: [Dream] = []
 
-    func matches(_ dream: Dream) -> Bool {
+    func updateFilters(allDreams: [Dream]) {
+        filteredDreams = allDreams.filter { matches($0) }
+    }
+
+    private func matches(_ dream: Dream) -> Bool {
         // Time range filter
         let passesTime: Bool = switch selectedTimeRange {
         case .today: dream.createdAt.isToday
@@ -35,8 +40,7 @@ final class JournalViewModel {
 
         // Search filter
         if !searchText.isEmpty {
-            let lowered = searchText.lowercased()
-            if !dream.text.lowercased().contains(lowered) {
+            if !dream.text.localizedCaseInsensitiveContains(searchText) {
                 return false
             }
         }

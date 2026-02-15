@@ -31,7 +31,7 @@ struct DreamCardPlayer: View {
             )
         }
         .task {
-            let analyzed = await AudioFileAnalyzer.analyzeBars(url: audioURL)
+            let analyzed = await AudioAnalysisCache.shared.bars(for: audioURL)
             bars = analyzed.isEmpty ? AudioFileAnalyzer.placeholderBars() : analyzed
         }
         .onDisappear {
@@ -129,6 +129,27 @@ private final class CardAudioPlayer: NSObject, AVAudioPlayerDelegate {
             self?.stopTimer()
             self?.onFinish()
         }
+    }
+}
+
+// MARK: - AudioAnalysisCache
+
+@MainActor
+final class AudioAnalysisCache {
+    static let shared = AudioAnalysisCache()
+    private var cache: [String: [CGFloat]] = [:]
+    private var inFlight: [String: Task<[CGFloat], Never>] = [:]
+
+    func bars(for url: URL) async -> [CGFloat] {
+        let key = url.path
+        if let cached = cache[key] { return cached }
+        if let existing = inFlight[key] { return await existing.value }
+        let task = Task { await AudioFileAnalyzer.analyzeBars(url: url) }
+        inFlight[key] = task
+        let result = await task.value
+        inFlight[key] = nil
+        if !result.isEmpty { cache[key] = result }
+        return result
     }
 }
 

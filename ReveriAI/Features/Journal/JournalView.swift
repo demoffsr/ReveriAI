@@ -15,10 +15,6 @@ struct JournalView: View {
     @State private var selectedDream: Dream?
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
 
-    private var filteredDreams: [Dream] {
-        allDreams.filter { viewModel.matches($0) }
-    }
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -45,12 +41,12 @@ struct JournalView: View {
 
                 // Content based on selected tab
                 if selectedTab == .dreams {
-                    if filteredDreams.isEmpty {
+                    if viewModel.filteredDreams.isEmpty {
                         EmptyJournalView()
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 14) {
-                                ForEach(filteredDreams, id: \.id) { dream in
+                                ForEach(viewModel.filteredDreams, id: \.id) { dream in
                                     DreamCard(dream: dream) {
                                         selectedDream = dream
                                     }
@@ -72,6 +68,21 @@ struct JournalView: View {
             .ignoresSafeArea(edges: .top)
             .navigationDestination(item: $selectedDream) { dream in
                 DreamDetailView(dream: dream)
+            }
+            .onAppear {
+                viewModel.updateFilters(allDreams: allDreams)
+            }
+            .onChange(of: allDreams) {
+                viewModel.updateFilters(allDreams: allDreams)
+            }
+            .onChange(of: viewModel.searchText) {
+                viewModel.updateFilters(allDreams: allDreams)
+            }
+            .onChange(of: viewModel.selectedEmotion) {
+                viewModel.updateFilters(allDreams: allDreams)
+            }
+            .onChange(of: viewModel.selectedTimeRange) {
+                viewModel.updateFilters(allDreams: allDreams)
             }
         }
     }
