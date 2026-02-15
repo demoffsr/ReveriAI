@@ -14,6 +14,7 @@ final class Dream {
     var imageURL: String?
     var interpretation: String?
     var isTranslated: Bool
+    var folder: DreamFolder?
 
     var emotions: [DreamEmotion] {
         get { emotionValues.compactMap { DreamEmotion(rawValue: $0) } }

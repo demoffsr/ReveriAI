@@ -11,18 +11,21 @@ struct TabBarItem: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: isExpanded ? 6 : 0) {
                 Image(isSelected ? activeIcon : inactiveIcon)
+                    .renderingMode(.template)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 26, height: 26)
+                    .foregroundStyle(isSelected ? accentColor : Color.black.opacity(0.3))
 
-                if isExpanded {
-                    Text(label)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(accentColor)
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                }
+                Text(label)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(accentColor)
+                    .fixedSize()
+                    .frame(width: isExpanded ? nil : 0, alignment: .leading)
+                    .opacity(isExpanded ? 1 : 0)
+                    .clipped()
             }
             .padding(.horizontal, isExpanded ? 16 : 12)
             .padding(.vertical, 10)

@@ -7,7 +7,7 @@ struct EmotionFilterBar: View {
     @Environment(\.theme) private var theme
 
     private let circleSize: CGFloat = 42
-    private let collapsedOverlap: CGFloat = 16
+    private let collapsedOverlap: CGFloat = 18
     private let expandedSpacing: CGFloat = 6
 
     var body: some View {

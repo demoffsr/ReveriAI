@@ -6,6 +6,7 @@ struct JournalHeader: View {
     @Binding var emotionOrder: [DreamEmotion]
     @Binding var selectedTimeRange: JournalViewModel.TimeRange
     var isFoldersTab: Bool
+    @Binding var showNewFolderAlert: Bool
     @State private var isEmotionsExpanded = false
     @AppStorage("speechRecognitionLocale") private var selectedLocaleId: String = SpeechLocale.defaultLocale.identifier
     @Environment(\.theme) private var theme
@@ -91,7 +92,7 @@ struct JournalHeader: View {
                 if isFoldersTab {
                     Spacer(minLength: 0)
                     Button {
-                        // TODO: create new folder
+                        showNewFolderAlert = true
                     } label: {
                         HStack(spacing: 6) {
                             Image("FolderAddIcon")

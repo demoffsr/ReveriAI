@@ -32,7 +32,7 @@ struct ReveriTabBar: View {
         Group {
             if isInDetailDreamTab {
                 detailDreamControls
-                    .transition(.blurReplace)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
             } else {
@@ -60,11 +60,12 @@ struct ReveriTabBar: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
-                .glassEffect(.clear, in: .capsule)
+                .reveriGlass(.capsule, interactive: false)
                 .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
                 .padding(.bottom, 8)
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isInDetailDreamTab)
     }
 
     private var normalTabs: some View {
@@ -382,9 +383,9 @@ struct ReveriTabBar: View {
         }
 
         collapseTask = Task {
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(0.8))
             guard !Task.isCancelled else { return }
-            withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
+            withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
                 expandedTab = nil
             }
         }

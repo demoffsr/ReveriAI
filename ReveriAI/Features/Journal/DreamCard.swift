@@ -7,6 +7,7 @@ struct DreamCard: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.theme) private var theme
     @State private var showDeleteConfirmation = false
+    @State private var showFolderPicker = false
 
     private var displayTitle: String {
         if !dream.title.isEmpty { return dream.title }
@@ -46,7 +47,7 @@ struct DreamCard: View {
                         Label("Rename", systemImage: "pencil")
                     }
                     Button {
-                        // Add to Folder — no-op for now
+                        showFolderPicker = true
                     } label: {
                         Label("Add to Folder", systemImage: "folder.badge.plus")
                     }
@@ -123,6 +124,9 @@ struct DreamCard: View {
                 try? modelContext.save()
             }
             Button("Отмена", role: .cancel) {}
+        }
+        .sheet(isPresented: $showFolderPicker) {
+            FolderPickerSheet(dream: dream)
         }
     }
 }
