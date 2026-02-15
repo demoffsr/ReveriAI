@@ -21,7 +21,9 @@ Xcode project (not Tuist/SPM). Simulators: iPhone 17 Pro, iPhone 17 Pro Max, iPh
 **Setup (new environment):**
 1. Create `Secrets.xcconfig` in project root with:
    ```
-   SUPABASE_PROJECT_URL = https:$(/)$(/)bvydopjjndfgbhjczyis.supabase.co
+   // xcconfig treats // as comment even mid-line, use SLASH variable
+   SLASH = /
+   SUPABASE_PROJECT_URL = https:$(SLASH)$(SLASH)bvydopjjndfgbhjczyis.supabase.co
    SUPABASE_ANON_KEY = <your-key-here>
    ```
 2. Xcconfig already linked to Debug/Release in `project.pbxproj`
@@ -32,7 +34,7 @@ Xcode project (not Tuist/SPM). Simulators: iPhone 17 Pro, iPhone 17 Pro Max, iPh
 2. Add to `ReveriAI/Info.plist`: `<key>NEW_KEY</key><string>$(NEW_KEY)</string>`
 3. Read in Swift: `Bundle.main.infoDictionary?["NEW_KEY"] as? String`
 
-**Important:** `Secrets.xcconfig` uses `$(/)` trick for URLs to avoid `//` being parsed as comment. Never commit this file (in `.gitignore`).
+**Important:** `Secrets.xcconfig` uses `SLASH = /` variable because `//` is parsed as comment even mid-line. Never commit this file (in `.gitignore`).
 
 ## Architecture
 
