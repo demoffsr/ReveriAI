@@ -8,6 +8,7 @@ struct DreamDetailView: View {
     @Binding var detailDreamHasImage: Bool
     @Binding var detailDreamIsGenerating: Bool
     @Binding var detailDreamGenerateTrigger: Bool
+    var detailState: DetailDreamState
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
@@ -83,26 +84,30 @@ struct DreamDetailView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
 
-            // Scrollable content
-            ScrollView {
-                Group {
-                    switch selectedTab {
-                    case .dream:
-                        Text(dream.text)
-                            .font(.system(size: 15))
-                            .lineSpacing(4)
-                            .tracking(-0.23)
-                            .foregroundStyle(.black.opacity(0.8))
-                    case .meaning:
-                        Text("Coming soon...")
-                            .font(.system(size: 15))
-                            .foregroundStyle(.black.opacity(0.4))
+            // Content area
+            if selectedTab == .meaning && meaningNeedsCenter {
+                meaningContent
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
+            } else {
+                ScrollView {
+                    Group {
+                        switch selectedTab {
+                        case .dream:
+                            Text(dream.text)
+                                .font(.system(size: 15))
+                                .lineSpacing(4)
+                                .tracking(-0.23)
+                                .foregroundStyle(.black.opacity(0.8))
+                        case .meaning:
+                            meaningContent
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, 100)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
-                .padding(.bottom, 100)
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
@@ -111,15 +116,29 @@ struct DreamDetailView: View {
             isInDetailDreamTab = true
             detailDreamHasImage = dream.imageURL != nil
             detailDreamIsGenerating = isGenerating
+            detailState.isActive = true
+            detailState.hasInterpretation = dream.interpretation != nil
+            updateTabBarMode()
         }
         .onDisappear {
             isInDetailDreamTab = false
+            detailState.isActive = false
+            detailState.tabBarMode = .none
         }
         .onChange(of: isGenerating) { _, newValue in
             detailDreamIsGenerating = newValue
         }
         .onChange(of: detailDreamGenerateTrigger) {
             loadQuestions()
+        }
+        .onChange(of: selectedTab) {
+            updateTabBarMode()
+        }
+        .onChange(of: detailState.interpretTrigger) {
+            generateInterpretation()
+        }
+        .onChange(of: detailState.hasInterpretation) {
+            updateTabBarMode()
         }
         .fullScreenCover(isPresented: $showFullscreenImage) {
             fullscreenImageView
@@ -255,6 +274,241 @@ struct DreamDetailView: View {
             .reveriGlass(.circle)
         }
         .padding(.horizontal, 16)
+    }
+
+    private var meaningNeedsCenter: Bool {
+        // Center when there's no scrollable interpretation text
+        dream.interpretation == nil
+    }
+
+    @ViewBuilder
+    private var meaningContent: some View {
+        if dream.text.trimmingCharacters(in: .whitespacesAndNewlines).count < 10 {
+            centeredPlaceholder {
+                Text("Add a text description of your dream for interpretation")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.black.opacity(0.4))
+                    .multilineTextAlignment(.center)
+            }
+        } else if detailState.isGeneratingInterpretation {
+            centeredPlaceholder {
+                ProgressView()
+                Text("Interpreting dream...")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+        } else if let error = detailState.interpretationError {
+            centeredPlaceholder {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.black.opacity(0.3))
+                Text(error)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button {
+                    detailState.interpretationError = nil
+                    generateInterpretation()
+                } label: {
+                    Text("Try again")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(theme.accent)
+                }
+            }
+        } else if let interpretation = dream.interpretation {
+            interpretationSections(interpretation)
+        } else {
+            centeredPlaceholder {
+                Image("EmotionJoyful")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                Text("Curious what it means?")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text("Discover the symbols\nand emotions hidden within")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private func centeredPlaceholder<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 12) {
+            content()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func interpretationSections(_ text: String) -> some View {
+        let sections = parseInterpretation(text)
+        return VStack(alignment: .leading, spacing: 20) {
+            ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+                VStack(alignment: .leading, spacing: 6) {
+                    if let title = section.title {
+                        Text(title)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.black)
+                    }
+                    styledBody(section.body)
+                }
+            }
+        }
+    }
+
+    private func styledBody(_ text: String) -> some View {
+        // Split into lines, render bullet points and bold inline
+        let lines = text.components(separatedBy: "\n")
+        return VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("•") || trimmed.hasPrefix("-") {
+                    let content = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("•")
+                            .font(.subheadline)
+                            .foregroundStyle(.black.opacity(0.8))
+                        boldInlineText(content)
+                    }
+                } else if !trimmed.isEmpty {
+                    boldInlineText(trimmed)
+                }
+            }
+        }
+    }
+
+    private func boldInlineText(_ text: String) -> Text {
+        // Parse **bold** markers into styled Text using string interpolation (iOS 26+)
+        let segments = parseBoldSegments(text)
+        var result = Text("")
+        for segment in segments {
+            if segment.isBold {
+                result = Text("\(result)\(Text(segment.text).font(.system(size: 15, weight: .semibold)).foregroundStyle(.black))")
+            } else {
+                result = Text("\(result)\(Text(segment.text).font(.subheadline).foregroundStyle(.black.opacity(0.8)))")
+            }
+        }
+        return result
+    }
+
+    private struct TextSegment {
+        let text: String
+        let isBold: Bool
+    }
+
+    private func parseBoldSegments(_ text: String) -> [TextSegment] {
+        var segments: [TextSegment] = []
+        var remaining = text[...]
+        while let starRange = remaining.range(of: "**") {
+            let before = remaining[remaining.startIndex..<starRange.lowerBound]
+            if !before.isEmpty {
+                segments.append(TextSegment(text: String(before), isBold: false))
+            }
+            remaining = remaining[starRange.upperBound...]
+            if let endRange = remaining.range(of: "**") {
+                segments.append(TextSegment(text: String(remaining[remaining.startIndex..<endRange.lowerBound]), isBold: true))
+                remaining = remaining[endRange.upperBound...]
+            } else {
+                segments.append(TextSegment(text: "**" + String(remaining), isBold: false))
+                remaining = remaining[remaining.endIndex...]
+            }
+        }
+        if !remaining.isEmpty {
+            segments.append(TextSegment(text: String(remaining), isBold: false))
+        }
+        return segments
+    }
+
+    private struct InterpretationSection {
+        var title: String?
+        var body: String
+    }
+
+    private func parseInterpretation(_ text: String) -> [InterpretationSection] {
+        // Split by numbered headers like "1. **Title**:" or "5. **Key symbols**:"
+        let lines = text.components(separatedBy: "\n")
+        var sections: [InterpretationSection] = []
+        var currentTitle: String?
+        var currentBody: [String] = []
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // Check if line starts a new numbered section
+            if let match = trimmed.range(of: #"^\d+\.\s*\*{0,2}([^*:]+?)\*{0,2}\s*:(.*)$"#, options: .regularExpression) {
+                // Save previous section
+                if currentTitle != nil || !currentBody.isEmpty {
+                    sections.append(InterpretationSection(
+                        title: currentTitle,
+                        body: currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                    ))
+                }
+                // Extract title and remainder
+                let fullMatch = String(trimmed[match])
+                // Parse out the title between the number and colon
+                if let titleMatch = fullMatch.range(of: #"\d+\.\s*\*{0,2}([^*:]+?)\*{0,2}\s*:"#, options: .regularExpression) {
+                    let captured = String(fullMatch[titleMatch])
+                    // Remove number prefix and colon suffix
+                    let cleaned = captured
+                        .replacingOccurrences(of: #"^\d+\.\s*"#, with: "", options: .regularExpression)
+                        .replacingOccurrences(of: #"\s*:$"#, with: "", options: .regularExpression)
+                        .replacingOccurrences(of: "**", with: "")
+                    currentTitle = cleaned
+                }
+                // Get text after the colon
+                let afterColon = trimmed.components(separatedBy: ":").dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespaces)
+                currentBody = afterColon.isEmpty ? [] : [afterColon]
+            } else {
+                currentBody.append(line)
+            }
+        }
+        // Don't forget last section
+        if currentTitle != nil || !currentBody.isEmpty {
+            sections.append(InterpretationSection(
+                title: currentTitle,
+                body: currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            ))
+        }
+
+        // If parsing found no sections, return entire text as one section
+        if sections.isEmpty {
+            sections.append(InterpretationSection(title: nil, body: text))
+        }
+
+        return sections
+    }
+
+    private func updateTabBarMode() {
+        guard detailState.isActive else { return }
+        switch selectedTab {
+        case .dream:
+            if dream.imageURL != nil {
+                detailState.tabBarMode = .generateImageAgain
+            } else {
+                detailState.tabBarMode = .generateImage
+            }
+        case .meaning:
+            if dream.text.trimmingCharacters(in: .whitespacesAndNewlines).count < 10 {
+                detailState.tabBarMode = .none
+            } else if dream.interpretation == nil && !detailState.isGeneratingInterpretation {
+                detailState.tabBarMode = .interpretDream
+            } else {
+                detailState.tabBarMode = .none
+            }
+        }
+    }
+
+    private func generateInterpretation() {
+        guard !detailState.isGeneratingInterpretation else { return }
+        detailState.tabBarMode = .none
+        DreamAIService.generateInterpretationInBackground(
+            dreamID: dream.persistentModelID,
+            dreamText: dream.text,
+            locale: speechLocale,
+            emotions: dream.emotions,
+            modelContainer: modelContext.container,
+            detailState: detailState
+        )
     }
 
     private func loadQuestions() {

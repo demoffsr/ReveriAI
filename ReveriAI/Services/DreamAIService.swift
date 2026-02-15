@@ -117,6 +117,66 @@ enum DreamAIService {
         }
     }
 
+    static func generateInterpretation(for dreamText: String, locale: SpeechLocale, emotions: [DreamEmotion]) async throws -> String {
+        guard dreamText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 10 else {
+            throw Error.emptyText
+        }
+
+        struct RequestBody: Encodable {
+            let dreamText: String
+            let locale: String
+            let emotions: [String]
+        }
+
+        struct ResponseBody: Decodable {
+            let interpretation: String
+        }
+
+        let response: ResponseBody = try await SupabaseService.client.functions.invoke(
+            "generate-dream-interpretation",
+            options: .init(body: RequestBody(
+                dreamText: dreamText,
+                locale: locale.rawValue,
+                emotions: emotions.map(\.rawValue)
+            ))
+        )
+
+        return response.interpretation
+    }
+
+    static func generateInterpretationInBackground(
+        dreamID: PersistentIdentifier,
+        dreamText: String,
+        locale: SpeechLocale,
+        emotions: [DreamEmotion],
+        modelContainer: ModelContainer,
+        detailState: DetailDreamState
+    ) {
+        guard !detailState.isGeneratingInterpretation else { return }
+        Task { @MainActor in
+            detailState.isGeneratingInterpretation = true
+            detailState.interpretationError = nil
+            do {
+                let interpretation = try await generateInterpretation(for: dreamText, locale: locale, emotions: emotions)
+                let context = modelContainer.mainContext
+                guard let dream = context.model(for: dreamID) as? Dream else {
+                    logger.warning("Dream not found for interpretation update")
+                    detailState.isGeneratingInterpretation = false
+                    return
+                }
+                dream.interpretation = interpretation
+                try context.save()
+                detailState.hasInterpretation = true
+                detailState.isGeneratingInterpretation = false
+                logger.info("Dream interpretation generated")
+            } catch {
+                logger.error("Failed to generate interpretation: \(error.localizedDescription)")
+                detailState.interpretationError = error.localizedDescription
+                detailState.isGeneratingInterpretation = false
+            }
+        }
+    }
+
     static func generateTitleInBackground(
         dreamID: PersistentIdentifier,
         dreamText: String,

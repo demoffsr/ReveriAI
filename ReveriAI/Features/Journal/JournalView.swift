@@ -13,6 +13,7 @@ struct JournalView: View {
     @Binding var detailDreamHasImage: Bool
     @Binding var detailDreamIsGenerating: Bool
     @Binding var detailDreamGenerateTrigger: Bool
+    var detailDreamState: DetailDreamState
     @Environment(\.theme) private var theme
     @State private var viewModel = JournalViewModel()
     @State private var selectedTab: JournalTab = .dreams
@@ -76,7 +77,8 @@ struct JournalView: View {
                     isInDetailDreamTab: $isInDetailDreamTab,
                     detailDreamHasImage: $detailDreamHasImage,
                     detailDreamIsGenerating: $detailDreamIsGenerating,
-                    detailDreamGenerateTrigger: $detailDreamGenerateTrigger
+                    detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
+                    detailState: detailDreamState
                 )
             }
             .onAppear {

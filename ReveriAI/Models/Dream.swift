@@ -12,6 +12,7 @@ final class Dream {
     var createdAt: Date
     var audioFilePath: String?
     var imageURL: String?
+    var interpretation: String?
     var isTranslated: Bool
 
     var emotions: [DreamEmotion] {

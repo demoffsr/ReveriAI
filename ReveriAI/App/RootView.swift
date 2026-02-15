@@ -20,6 +20,7 @@ struct RootView: View {
     @State private var detailDreamHasImage = false
     @State private var detailDreamIsGenerating = false
     @State private var detailDreamGenerateTrigger = false
+    @State private var detailDreamState = DetailDreamState()
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
@@ -51,7 +52,8 @@ struct RootView: View {
                         isInDetailDreamTab: $isInDetailDreamTab,
                         detailDreamHasImage: $detailDreamHasImage,
                         detailDreamIsGenerating: $detailDreamIsGenerating,
-                        detailDreamGenerateTrigger: $detailDreamGenerateTrigger
+                        detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
+                        detailDreamState: detailDreamState
                     )
                 }
             }
@@ -136,7 +138,8 @@ struct RootView: View {
                 isGeneratingImage: detailDreamIsGenerating,
                 onGenerateImage: {
                     detailDreamGenerateTrigger.toggle()
-                }
+                },
+                detailState: detailDreamState
             )
         }
         .ignoresSafeArea(.keyboard)

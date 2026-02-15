@@ -26,6 +26,7 @@ struct ReveriTabBar: View {
     var hasGeneratedImage: Bool = false
     var isGeneratingImage: Bool = false
     var onGenerateImage: (() -> Void)?
+    var detailState: DetailDreamState?
 
     var body: some View {
         Group {
@@ -277,33 +278,69 @@ struct ReveriTabBar: View {
     }
 
     private var detailDreamControls: some View {
-        Button {
-            onGenerateImage?()
-        } label: {
-            HStack(spacing: 8) {
-                if isGeneratingImage {
-                    ProgressView()
-                        .tint(theme.accent)
-                        .scaleEffect(0.9)
-                } else {
-                    Image("GenerateImageIcon")
-                        .renderingMode(.template)
-                        .resizable()
-                        .frame(width: 20, height: 20)
-                        .foregroundStyle(theme.accent)
+        let mode = detailState?.tabBarMode ?? .generateImage
+        let isGenerating = isGeneratingImage || (detailState?.isGeneratingInterpretation ?? false)
+        return Group {
+            switch mode {
+            case .generateImage, .generateImageAgain:
+                Button {
+                    onGenerateImage?()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isGeneratingImage {
+                            ProgressView()
+                                .tint(theme.accent)
+                                .scaleEffect(0.9)
+                        } else {
+                            Image("GenerateImageIcon")
+                                .renderingMode(.template)
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundStyle(theme.accent)
+                        }
+                        Text(mode == .generateImageAgain ? "Generate Again" : "Generate Image")
+                            .font(.subheadline.weight(.medium))
+                            .tracking(-0.23)
+                            .foregroundStyle(theme.accent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                Text(hasGeneratedImage ? "Generate Again" : "Generate Image")
-                    .font(.subheadline.weight(.medium))
-                    .tracking(-0.23)
-                    .foregroundStyle(theme.accent)
+                .buttonStyle(.plain)
+                .reveriGlass(.capsule)
+                .disabled(isGeneratingImage)
+                .opacity(isGeneratingImage ? 0.6 : 1.0)
+            case .interpretDream:
+                Button {
+                    detailState?.interpretTrigger.toggle()
+                } label: {
+                    HStack(spacing: 8) {
+                        if detailState?.isGeneratingInterpretation == true {
+                            ProgressView()
+                                .tint(theme.accent)
+                                .scaleEffect(0.9)
+                        } else {
+                            Image("InterpretIcon")
+                                .renderingMode(.original)
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                        }
+                        Text("Interpret Dream")
+                            .font(.subheadline.weight(.medium))
+                            .tracking(-0.23)
+                            .foregroundStyle(theme.accent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .reveriGlass(.capsule)
+                .disabled(isGenerating)
+                .opacity(isGenerating ? 0.6 : 1.0)
+            case .none:
+                EmptyView()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
-        .buttonStyle(.plain)
-        .reveriGlass(.capsule)
-        .disabled(isGeneratingImage)
-        .opacity(isGeneratingImage ? 0.6 : 1.0)
     }
 
     private var savingFeelingsControls: some View {
