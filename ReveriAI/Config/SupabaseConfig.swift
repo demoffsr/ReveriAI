@@ -1,6 +1,21 @@
 import Foundation
 
 enum SupabaseConfig {
-    static let projectURL = "https://bvydopjjndfgbhjczyis.supabase.co"
-    static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2eWRvcGpqbmRmZ2JoamN6eWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwOTc3MTAsImV4cCI6MjA4NjY3MzcxMH0.7gx8RcEnJSHjMAjUQ5YJLMGZrHpbH4Jp5FlMgS_XE20"
+    static let projectURL: String = {
+        guard let url = Bundle.main.infoDictionary?["SUPABASE_PROJECT_URL"] as? String,
+              !url.isEmpty,
+              !url.hasPrefix("$(") else {
+            fatalError("Missing SUPABASE_PROJECT_URL. Ensure Secrets.xcconfig exists in project root.")
+        }
+        return url
+    }()
+
+    static let anonKey: String = {
+        guard let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String,
+              !key.isEmpty,
+              !key.hasPrefix("$(") else {
+            fatalError("Missing SUPABASE_ANON_KEY. Ensure Secrets.xcconfig exists in project root.")
+        }
+        return key
+    }()
 }
