@@ -13,6 +13,26 @@ final class SpeechRecognitionService {
         case none
     }
 
+    // MARK: - Punctuation Constants
+
+    private static let fillers: Set<String> = [
+        "а", "ну", "и", "но", "да", "так", "вот", "ведь", "же",
+        "ой", "эй", "ну-ка", "слушай", "слушайте", "скажи", "скажите",
+        "well", "so", "and", "but", "oh", "hey",
+    ]
+
+    private static let questionWords: Set<String> = [
+        "почему", "зачем", "откуда", "куда", "сколько",
+        "кто", "кого", "кому", "кем",
+        "что", "чего", "чему", "чем",
+        "где", "когда",
+        "какой", "какая", "какое", "какие", "каким", "каких",
+        "чей", "чья", "чьё", "чьи",
+        "why", "how", "what", "where", "when", "who", "which",
+        "do", "does", "did", "is", "are", "was", "were",
+        "will", "can", "could", "should", "would",
+    ]
+
     // MARK: - Public State
 
     /// All accumulated final text + current partial text.
@@ -555,28 +575,13 @@ final class SpeechRecognitionService {
         if words.contains("неужели") || words.contains("разве") { return text + "?" }
 
         // Skip filler words to find the first significant word
-        let fillers: Set<String> = [
-            "а", "ну", "и", "но", "да", "так", "вот", "ведь", "же",
-            "ой", "эй", "ну-ка", "слушай", "слушайте", "скажи", "скажите",
-            "well", "so", "and", "but", "oh", "hey",
-        ]
+        let fillers = Self.fillers
         guard let firstSignificant = words.drop(while: { fillers.contains($0) }).first else {
             return text + "."
         }
 
         // Question words — match as first significant word
-        let questionWords: Set<String> = [
-            "почему", "зачем", "откуда", "куда", "сколько",
-            "кто", "кого", "кому", "кем",
-            "что", "чего", "чему", "чем",
-            "где", "когда",
-            "какой", "какая", "какое", "какие", "каким", "каких",
-            "чей", "чья", "чьё", "чьи",
-            // English
-            "why", "how", "what", "where", "when", "who", "which",
-            "do", "does", "did", "is", "are", "was", "were",
-            "will", "can", "could", "should", "would",
-        ]
+        let questionWords = Self.questionWords
 
         if questionWords.contains(firstSignificant) {
             return text + "?"

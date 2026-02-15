@@ -7,9 +7,11 @@ struct FolderCard: View {
     var onRename: () -> Void = {}
     var onDelete: () -> Void = {}
 
-    private var topEmotions: [DreamEmotion] {
+    @State private var cachedEmotions: [DreamEmotion] = []
+
+    private static func computeTopEmotions(from dreams: [Dream]) -> [DreamEmotion] {
         var counts: [DreamEmotion: Int] = [:]
-        for dream in folder.dreams {
+        for dream in dreams {
             for emotion in dream.emotions {
                 counts[emotion, default: 0] += 1
             }
@@ -79,11 +81,14 @@ struct FolderCard: View {
         .onTapGesture {
             onTap()
         }
+        .task(id: folder.dreams.count) {
+            cachedEmotions = Self.computeTopEmotions(from: folder.dreams)
+        }
     }
 
     @ViewBuilder
     private var emotionIcons: some View {
-        let emotions = topEmotions
+        let emotions = cachedEmotions
         if !emotions.isEmpty {
             // Overlapping circles: 32pt each, 18pt offset (14pt overlap)
             let circleSize: CGFloat = 32

@@ -5,10 +5,19 @@ final class ThemeManager {
     var isDayTime: Bool
 
     private var timer: Timer?
+    private var backgroundObserver: Any?
+    private var foregroundObserver: Any?
 
     init() {
         self.isDayTime = Self.calculateIsDayTime()
         startMonitoring()
+        observeAppLifecycle()
+    }
+
+    deinit {
+        timer?.invalidate()
+        if let obs = backgroundObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = foregroundObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
     private static func calculateIsDayTime() -> Bool {
@@ -17,10 +26,32 @@ final class ThemeManager {
     }
 
     private func startMonitoring() {
+        guard timer == nil else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.isDayTime = Self.calculateIsDayTime()
             }
+        }
+    }
+
+    private func stopMonitoring() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func observeAppLifecycle() {
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.stopMonitoring()
+        }
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.isDayTime = Self.calculateIsDayTime()
+            self?.startMonitoring()
         }
     }
 

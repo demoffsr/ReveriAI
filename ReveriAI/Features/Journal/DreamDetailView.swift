@@ -21,6 +21,7 @@ struct DreamDetailView: View {
     @State private var answers: [String] = []
     @State private var isLoadingQuestions = false
     @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
+    @State private var cachedInterpretationSections: [InterpretationSection] = []
 
     private enum DetailTab: String, CaseIterable {
         case dream = "Dream"
@@ -118,6 +119,9 @@ struct DreamDetailView: View {
             detailDreamIsGenerating = isGenerating
             detailState.isActive = true
             detailState.hasInterpretation = dream.interpretation != nil
+            if let text = dream.interpretation {
+                cachedInterpretationSections = parseInterpretation(text)
+            }
             updateTabBarMode()
         }
         .onDisappear {
@@ -138,6 +142,9 @@ struct DreamDetailView: View {
             generateInterpretation()
         }
         .onChange(of: detailState.hasInterpretation) {
+            if let text = dream.interpretation {
+                cachedInterpretationSections = parseInterpretation(text)
+            }
             updateTabBarMode()
         }
         .fullScreenCover(isPresented: $showFullscreenImage) {
@@ -160,7 +167,7 @@ struct DreamDetailView: View {
                         ProgressView()
                     }
             } else if let imageURL = dream.imageURL, let url = URL(string: imageURL) {
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
                         image
@@ -186,7 +193,7 @@ struct DreamDetailView: View {
                                 Image(systemName: "exclamationmark.triangle")
                                     .foregroundStyle(.black.opacity(0.3))
                             }
-                    default:
+                    case .empty:
                         RoundedRectangle(cornerRadius: 12)
                             .fill(.black.opacity(0.05))
                             .frame(width: 74, height: 74)
@@ -204,7 +211,7 @@ struct DreamDetailView: View {
             Color.black.ignoresSafeArea()
 
             if let imageURL = dream.imageURL, let url = URL(string: imageURL) {
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
                         image
@@ -315,8 +322,8 @@ struct DreamDetailView: View {
                         .foregroundStyle(theme.accent)
                 }
             }
-        } else if let interpretation = dream.interpretation {
-            interpretationSections(interpretation)
+        } else if dream.interpretation != nil, !cachedInterpretationSections.isEmpty {
+            interpretationSectionsView
         } else {
             centeredPlaceholder {
                 Image("EmotionJoyful")
@@ -341,10 +348,9 @@ struct DreamDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func interpretationSections(_ text: String) -> some View {
-        let sections = parseInterpretation(text)
-        return VStack(alignment: .leading, spacing: 20) {
-            ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+    private var interpretationSectionsView: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ForEach(Array(cachedInterpretationSections.enumerated()), id: \.offset) { _, section in
                 VStack(alignment: .leading, spacing: 6) {
                     if let title = section.title {
                         Text(title)

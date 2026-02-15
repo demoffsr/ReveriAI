@@ -205,7 +205,8 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
                 guard !Task.isCancelled else { break }
-                guard let self, let player = self.audioPlayer, player.isPlaying else { continue }
+                guard let self else { break }
+                guard let player = self.audioPlayer, player.isPlaying else { continue }
                 self.playbackCurrentTime = player.currentTime
             }
         }

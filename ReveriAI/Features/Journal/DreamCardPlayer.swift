@@ -113,7 +113,8 @@ private final class CardAudioPlayer: NSObject, AVAudioPlayerDelegate {
         timerTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
-                guard !Task.isCancelled, let self, let player = self.audioPlayer, player.isPlaying else { continue }
+                guard !Task.isCancelled, let self else { break }
+                guard let player = self.audioPlayer, player.isPlaying else { continue }
                 self.onProgress(player.currentTime, player.duration)
             }
         }

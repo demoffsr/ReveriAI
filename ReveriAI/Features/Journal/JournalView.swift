@@ -21,6 +21,7 @@ struct JournalView: View {
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
     @State private var selectedFolder: DreamFolder?
+    @State private var searchDebounceTask: Task<Void, Never>?
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
     @Query(sort: \DreamFolder.createdAt, order: .reverse) private var folders: [DreamFolder]
     @Environment(\.modelContext) private var modelContext
@@ -74,7 +75,14 @@ struct JournalView: View {
             refreshFilters()
         }
         .onChange(of: allDreams) { _, _ in refreshFilters() }
-        .onChange(of: viewModel.searchText) { _, _ in refreshFilters() }
+        .onChange(of: viewModel.searchText) { _, _ in
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard !Task.isCancelled else { return }
+                refreshFilters()
+            }
+        }
         .onChange(of: viewModel.selectedTimeRange) { _, _ in refreshFilters() }
         .onChange(of: selectedDream) { _, newValue in
             if newValue == nil { isInDetailDreamTab = false }

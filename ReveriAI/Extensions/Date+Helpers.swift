@@ -18,19 +18,27 @@ extension Date {
         return hour >= 5 && hour < 21
     }
 
+    private static let dreamFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, yyyy, hh:mma"
+        f.amSymbol = "am"
+        f.pmSymbol = "pm"
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "hh:mma"
+        f.amSymbol = "am"
+        f.pmSymbol = "pm"
+        return f
+    }()
+
     var dreamFormatted: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy, hh:mma"
-        formatter.amSymbol = "am"
-        formatter.pmSymbol = "pm"
-        return formatter.string(from: self)
+        Self.dreamFormatter.string(from: self)
     }
 
     var timeFormatted: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "hh:mma"
-        formatter.amSymbol = "am"
-        formatter.pmSymbol = "pm"
-        return formatter.string(from: self)
+        Self.timeFormatter.string(from: self)
     }
 }

@@ -3,6 +3,8 @@ import SwiftData
 
 @Model
 final class Dream {
+    #Index<Dream>([\.createdAt])
+
     var id: UUID
     var title: String = ""
     var text: String
@@ -16,9 +18,24 @@ final class Dream {
     var isTranslated: Bool
     var folder: DreamFolder?
 
+    @Transient private var _cachedEmotions: [DreamEmotion]?
+    @Transient private var _cachedEmotionValues: [String]?
+
     var emotions: [DreamEmotion] {
-        get { emotionValues.compactMap { DreamEmotion(rawValue: $0) } }
-        set { emotionValues = newValue.map(\.rawValue) }
+        get {
+            if let cached = _cachedEmotions, _cachedEmotionValues == emotionValues {
+                return cached
+            }
+            let result = emotionValues.compactMap { DreamEmotion(rawValue: $0) }
+            _cachedEmotions = result
+            _cachedEmotionValues = emotionValues
+            return result
+        }
+        set {
+            emotionValues = newValue.map(\.rawValue)
+            _cachedEmotions = newValue
+            _cachedEmotionValues = emotionValues
+        }
     }
 
     var emotion: DreamEmotion? {

@@ -15,13 +15,17 @@ struct FolderDetailView: View {
     @State private var searchText = ""
     @State private var selectedDream: Dream?
     @State private var showAddDreams = false
+    @State private var cachedFilteredDreams: [Dream] = []
 
-    private var filteredDreams: [Dream] {
+    private func updateFilteredDreams() {
         let sorted = folder.dreams.sorted { $0.createdAt > $1.createdAt }
-        if searchText.isEmpty { return sorted }
-        return sorted.filter {
-            $0.text.localizedCaseInsensitiveContains(searchText) ||
-            $0.title.localizedCaseInsensitiveContains(searchText)
+        if searchText.isEmpty {
+            cachedFilteredDreams = sorted
+        } else {
+            cachedFilteredDreams = sorted.filter {
+                $0.text.localizedCaseInsensitiveContains(searchText) ||
+                $0.title.localizedCaseInsensitiveContains(searchText)
+            }
         }
     }
 
@@ -34,7 +38,7 @@ struct FolderDetailView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 8)
 
-            if filteredDreams.isEmpty {
+            if cachedFilteredDreams.isEmpty {
                 ContentUnavailableView("No dreams", systemImage: "moon.zzz", description: Text("Add dreams to this folder"))
                     .frame(maxHeight: .infinity)
             } else {
@@ -43,6 +47,9 @@ struct FolderDetailView: View {
         }
         .background(Color(.systemGroupedBackground))
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear { updateFilteredDreams() }
+        .onChange(of: searchText) { _, _ in updateFilteredDreams() }
+        .onChange(of: folder.dreams.count) { _, _ in updateFilteredDreams() }
         .navigationDestination(item: $selectedDream) { dream in
             DreamDetailView(
                 dream: dream,
@@ -103,7 +110,7 @@ struct FolderDetailView: View {
     private var dreamsList: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
-                ForEach(filteredDreams, id: \.id) { dream in
+                ForEach(cachedFilteredDreams, id: \.id) { dream in
                     DreamCard(dream: dream) {
                         selectedDream = dream
                     }
