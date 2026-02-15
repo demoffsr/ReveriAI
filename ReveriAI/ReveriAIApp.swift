@@ -10,6 +10,6 @@ struct ReveriAIApp: App {
             RootView()
                 .environment(\.theme, theme)
         }
-        .modelContainer(for: Dream.self)
+        .modelContainer(for: [Dream.self, DreamFolder.self])
     }
 }

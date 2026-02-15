@@ -19,10 +19,6 @@
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		AABB00222F5000000055480B /* Exceptions for "ReveriAI" folder in "ReveriAI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			publicHeaders = (
-			);
-			privacyInfoFiles = (
-			);
 			membershipExceptions = (
 				Info.plist,
 			);
