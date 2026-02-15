@@ -9,6 +9,10 @@ struct JournalView: View {
 
     @Binding var selectedEmotion: DreamEmotion?
     @Binding var emotionOrder: [DreamEmotion]
+    @Binding var isInDetailDreamTab: Bool
+    @Binding var detailDreamHasImage: Bool
+    @Binding var detailDreamIsGenerating: Bool
+    @Binding var detailDreamGenerateTrigger: Bool
     @Environment(\.theme) private var theme
     @State private var viewModel = JournalViewModel()
     @State private var selectedTab: JournalTab = .dreams
@@ -67,7 +71,13 @@ struct JournalView: View {
             .background(Color(.systemGroupedBackground))
             .ignoresSafeArea(edges: .top)
             .navigationDestination(item: $selectedDream) { dream in
-                DreamDetailView(dream: dream)
+                DreamDetailView(
+                    dream: dream,
+                    isInDetailDreamTab: $isInDetailDreamTab,
+                    detailDreamHasImage: $detailDreamHasImage,
+                    detailDreamIsGenerating: $detailDreamIsGenerating,
+                    detailDreamGenerateTrigger: $detailDreamGenerateTrigger
+                )
             }
             .onAppear {
                 viewModel.updateFilters(allDreams: allDreams)

@@ -16,6 +16,10 @@ struct RootView: View {
     @State private var showDreamSaved = false
     @State private var pendingEmotions: Set<DreamEmotion> = []
     @State private var autoDismissTask: Task<Void, Never>?
+    @State private var isInDetailDreamTab = false
+    @State private var detailDreamHasImage = false
+    @State private var detailDreamIsGenerating = false
+    @State private var detailDreamGenerateTrigger = false
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
@@ -41,7 +45,14 @@ struct RootView: View {
                         }
                     )
                 case .journal:
-                    JournalView(selectedEmotion: $selectedEmotionFilter, emotionOrder: $emotionOrder)
+                    JournalView(
+                        selectedEmotion: $selectedEmotionFilter,
+                        emotionOrder: $emotionOrder,
+                        isInDetailDreamTab: $isInDetailDreamTab,
+                        detailDreamHasImage: $detailDreamHasImage,
+                        detailDreamIsGenerating: $detailDreamIsGenerating,
+                        detailDreamGenerateTrigger: $detailDreamGenerateTrigger
+                    )
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -119,6 +130,12 @@ struct RootView: View {
                 },
                 onSaveFeelings: {
                     saveFeelings()
+                },
+                isInDetailDreamTab: isInDetailDreamTab,
+                hasGeneratedImage: detailDreamHasImage,
+                isGeneratingImage: detailDreamIsGenerating,
+                onGenerateImage: {
+                    detailDreamGenerateTrigger.toggle()
                 }
             )
         }

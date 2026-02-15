@@ -22,35 +22,48 @@ struct ReveriTabBar: View {
     var onSkipBack: (() -> Void)?
     var onSkipForward: (() -> Void)?
     var onSaveFeelings: (() -> Void)?
+    var isInDetailDreamTab: Bool = false
+    var hasGeneratedImage: Bool = false
+    var isGeneratingImage: Bool = false
+    var onGenerateImage: (() -> Void)?
 
     var body: some View {
         Group {
-            if isRecording {
-                recordingControls
+            if isInDetailDreamTab {
+                detailDreamControls
                     .transition(.blurReplace)
-            } else if isReviewing {
-                reviewControls
-                    .transition(.blurReplace)
-            } else if isSavingFeelings {
-                savingFeelingsControls
-                    .transition(.blurReplace)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
             } else {
-                normalTabs
-                    .transition(.blurReplace)
+                Group {
+                    if isRecording {
+                        recordingControls
+                            .transition(.blurReplace)
+                    } else if isReviewing {
+                        reviewControls
+                            .transition(.blurReplace)
+                    } else if isSavingFeelings {
+                        savingFeelingsControls
+                            .transition(.blurReplace)
+                    } else {
+                        normalTabs
+                            .transition(.blurReplace)
+                    }
+                }
+                .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
+                    Button("Delete", role: .destructive) { onDelete?() }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("This action cannot be undone")
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
+                .glassEffect(.clear, in: .capsule)
+                .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
+                .padding(.bottom, 8)
             }
         }
-        .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
-            Button("Delete", role: .destructive) { onDelete?() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("This action cannot be undone")
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
-        .glassEffect(.clear, in: .capsule)
-        .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
-        .padding(.bottom, 8)
     }
 
     private var normalTabs: some View {
@@ -261,6 +274,36 @@ struct ReveriTabBar: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var detailDreamControls: some View {
+        Button {
+            onGenerateImage?()
+        } label: {
+            HStack(spacing: 8) {
+                if isGeneratingImage {
+                    ProgressView()
+                        .tint(theme.accent)
+                        .scaleEffect(0.9)
+                } else {
+                    Image("GenerateImageIcon")
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                        .foregroundStyle(theme.accent)
+                }
+                Text(hasGeneratedImage ? "Generate Again" : "Generate Image")
+                    .font(.subheadline.weight(.medium))
+                    .tracking(-0.23)
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .reveriGlass(.capsule)
+        .disabled(isGeneratingImage)
+        .opacity(isGeneratingImage ? 0.6 : 1.0)
     }
 
     private var savingFeelingsControls: some View {

@@ -11,6 +11,7 @@ final class Dream {
     var emotionValues: [String] = []
     var createdAt: Date
     var audioFilePath: String?
+    var imageURL: String?
     var isTranslated: Bool
 
     var emotions: [DreamEmotion] {
@@ -33,6 +34,7 @@ final class Dream {
         emotions: [DreamEmotion] = [],
         createdAt: Date = .now,
         audioFilePath: String? = nil,
+        imageURL: String? = nil,
         isTranslated: Bool = false
     ) {
         self.id = UUID()
@@ -42,6 +44,7 @@ final class Dream {
         self.emotionRawValue = emotions.first?.rawValue
         self.createdAt = createdAt
         self.audioFilePath = audioFilePath
+        self.imageURL = imageURL
         self.isTranslated = isTranslated
     }
 }
