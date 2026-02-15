@@ -96,6 +96,11 @@ struct JournalView: View {
             .onChange(of: viewModel.selectedTimeRange) {
                 viewModel.updateFilters(allDreams: allDreams)
             }
+            .onChange(of: selectedDream) { _, newValue in
+                if newValue == nil {
+                    isInDetailDreamTab = false
+                }
+            }
         }
     }
 }

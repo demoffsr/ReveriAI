@@ -185,7 +185,7 @@ struct RecordView: View {
                         handleSaveAudio()
                     }
                     .padding(.trailing, 16)
-                    .offset(y: cloudOverhang + 30)
+                    .offset(y: cloudOverhang + 38)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if !isRecording {
                     modeSwitchPill
