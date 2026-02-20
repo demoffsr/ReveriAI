@@ -20,6 +20,20 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
     private var audioPlayer: AVAudioPlayer?
     private var playbackTimerTask: Task<Void, Never>?
 
+    override init() {
+        super.init()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     /// Start recording. Returns a stream of raw PCM buffers for speech recognition.
     @discardableResult
     func startRecording() -> AsyncStream<AVAudioPCMBuffer> {
@@ -62,14 +76,17 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
         audioBufferContinuation = continuation
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
-            guard let self, !self.isPaused else { return }
+            guard let self else { return }
 
-            // Write to file
+            // Always write to file — keeps iOS audio session alive in background
             do {
                 try self.audioFile?.write(from: buffer)
             } catch {
                 print("AudioRecorder: write error — \(error)")
             }
+
+            // Only process speech/metering when not paused
+            guard !self.isPaused else { return }
 
             // Forward for speech recognition
             self.audioBufferContinuation?.yield(buffer)
@@ -105,6 +122,40 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
 
     func resumeRecording() {
         isPaused = false
+    }
+
+    // MARK: - Interruption Handling
+
+    @objc private func handleInterruption(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+        else { return }
+
+        switch type {
+        case .began:
+            guard isRecording else { return }
+            isPaused = true
+            currentLevel = 0
+
+        case .ended:
+            guard isRecording else { return }
+            let options = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt
+            let shouldResume = options.map {
+                AVAudioSession.InterruptionOptions(rawValue: $0).contains(.shouldResume)
+            } ?? false
+
+            // Re-activate session before resuming
+            try? AVAudioSession.sharedInstance().setActive(true)
+
+            if shouldResume {
+                isPaused = false
+            }
+            // If not shouldResume — stay paused, user manually resumes
+
+        @unknown default:
+            break
+        }
     }
 
     func stopRecording() -> URL? {

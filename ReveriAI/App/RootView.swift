@@ -22,41 +22,47 @@ struct RootView: View {
     @State private var detailDreamIsGenerating = false
     @State private var detailDreamGenerateTrigger = false
     @State private var detailDreamState = DetailDreamState()
+    @State private var liveActivityManager = LiveActivityManager()
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Tab content
-            Group {
-                switch selectedTab {
-                case .record:
-                    RecordView(
-                        isRecording: $isRecording,
-                        isPaused: $isPaused,
-                        isReviewing: $isReviewing,
-                        audioRecorder: audioRecorder,
-                        speechService: speechService,
-                        onDreamSaved: { dream in
-                            savedDreamForEmotion = dream
-                        },
-                        onShowHowDidItFeel: {
-                            withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
-                                showHowDidItFeel = true
-                            }
-                            startAutoDismissTimer()
+            // Both views stay mounted — tab switch preserves all @State
+            ZStack {
+                RecordView(
+                    isRecording: $isRecording,
+                    isPaused: $isPaused,
+                    isReviewing: $isReviewing,
+                    audioRecorder: audioRecorder,
+                    speechService: speechService,
+                    isVisible: selectedTab == .record,
+                    liveActivityManager: liveActivityManager,
+                    onDreamSaved: { dream in
+                        savedDreamForEmotion = dream
+                    },
+                    onShowHowDidItFeel: {
+                        dismissTask?.cancel()
+                        showDreamSaved = false
+                        withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
+                            showHowDidItFeel = true
                         }
-                    )
-                case .journal:
-                    JournalView(
-                        selectedEmotion: $selectedEmotionFilter,
-                        emotionOrder: $emotionOrder,
-                        isInDetailDreamTab: $isInDetailDreamTab,
-                        detailDreamHasImage: $detailDreamHasImage,
-                        detailDreamIsGenerating: $detailDreamIsGenerating,
-                        detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
-                        detailDreamState: detailDreamState
-                    )
-                }
+                        startAutoDismissTimer()
+                    }
+                )
+                .opacity(selectedTab == .record ? 1 : 0)
+                .allowsHitTesting(selectedTab == .record)
+
+                JournalView(
+                    selectedEmotion: $selectedEmotionFilter,
+                    emotionOrder: $emotionOrder,
+                    isInDetailDreamTab: $isInDetailDreamTab,
+                    detailDreamHasImage: $detailDreamHasImage,
+                    detailDreamIsGenerating: $detailDreamIsGenerating,
+                    detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
+                    detailDreamState: detailDreamState
+                )
+                .opacity(selectedTab == .journal ? 1 : 0)
+                .allowsHitTesting(selectedTab == .journal)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -149,8 +155,10 @@ struct RootView: View {
             if recording {
                 showEmotionGrid = false
                 showHowDidItFeel = false
+                showDreamSaved = false
                 pendingEmotions = []
                 autoDismissTask?.cancel()
+                dismissTask?.cancel()
             }
         }
         .onChange(of: selectedTab) { _, _ in
@@ -158,6 +166,7 @@ struct RootView: View {
                 withAnimation(.easeOut(duration: 0.3)) {
                     showHowDidItFeel = false
                 }
+                showDreamSaved = false
                 autoDismissTask?.cancel()
                 dismissTask?.cancel()
             }

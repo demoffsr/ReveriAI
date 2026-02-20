@@ -6,6 +6,7 @@ struct AudioWaveformView: View {
     var isPlayingBack: Bool = false
     var playbackProgress: CGFloat = 0 // 0...1 current playback position
     var playbackDuration: TimeInterval = 0
+    var isVisible: Bool = true
 
     @Environment(\.theme) private var theme
     /// Reference-type buffer — mutations don't trigger SwiftUI state diffs
@@ -27,7 +28,7 @@ struct AudioWaveformView: View {
     private static let scrollSpeed: CGFloat = barSlot * CGFloat(barsPerSecond)
 
     private var isTimelinePaused: Bool {
-        !isAnimating && playbackAnimStartTime == nil
+        (!isAnimating && playbackAnimStartTime == nil) || !isVisible
     }
 
     /// Compute scroll offset based on current mode (playback, review, or recording).

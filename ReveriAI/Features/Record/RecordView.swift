@@ -18,6 +18,8 @@ struct RecordView: View {
     @State private var reviewText: String = ""
     var audioRecorder: AudioRecorder
     var speechService: SpeechRecognitionService
+    var isVisible: Bool = true
+    var liveActivityManager: LiveActivityManager?
 
     var onDreamSaved: ((Dream) -> Void)?
     var onShowHowDidItFeel: (() -> Void)?
@@ -28,6 +30,8 @@ struct RecordView: View {
         isReviewing: Binding<Bool>,
         audioRecorder: AudioRecorder,
         speechService: SpeechRecognitionService,
+        isVisible: Bool = true,
+        liveActivityManager: LiveActivityManager? = nil,
         onDreamSaved: ((Dream) -> Void)? = nil,
         onShowHowDidItFeel: (() -> Void)? = nil
     ) {
@@ -36,6 +40,8 @@ struct RecordView: View {
         self._isReviewing = isReviewing
         self.audioRecorder = audioRecorder
         self.speechService = speechService
+        self.isVisible = isVisible
+        self.liveActivityManager = liveActivityManager
         self.onDreamSaved = onDreamSaved
         self.onShowHowDidItFeel = onShowHowDidItFeel
     }
@@ -95,8 +101,10 @@ struct RecordView: View {
                 if paused {
                     audioRecorder.pauseRecording()
                     speechService.pauseTranscription()
+                    liveActivityManager?.pause(elapsedSeconds: elapsedSeconds)
                 } else {
                     audioRecorder.resumeRecording()
+                    liveActivityManager?.resume(elapsedSeconds: elapsedSeconds)
                 }
             }
         }
@@ -288,6 +296,7 @@ struct RecordView: View {
                 LiveWaveformView(
                     isAnimating: isRecording && !isPaused,
                     isReviewing: isReviewing,
+                    isVisible: isVisible,
                     audioRecorder: audioRecorder
                 )
                 .padding(.bottom, 8)
@@ -402,6 +411,7 @@ struct RecordView: View {
                 isPaused = false
                 elapsedSeconds = 0
                 startTimer()
+                liveActivityManager?.startRecording()
             }
         }
     }
@@ -411,6 +421,7 @@ struct RecordView: View {
         speechService.stopTranscription()
         timerTask?.cancel()
         timerTask = nil
+        liveActivityManager?.end()
 
         guard elapsedSeconds > 1 else {
             // Too short — auto-discard
@@ -491,6 +502,7 @@ struct RecordView: View {
 private struct LiveWaveformView: View {
     let isAnimating: Bool
     let isReviewing: Bool
+    var isVisible: Bool = true
     var audioRecorder: AudioRecorder
 
     var body: some View {
@@ -501,7 +513,8 @@ private struct LiveWaveformView: View {
             playbackProgress: isReviewing && audioRecorder.playbackDuration > 0
                 ? CGFloat(audioRecorder.playbackCurrentTime / audioRecorder.playbackDuration)
                 : 0,
-            playbackDuration: audioRecorder.playbackDuration
+            playbackDuration: audioRecorder.playbackDuration,
+            isVisible: isVisible
         )
     }
 }

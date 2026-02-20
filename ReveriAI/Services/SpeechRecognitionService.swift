@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import Speech
+import UIKit
 
 @Observable
 final class SpeechRecognitionService {
@@ -51,6 +52,42 @@ final class SpeechRecognitionService {
     private var transcriptionTask: Task<Void, Never>?
     /// Text accumulated from finalized results across restarts.
     private var accumulatedFinalText: String = ""
+    private var isInBackground = false
+    private var backgroundObserver: Any?
+    private var foregroundObserver: Any?
+
+    // MARK: - Init
+
+    init() {
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isTranscribing else { return }
+            self.isInBackground = true
+            self.pauseTranscription()
+        }
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isInBackground else { return }
+            self.isInBackground = false
+            // Delay restart — SpeechAnalyzer can fail during app transition
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                guard UIApplication.shared.applicationState == .active else { return }
+                // AudioBufferRelay reconnects automatically on next session restart
+            }
+        }
+    }
+
+    deinit {
+        if let backgroundObserver { NotificationCenter.default.removeObserver(backgroundObserver) }
+        if let foregroundObserver { NotificationCenter.default.removeObserver(foregroundObserver) }
+    }
 
     // MARK: - Public API
 
