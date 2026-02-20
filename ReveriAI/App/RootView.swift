@@ -148,6 +148,7 @@ struct RootView: View {
                 detailState: detailDreamState,
                 audioRecorder: audioRecorder  // Reference only — NO property read in RootView
             )
+            .padding(.bottom, 16)
         }
         .ignoresSafeArea(.keyboard)
         .animation(.spring(duration: 0.4), value: showEmotionGrid)

@@ -65,21 +65,8 @@ final class ThemeManager {
         isDayTime ? .dayAccent : .nightAccent
     }
 
-    // MARK: - Header
+    // MARK: - Screen
 
-    var headerGradient: LinearGradient {
-        isDayTime ? .dayHeaderGradient : .nightHeaderGradient
-    }
-
-    var headerBottom: Color { isDayTime ? .headerLightBrown : .headerLightNavy }
-
-    // MARK: - Clouds
-
-    var cloudBack: Color { isDayTime ? .cloudBackDay : .cloudBackNight }
-    var cloudMid: Color { isDayTime ? .cloudMidDay : .cloudMidNight }
-    var cloudFront: Color { .cloudFront }
-
-    // MARK: - Celestial
-
-    var celestialIconName: String { isDayTime ? "sun.max.fill" : "moon.fill" }
+    var screenBackground: Color { isDayTime ? .cloudFront : Color(hex: "1C1C1E") }
+    var cardBackground: Color { isDayTime ? .white : Color(hex: "2C2C2E") }
 }

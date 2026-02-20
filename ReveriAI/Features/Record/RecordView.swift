@@ -2,6 +2,65 @@ import SwiftUI
 import SwiftData
 import AVFoundation
 
+// MARK: - RecordCardShape (matches Figma SVG: stepped top with bump on right)
+
+private struct RecordCardShape: Shape {
+    let stepHeight: CGFloat
+    let stepXFraction: CGFloat
+    let cornerRadius: CGFloat
+    let transitionRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        let cr = cornerRadius
+        let tr = transitionRadius
+        let stepY = stepHeight
+        let stepX = w * stepXFraction
+        let bumpLeftX = stepX + tr
+
+        var path = Path()
+
+        // Clockwise from bottom-left
+        path.move(to: CGPoint(x: 0, y: h - cr))
+
+        // Bottom-left corner
+        path.addArc(tangent1End: CGPoint(x: 0, y: h),
+                     tangent2End: CGPoint(x: cr, y: h),
+                     radius: cr)
+
+        // Bottom edge → bottom-right corner
+        path.addArc(tangent1End: CGPoint(x: w, y: h),
+                     tangent2End: CGPoint(x: w, y: h - cr),
+                     radius: cr)
+
+        // Right edge up → top-right corner
+        path.addArc(tangent1End: CGPoint(x: w, y: 0),
+                     tangent2End: CGPoint(x: w - cr, y: 0),
+                     radius: cr)
+
+        // Bump top edge left → bump top-left corner (turning down)
+        path.addArc(tangent1End: CGPoint(x: bumpLeftX, y: 0),
+                     tangent2End: CGPoint(x: bumpLeftX, y: stepY),
+                     radius: cr)
+
+        // Vertical step → concave transition (turning left)
+        path.addArc(tangent1End: CGPoint(x: bumpLeftX, y: stepY),
+                     tangent2End: CGPoint(x: 0, y: stepY),
+                     radius: tr)
+
+        // Step edge left → top-left corner (turning down)
+        path.addArc(tangent1End: CGPoint(x: 0, y: stepY),
+                     tangent2End: CGPoint(x: 0, y: stepY + cr),
+                     radius: cr)
+
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - RecordView
+
 struct RecordView: View {
     @Environment(\.theme) private var theme
     @Environment(\.modelContext) private var modelContext
@@ -46,48 +105,41 @@ struct RecordView: View {
         self.onShowHowDidItFeel = onShowHowDidItFeel
     }
 
-    private let cloudHeight: CGFloat = 159
-    private let baseHeaderHeight: CGFloat = 255
+    // Shape constants (from Figma SVG: 350×754.5 viewBox)
+    private let stepHeight: CGFloat = 53
+    private let stepXFraction: CGFloat = 197.5 / 350
+    private let cardCornerRadius: CGFloat = 16
+    private let stepTransitionRadius: CGFloat = 12
 
-    private var headerRatio: CGFloat {
-        isTextFocused ? 0.38 : 1.0
+    private var selectedLocale: SpeechLocale {
+        SpeechLocale(rawValue: selectedLocaleId) ?? .defaultLocale
     }
 
-    private var headerHeight: CGFloat {
-        baseHeaderHeight * headerRatio
-    }
-
-    /// How far clouds extend below the header's bottom edge
-    private var cloudOverhang: CGFloat {
-        cloudHeight * 0.5
+    private var cardShape: RecordCardShape {
+        RecordCardShape(
+            stepHeight: stepHeight,
+            stepXFraction: stepXFraction,
+            cornerRadius: cardCornerRadius,
+            transitionRadius: stepTransitionRadius
+        )
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Main layered layout
-            ZStack(alignment: .top) {
-                // Layer 0: Light background fills entire screen
-                theme.cloudFront
-                    .ignoresSafeArea()
+        ZStack {
+            theme.screenBackground.ignoresSafeArea()
 
-                // Layer 1: Content (below header + cloud zone)
-                contentArea
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+            VStack(spacing: 0) {
+                topBar
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+                    .zIndex(1)
 
-                // Layer 2: Header gradient background (animated)
-                headerGradientBackground
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
-
-                // Layer 3: Title + icon (shifts up slightly when keyboard appears)
-                headerTitle
-                    .offset(y: isTextFocused ? -25 : 0)
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
-
-                // Layer 4: Clouds + pill (animated, on top of title)
-                cloudLayer
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+                contentCard
+                    .padding(.horizontal, 16)
+                    .offset(y: -stepHeight)
+                    .padding(.bottom, -stepHeight)
             }
-            .ignoresSafeArea(edges: .top)
         }
         .onAppear {
             viewModel.onDreamSaved = onDreamSaved
@@ -118,112 +170,172 @@ struct RecordView: View {
         }
     }
 
-    // MARK: - Header Gradient Background (animated)
+    // MARK: - Top Bar (avatar + title + right control — all in one row for alignment)
 
-    private var headerGradientBackground: some View {
-        DreamHeader()
-            .frame(height: headerHeight + cloudOverhang)
-            .clipped()
+    private var topBar: some View {
+        HStack {
+            Menu {
+                ForEach(SpeechLocale.allCases) { locale in
+                    Button {
+                        selectedLocaleId = locale.identifier
+                    } label: {
+                        HStack {
+                            Text(locale.displayName)
+                            if locale == selectedLocale {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "person.fill")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .frame(width: 44, height: 44)
+                    .reveriGlass(.circle)
+            }
+
+            Text("Your Dreams")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(theme.accent)
+
+            Spacer()
+
+            rightControl
+        }
+        .animation(.spring(duration: 0.35, bounce: 0.15), value: isRecording)
+        .animation(.spring(duration: 0.35, bounce: 0.15), value: isReviewing)
+        .animation(.easeOut(duration: 0.25), value: viewModel.canSave)
+        .animation(.easeOut(duration: 0.25), value: viewModel.mode)
     }
 
-    // MARK: - Header Title (static — never moves)
+    // MARK: - Content Card (custom shape, content only)
 
-    private var headerTitle: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("What did")
-                    .font(.system(size: 36, weight: .heavy))
-                    .foregroundStyle(.white)
-                Text("you dream")
-                    .font(.system(size: 36, weight: .heavy))
-                    .foregroundStyle(.white)
-                Text("about...?")
-                    .font(.system(size: 36, weight: .heavy))
-                    .foregroundStyle(theme.accent)
+    private var contentCard: some View {
+        VStack(spacing: 0) {
+            // Reserve bump area (topBar right control visually sits here)
+            Spacer().frame(height: stepHeight + 8)
+
+            // Main content
+            Group {
+                if viewModel.mode == .text && !isRecording && !isReviewing {
+                    textModeContent
+                } else {
+                    voiceModeContent
+                }
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
-            .padding(.top, 60)
-            .padding(.leading, 20)
+            .padding(.bottom, 120) // tab bar clearance
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(cardShape.fill(theme.cardBackground))
+        .clipShape(cardShape)
+    }
+
+    // MARK: - Right Control (in bump area)
+
+    @ViewBuilder
+    private var rightControl: some View {
+        if isReviewing {
+            SaveDreamButton { handleSaveAudio() }
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if !isRecording && viewModel.mode == .text && viewModel.canSave {
+            SaveDreamButton {
+                viewModel.saveDream(context: modelContext)
+                isTextFocused = false
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if !isRecording && !isReviewing {
+            modeSwitchPill
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        }
+    }
+
+    // MARK: - Text Mode Content
+
+    private var textModeContent: some View {
+        TextModeView(text: $viewModel.dreamText, isFocused: $isTextFocused)
+    }
+
+    // MARK: - Voice Mode Content
+
+    private var voiceModeContent: some View {
+        VStack(spacing: 0) {
+            if isReviewing {
+                TextEditor(text: $reviewText)
+                    .font(.system(size: 15))
+                    .tracking(-0.23)
+                    .lineSpacing(5)
+                    .tint(theme.accent)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .overlay(alignment: .topLeading) {
+                        if reviewText.isEmpty {
+                            Text("Add dream description...")
+                                .font(.system(size: 15))
+                                .tracking(-0.23)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 24)
+                                .padding(.leading, 25)
+                                .allowsHitTesting(false)
+                        }
+                    }
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        if speechService.transcribedText.isEmpty {
+                            Text("Live Captions will appear here...")
+                                .font(.system(size: 15))
+                                .tracking(-0.23)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                        } else {
+                            liveCaptionsText
+                                .font(.system(size: 15))
+                                .tracking(-0.23)
+                                .lineSpacing(5)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                        }
+                        Color.clear.frame(height: 1).id("captionsBottom")
+                    }
+                    .scrollIndicators(.hidden)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .onChange(of: speechService.transcribedText) {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            proxy.scrollTo("captionsBottom", anchor: .bottom)
+                        }
+                    }
+                }
+            }
 
             Spacer(minLength: 0)
 
-            CelestialIcon()
-                .padding(.top, 50)
-                .padding(.trailing, 12)
-        }
-        .allowsHitTesting(false)
-    }
-
-    // MARK: - Cloud Layer + Pill (animated, on top of title)
-
-    private var cloudLayer: some View {
-        Color.clear
-            .frame(height: headerHeight)
-            .overlay(alignment: .bottom) {
-                CloudSeparator()
-                    .frame(height: cloudHeight)
-                    .offset(y: cloudOverhang)
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .bottomLeading) {
-                if isRecording {
-                    timerText
-                        .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 30)
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if isReviewing {
-                    reviewTimerText
-                        .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 30)
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if viewModel.mode == .text && viewModel.canSave {
-                    SaveDreamButton {
-                        viewModel.saveDream(context: modelContext)
-                        isTextFocused = false
-                    }
-                    .padding(.leading, 16)
-                    .offset(y: cloudOverhang + 30)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                if isReviewing {
-                    SaveDreamButton {
-                        handleSaveAudio()
-                    }
-                    .padding(.trailing, 16)
-                    .offset(y: cloudOverhang + 38)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if !isRecording {
-                    modeSwitchPill
-                        .padding(.trailing, 16)
-                        .offset(y: cloudOverhang + 30)
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                }
-            }
-            .animation(.easeOut(duration: 0.25), value: viewModel.canSave)
-            .animation(.spring(duration: 0.35, bounce: 0.15), value: isRecording)
-            .animation(.spring(duration: 0.35, bounce: 0.15), value: isReviewing)
-    }
-
-    // MARK: - Content
-
-    private var contentArea: some View {
-        VStack(spacing: 0) {
-            // Reserve space for header + cloud overhang
-            Color.clear
-                .frame(height: headerHeight + cloudOverhang)
-
-            // Text editor or voice placeholder
-            if viewModel.mode == .text {
-                TextModeView(
-                    text: $viewModel.dreamText,
-                    isFocused: $isTextFocused
+            if isRecording || isReviewing {
+                LiveWaveformView(
+                    isAnimating: isRecording && !isPaused,
+                    isReviewing: isReviewing,
+                    isVisible: isVisible,
+                    audioRecorder: audioRecorder
                 )
-                .padding(.top, 36)
-            } else {
-                voicePlaceholder
+                .padding(.horizontal, 20)
+                .padding(.bottom, 4)
+
+                timerRow
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+            }
+        }
+    }
+
+    // MARK: - Timer Row
+
+    private var timerRow: some View {
+        Group {
+            if isRecording {
+                timerText
+            } else if isReviewing {
+                LiveReviewTimerView(audioRecorder: audioRecorder, totalSeconds: totalRecordingSeconds)
             }
         }
     }
@@ -254,7 +366,7 @@ struct RecordView: View {
                 Capsule()
                     .stroke(.white.opacity(0.7), lineWidth: 1)
             )
-            .glassEffect(.clear.interactive(), in: .capsule)
+            .reveriGlass(.capsule)
         }
         .buttonStyle(.plain)
     }
@@ -268,115 +380,7 @@ struct RecordView: View {
 
         return Text(String(format: "%02d:%02d:%02d", h, m, s))
             .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.black.opacity(0.3))
-    }
-
-    // MARK: - Review Timer Text
-
-    private var reviewTimerText: some View {
-        let currentSeconds = Int(audioRecorder.playbackCurrentTime)
-        let ch = currentSeconds / 3600
-        let cm = (currentSeconds % 3600) / 60
-        let cs = currentSeconds % 60
-
-        let th = totalRecordingSeconds / 3600
-        let tm = (totalRecordingSeconds % 3600) / 60
-        let ts = totalRecordingSeconds % 60
-
-        return Text(String(format: "%02d:%02d:%02d — %02d:%02d:%02d", ch, cm, cs, th, tm, ts))
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.black.opacity(0.3))
-    }
-
-    // MARK: - Voice Placeholder
-
-    private var voicePlaceholder: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if isRecording || isReviewing {
-                LiveWaveformView(
-                    isAnimating: isRecording && !isPaused,
-                    isReviewing: isReviewing,
-                    isVisible: isVisible,
-                    audioRecorder: audioRecorder
-                )
-                .padding(.bottom, 8)
-            } else {
-                // Start Recording button
-                Button {
-                    requestMicAndRecord()
-                } label: {
-                    HStack(spacing: 8) {
-                        // Orange circle with glass effect + mic icon
-                        ZStack {
-                            Circle()
-                                .fill(theme.accent)
-                                .frame(width: 36, height: 36)
-                            Image("VoiceModeButtonIcon")
-                                .renderingMode(.original)
-                        }
-                        .frame(width: 40, height: 40)
-                        .glassEffect(.regular, in: .circle)
-
-                        Text("Start Recording")
-                            .font(.system(size: 15, weight: .medium))
-                            .tracking(-0.23)
-                            .foregroundStyle(.primary)
-                    }
-                }
-                .buttonStyle(.plain)
-                .padding(.bottom, 12)
-            }
-
-            // Captions: editable in review mode, read-only during recording
-            if isReviewing {
-                TextEditor(text: $reviewText)
-                    .font(.system(size: 15))
-                    .tracking(-0.23)
-                    .lineSpacing(5)
-                    .tint(theme.accent)
-                    .scrollContentBackground(.hidden)
-                    .padding(.bottom, 100)
-                    .overlay(alignment: .topLeading) {
-                        if reviewText.isEmpty {
-                            Text("Add dream description...")
-                                .font(.system(size: 15))
-                                .tracking(-0.23)
-                                .foregroundStyle(.black.opacity(0.3))
-                                .padding(.top, 8)
-                                .padding(.leading, 5)
-                                .allowsHitTesting(false)
-                        }
-                    }
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        if speechService.transcribedText.isEmpty {
-                            Text("Live Captions will appear here")
-                                .font(.system(size: 15))
-                                .tracking(-0.23)
-                                .foregroundStyle(.black.opacity(0.3))
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                        } else {
-                            liveCaptionsText
-                                .font(.system(size: 15))
-                                .tracking(-0.23)
-                                .lineSpacing(5)
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                        }
-                        Color.clear.frame(height: 1).id("captionsBottom")
-                    }
-                    .scrollIndicators(.hidden)
-                    .padding(.bottom, 100)
-                    .onChange(of: speechService.transcribedText) {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            proxy.scrollTo("captionsBottom", anchor: .bottom)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 44)
+            .foregroundStyle(.secondary)
     }
 
     // MARK: - Live Captions Text
@@ -424,7 +428,6 @@ struct RecordView: View {
         liveActivityManager?.end()
 
         guard elapsedSeconds > 1 else {
-            // Too short — auto-discard
             audioRecorder.deleteRecording()
             speechService.resetTranscription()
             elapsedSeconds = 0
@@ -435,7 +438,6 @@ struct RecordView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if url != nil {
-            // Enter review mode with editable transcript
             reviewText = transcript
             totalRecordingSeconds = elapsedSeconds
             speechService.resetTranscription()
@@ -443,7 +445,6 @@ struct RecordView: View {
                 isReviewing = true
             }
         } else if !transcript.isEmpty {
-            // No audio file but have transcript — fall back to text mode
             viewModel.dreamText = transcript
             viewModel.mode = .text
             speechService.resetTranscription()
@@ -469,7 +470,6 @@ struct RecordView: View {
         let transcript = reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
         viewModel.saveAudioDream(audioPath: relativePath, transcript: transcript, context: modelContext)
 
-        // Reset review state
         reviewText = ""
         elapsedSeconds = 0
         totalRecordingSeconds = 0
@@ -496,9 +496,6 @@ struct RecordView: View {
 
 // MARK: - LiveWaveformView (isolates audioRecorder.currentLevel observation)
 
-/// Wrapper that observes `audioRecorder.currentLevel` in its own body,
-/// preventing RecordView from re-evaluating ~43 times/sec.
-/// Also isolates playback progress observation during review.
 private struct LiveWaveformView: View {
     let isAnimating: Bool
     let isReviewing: Bool
@@ -516,5 +513,29 @@ private struct LiveWaveformView: View {
             playbackDuration: audioRecorder.playbackDuration,
             isVisible: isVisible
         )
+    }
+}
+
+// MARK: - LiveReviewTimerView (isolates playbackCurrentTime observation)
+
+private struct LiveReviewTimerView: View {
+    var audioRecorder: AudioRecorder
+    let totalSeconds: Int
+
+    var body: some View {
+        HStack {
+            Text(formatTime(Int(audioRecorder.playbackCurrentTime)))
+            Spacer()
+            Text(formatTime(totalSeconds))
+        }
+        .font(.system(size: 15, weight: .medium))
+        .foregroundStyle(.secondary)
+    }
+
+    private func formatTime(_ s: Int) -> String {
+        let h = s / 3600
+        let m = (s % 3600) / 60
+        let sec = s % 60
+        return String(format: "%02d:%02d:%02d", h, m, sec)
     }
 }
