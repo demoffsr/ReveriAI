@@ -23,6 +23,7 @@ struct DreamDetailView: View {
     @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
     @State private var cachedParsedSections: [ParsedSection] = []
     @State private var showImageError = false
+    @State private var sheetDismissTask: Task<Void, Never>?
 
     private enum DetailTab: String, CaseIterable {
         case dream = "Dream"
@@ -126,6 +127,7 @@ struct DreamDetailView: View {
             updateTabBarMode()
         }
         .onDisappear {
+            sheetDismissTask?.cancel()
             isInDetailDreamTab = false
             detailState.isActive = false
             detailState.tabBarMode = .none
@@ -617,7 +619,10 @@ struct DreamDetailView: View {
                         Button {
                             let savedAnswers = answers
                             showQuestionsSheet = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            sheetDismissTask?.cancel()
+                            sheetDismissTask = Task {
+                                try? await Task.sleep(for: .seconds(0.3))
+                                guard !Task.isCancelled else { return }
                                 generateImage(answers: savedAnswers)
                             }
                         } label: {
@@ -633,7 +638,10 @@ struct DreamDetailView: View {
                         // Skip button
                         Button {
                             showQuestionsSheet = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            sheetDismissTask?.cancel()
+                            sheetDismissTask = Task {
+                                try? await Task.sleep(for: .seconds(0.3))
+                                guard !Task.isCancelled else { return }
                                 generateImage()
                             }
                         } label: {
