@@ -33,16 +33,15 @@ struct EmotionFilterBar: View {
             }
             .scrollDisabled(!isExpanded)
             .scrollClipDisabled()
-            .mask(
+            .overlay(alignment: .leading) {
                 LinearGradient(
-                    gradient: Gradient(stops: [
-                        .init(color: .clear, location: 0),
-                        .init(color: .black, location: isExpanded ? 0.12 : 0)
-                    ]),
+                    colors: [.black, .black.opacity(0)],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-            )
+                .frame(width: isExpanded ? 40 : 0)
+                .allowsHitTesting(false)
+            }
             .contentMargins(.leading, 0)
             .onChange(of: isExpanded) { _, newValue in
                 if !newValue {
