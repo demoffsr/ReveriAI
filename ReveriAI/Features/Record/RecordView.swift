@@ -372,31 +372,8 @@ struct RecordView: View {
                         }
                     }
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        if speechService.transcribedText.isEmpty {
-                            Text("Live Captions will appear here")
-                                .font(.system(size: 15))
-                                .tracking(-0.23)
-                                .foregroundStyle(.black.opacity(0.3))
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                        } else {
-                            liveCaptionsText
-                                .font(.system(size: 15))
-                                .tracking(-0.23)
-                                .lineSpacing(5)
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                        }
-                        Color.clear.frame(height: 1).id("captionsBottom")
-                    }
-                    .scrollIndicators(.hidden)
+                LiveCaptionsView(speechService: speechService)
                     .padding(.bottom, 100)
-                    .onChange(of: speechService.transcribedText) {
-                        withAnimation(.easeOut(duration: 0.1)) {
-                            proxy.scrollTo("captionsBottom", anchor: .bottom)
-                        }
-                    }
-                }
             }
         }
         .padding(.horizontal, 20)
@@ -411,23 +388,6 @@ struct RecordView: View {
                 .fontWeight(.medium)
             }
         }
-    }
-
-    // MARK: - Live Captions Text
-
-    private var liveCaptionsText: Text {
-        let gradient = LinearGradient(
-            colors: [.primary, theme.accent],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-
-        if speechService.latestText.isEmpty {
-            return Text(speechService.stableText)
-                .foregroundStyle(.primary)
-        }
-
-        return Text("\(Text(speechService.stableText).foregroundStyle(.primary))\(Text(speechService.latestText).foregroundStyle(gradient))")
     }
 
     // MARK: - Recording
@@ -571,5 +531,52 @@ private struct LiveReviewTimerView: View {
         Text(String(format: "%02d:%02d:%02d — %02d:%02d:%02d", ch, cm, cs, th, tm, ts))
             .font(.system(size: 15, weight: .medium))
             .foregroundStyle(.black.opacity(0.3))
+    }
+}
+
+// MARK: - LiveCaptionsView (isolates speechService observation)
+
+private struct LiveCaptionsView: View {
+    var speechService: SpeechRecognitionService
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                if speechService.transcribedText.isEmpty {
+                    Text("Live Captions will appear here")
+                        .font(.system(size: 15))
+                        .tracking(-0.23)
+                        .foregroundStyle(.black.opacity(0.3))
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                } else {
+                    captionsText
+                        .font(.system(size: 15))
+                        .tracking(-0.23)
+                        .lineSpacing(5)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                Color.clear.frame(height: 1).id("captionsBottom")
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: speechService.transcribedText) {
+                withAnimation(.easeOut(duration: 0.1)) {
+                    proxy.scrollTo("captionsBottom", anchor: .bottom)
+                }
+            }
+        }
+    }
+
+    private var captionsText: Text {
+        let gradient = LinearGradient(
+            colors: [.primary, theme.accent],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+        if speechService.latestText.isEmpty {
+            return Text(speechService.stableText)
+                .foregroundStyle(.primary)
+        }
+        return Text("\(Text(speechService.stableText).foregroundStyle(.primary))\(Text(speechService.latestText).foregroundStyle(gradient))")
     }
 }
