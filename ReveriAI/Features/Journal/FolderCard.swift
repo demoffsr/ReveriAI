@@ -111,6 +111,7 @@ struct FolderCard: View {
                 }
             }
             .frame(width: totalWidth, height: circleSize, alignment: .leading)
+            .drawingGroup()
         }
     }
 }
