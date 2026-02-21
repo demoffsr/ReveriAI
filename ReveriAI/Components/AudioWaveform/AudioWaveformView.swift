@@ -148,6 +148,10 @@ private final class WaveformBuffer {
     private var lastBarIndex: Int = -1
     private var smoothedLevel: Float = 0
 
+    init() {
+        bars.reserveCapacity(4096)
+    }
+
     @discardableResult
     func update(
         scrollOffset: CGFloat,
