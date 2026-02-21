@@ -305,18 +305,10 @@ struct RecordView: View {
     // MARK: - Review Timer Text
 
     private var reviewTimerText: some View {
-        let currentSeconds = Int(audioRecorder.playbackCurrentTime)
-        let ch = currentSeconds / 3600
-        let cm = (currentSeconds % 3600) / 60
-        let cs = currentSeconds % 60
-
-        let th = totalRecordingSeconds / 3600
-        let tm = (totalRecordingSeconds % 3600) / 60
-        let ts = totalRecordingSeconds % 60
-
-        return Text(String(format: "%02d:%02d:%02d — %02d:%02d:%02d", ch, cm, cs, th, tm, ts))
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.black.opacity(0.3))
+        LiveReviewTimerView(
+            audioRecorder: audioRecorder,
+            totalRecordingSeconds: totalRecordingSeconds
+        )
     }
 
     // MARK: - Voice Placeholder
@@ -559,5 +551,25 @@ private struct LiveWaveformView: View {
             playbackDuration: audioRecorder.playbackDuration,
             isVisible: isVisible
         )
+    }
+}
+
+private struct LiveReviewTimerView: View {
+    let audioRecorder: AudioRecorder
+    let totalRecordingSeconds: Int
+
+    var body: some View {
+        let currentSeconds = Int(audioRecorder.playbackCurrentTime)
+        let ch = currentSeconds / 3600
+        let cm = (currentSeconds % 3600) / 60
+        let cs = currentSeconds % 60
+
+        let th = totalRecordingSeconds / 3600
+        let tm = (totalRecordingSeconds % 3600) / 60
+        let ts = totalRecordingSeconds % 60
+
+        Text(String(format: "%02d:%02d:%02d — %02d:%02d:%02d", ch, cm, cs, th, tm, ts))
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(.black.opacity(0.3))
     }
 }
