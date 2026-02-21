@@ -9,10 +9,15 @@ struct FolderPickerSheet: View {
     @State private var searchText = ""
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
+    @State private var cachedFilteredFolders: [DreamFolder] = []
+    @State private var searchDebounceTask: Task<Void, Never>?
 
-    private var filteredFolders: [DreamFolder] {
-        if searchText.isEmpty { return folders }
-        return folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    private func updateFilteredFolders() {
+        if searchText.isEmpty {
+            cachedFilteredFolders = folders
+        } else {
+            cachedFilteredFolders = folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
     }
 
     private let columns = [
@@ -28,13 +33,13 @@ struct FolderPickerSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
-                if filteredFolders.isEmpty {
+                if cachedFilteredFolders.isEmpty {
                     ContentUnavailableView("No folders", systemImage: "folder", description: Text("Create a folder first"))
                         .frame(maxHeight: .infinity)
                 } else {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 14) {
-                            ForEach(filteredFolders, id: \.id) { folder in
+                            ForEach(cachedFilteredFolders, id: \.id) { folder in
                                 FolderCard(folder: folder, onTap: {
                                     dream.folder = folder
                                     try? modelContext.save()
@@ -62,6 +67,16 @@ struct FolderPickerSheet: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 24, height: 24)
                     }
+                }
+            }
+            .onAppear { updateFilteredFolders() }
+            .onChange(of: folders.count) { _, _ in updateFilteredFolders() }
+            .onChange(of: searchText) { _, _ in
+                searchDebounceTask?.cancel()
+                searchDebounceTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    updateFilteredFolders()
                 }
             }
             .alert("New Folder", isPresented: $showNewFolderAlert) {
