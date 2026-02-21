@@ -25,11 +25,17 @@ final class ThemeManager {
         return hour >= 5 && hour < 21
     }
 
+    private func updateIfNeeded() {
+        let newValue = Self.calculateIsDayTime()
+        guard newValue != isDayTime else { return }
+        isDayTime = newValue
+    }
+
     private func startMonitoring() {
         guard timer == nil else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.isDayTime = Self.calculateIsDayTime()
+                self?.updateIfNeeded()
             }
         }
     }
@@ -50,13 +56,9 @@ final class ThemeManager {
             forName: UIApplication.willEnterForegroundNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            self?.isDayTime = Self.calculateIsDayTime()
+            self?.updateIfNeeded()
             self?.startMonitoring()
         }
-    }
-
-    func refreshTheme() {
-        isDayTime = Self.calculateIsDayTime()
     }
 
     // MARK: - Accent
