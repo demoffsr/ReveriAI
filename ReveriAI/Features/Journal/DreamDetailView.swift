@@ -145,9 +145,6 @@ struct DreamDetailView: View {
             generateInterpretation()
         }
         .onChange(of: detailState.hasInterpretation) {
-            if let text = dream.interpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
             updateTabBarMode()
         }
         .onChange(of: dream.interpretation) { _, newInterpretation in
