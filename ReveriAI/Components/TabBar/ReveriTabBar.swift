@@ -40,16 +40,16 @@ struct ReveriTabBar: View {
                 Group {
                     if isRecording {
                         recordingControls
-                            .transition(.blurReplace)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else if isReviewing {
                         reviewControls
-                            .transition(.blurReplace)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else if isSavingFeelings {
                         savingFeelingsControls
-                            .transition(.blurReplace)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else {
                         normalTabs
-                            .transition(.blurReplace)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                 }
                 .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
