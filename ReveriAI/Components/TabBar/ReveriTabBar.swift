@@ -63,6 +63,7 @@ struct ReveriTabBar: View {
                 .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
                 .reveriGlass(.capsule, interactive: false)
                 .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
+                .drawingGroup()
                 .padding(.bottom, 8)
             }
         }
