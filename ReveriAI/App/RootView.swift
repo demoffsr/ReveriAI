@@ -151,6 +151,7 @@ struct RootView: View {
         }
         .ignoresSafeArea(.keyboard)
         .animation(.spring(duration: 0.4), value: showEmotionGrid)
+        .onAppear { HapticService.warmUp() }
         .onChange(of: isRecording) { _, recording in
             if recording {
                 showEmotionGrid = false

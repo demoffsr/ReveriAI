@@ -9,6 +9,7 @@ struct ReveriTabBar: View {
     @State private var pauseFlipCount: Int = 0
     @State private var previewFlipCount: Int = 0
     @State private var showDeleteConfirmation = false
+    private static let stopColor = Color(hex: "FF3F42")
     var isRecording: Bool = false
     var isPaused: Bool = false
     var isReviewing: Bool = false
@@ -104,7 +105,7 @@ struct ReveriTabBar: View {
     }
 
     private var recordingControls: some View {
-        let stopColor = Color(hex: "FF3F42")
+        let stopColor = Self.stopColor
 
         // Icons NEVER change positions: Stop is always left, Pause/Play is always right.
         // Only the labels migrate: recording → "Stop" on left; paused → "Resume" on right.

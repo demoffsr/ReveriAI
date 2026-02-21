@@ -25,4 +25,11 @@ enum HapticService {
     static func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         notificationGenerator.notificationOccurred(type)
     }
+
+    static func warmUp() {
+        lightImpact.prepare()
+        mediumImpact.prepare()
+        selectionGenerator.prepare()
+        notificationGenerator.prepare()
+    }
 }
