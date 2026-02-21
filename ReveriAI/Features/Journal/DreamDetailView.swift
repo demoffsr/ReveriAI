@@ -21,7 +21,7 @@ struct DreamDetailView: View {
     @State private var answers: [String] = []
     @State private var isLoadingQuestions = false
     @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
-    @State private var cachedInterpretationSections: [InterpretationSection] = []
+    @State private var cachedParsedSections: [ParsedSection] = []
     @State private var showImageError = false
 
     private enum DetailTab: String, CaseIterable {
@@ -121,7 +121,7 @@ struct DreamDetailView: View {
             detailState.isActive = true
             detailState.hasInterpretation = dream.interpretation != nil
             if let text = dream.interpretation {
-                cachedInterpretationSections = parseInterpretation(text)
+                cachedParsedSections = parseAndStyleSections(text)
             }
             updateTabBarMode()
         }
@@ -144,13 +144,13 @@ struct DreamDetailView: View {
         }
         .onChange(of: detailState.hasInterpretation) {
             if let text = dream.interpretation {
-                cachedInterpretationSections = parseInterpretation(text)
+                cachedParsedSections = parseAndStyleSections(text)
             }
             updateTabBarMode()
         }
         .onChange(of: dream.interpretation) { _, newInterpretation in
             if let text = newInterpretation {
-                cachedInterpretationSections = parseInterpretation(text)
+                cachedParsedSections = parseAndStyleSections(text)
             }
             detailState.hasInterpretation = newInterpretation != nil
             updateTabBarMode()
@@ -331,7 +331,7 @@ struct DreamDetailView: View {
                         .foregroundStyle(theme.accent)
                 }
             }
-        } else if dream.interpretation != nil, !cachedInterpretationSections.isEmpty {
+        } else if dream.interpretation != nil, !cachedParsedSections.isEmpty {
             interpretationSectionsView
         } else {
             centeredPlaceholder {
@@ -359,45 +359,34 @@ struct DreamDetailView: View {
 
     private var interpretationSectionsView: some View {
         VStack(alignment: .leading, spacing: 20) {
-            ForEach(Array(cachedInterpretationSections.enumerated()), id: \.offset) { _, section in
+            ForEach(Array(cachedParsedSections.enumerated()), id: \.offset) { _, section in
                 VStack(alignment: .leading, spacing: 6) {
                     if let title = section.title {
                         Text(title)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(.black)
                     }
-                    styledBody(section.body)
-                }
-            }
-        }
-    }
-
-    private func styledBody(_ text: String) -> some View {
-        // Split into lines, render bullet points and bold inline
-        let lines = text.components(separatedBy: "\n")
-        return VStack(alignment: .leading, spacing: 4) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("•") || trimmed.hasPrefix("-") {
-                    let content = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("•")
-                            .font(.subheadline)
-                            .foregroundStyle(.black.opacity(0.8))
-                        boldInlineText(content)
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
+                            if line.isBullet {
+                                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                    Text("•")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.black.opacity(0.8))
+                                    renderSegments(line.segments)
+                                }
+                            } else {
+                                renderSegments(line.segments)
+                            }
+                        }
                     }
-                } else if !trimmed.isEmpty {
-                    boldInlineText(trimmed)
                 }
             }
         }
     }
 
-    private func boldInlineText(_ text: String) -> Text {
-        // Parse **bold** markers into styled Text using string interpolation (iOS 26+)
-        // Use reduce instead of for-loop to avoid N intermediate Text allocations
-        let segments = parseBoldSegments(text)
-        return segments.reduce(Text("")) { accumulated, segment in
+    private func renderSegments(_ segments: [TextSegment]) -> Text {
+        segments.reduce(Text("")) { accumulated, segment in
             let segmentText = segment.isBold
                 ? Text(segment.text).font(.system(size: 15, weight: .semibold)).foregroundStyle(.black)
                 : Text(segment.text).font(.subheadline).foregroundStyle(.black.opacity(0.8))
@@ -408,6 +397,16 @@ struct DreamDetailView: View {
     private struct TextSegment {
         let text: String
         let isBold: Bool
+    }
+
+    private struct ParsedLine {
+        let isBullet: Bool
+        let segments: [TextSegment]
+    }
+
+    private struct ParsedSection {
+        let title: String?
+        let lines: [ParsedLine]
     }
 
     private func parseBoldSegments(_ text: String) -> [TextSegment] {
@@ -433,15 +432,32 @@ struct DreamDetailView: View {
         return segments
     }
 
-    private struct InterpretationSection {
+    private func parseAndStyleSections(_ text: String) -> [ParsedSection] {
+        let sections = parseInterpretation(text)
+        return sections.map { section in
+            let lines = section.body.components(separatedBy: "\n").compactMap { line -> ParsedLine? in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty else { return nil }
+                if trimmed.hasPrefix("•") || trimmed.hasPrefix("-") {
+                    let content = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+                    return ParsedLine(isBullet: true, segments: parseBoldSegments(content))
+                } else {
+                    return ParsedLine(isBullet: false, segments: parseBoldSegments(trimmed))
+                }
+            }
+            return ParsedSection(title: section.title, lines: lines)
+        }
+    }
+
+    private struct RawInterpretationSection {
         var title: String?
         var body: String
     }
 
-    private func parseInterpretation(_ text: String) -> [InterpretationSection] {
+    private func parseInterpretation(_ text: String) -> [RawInterpretationSection] {
         // Split by numbered headers like "1. **Title**:" or "5. **Key symbols**:"
         let lines = text.components(separatedBy: "\n")
-        var sections: [InterpretationSection] = []
+        var sections: [RawInterpretationSection] = []
         var currentTitle: String?
         var currentBody: [String] = []
 
@@ -451,7 +467,7 @@ struct DreamDetailView: View {
             if let match = trimmed.range(of: #"^\d+\.\s*\*{0,2}([^*:]+?)\*{0,2}\s*:(.*)$"#, options: .regularExpression) {
                 // Save previous section
                 if currentTitle != nil || !currentBody.isEmpty {
-                    sections.append(InterpretationSection(
+                    sections.append(RawInterpretationSection(
                         title: currentTitle,
                         body: currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
                     ))
@@ -477,7 +493,7 @@ struct DreamDetailView: View {
         }
         // Don't forget last section
         if currentTitle != nil || !currentBody.isEmpty {
-            sections.append(InterpretationSection(
+            sections.append(RawInterpretationSection(
                 title: currentTitle,
                 body: currentBody.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
             ))
@@ -485,7 +501,7 @@ struct DreamDetailView: View {
 
         // If parsing found no sections, return entire text as one section
         if sections.isEmpty {
-            sections.append(InterpretationSection(title: nil, body: text))
+            sections.append(RawInterpretationSection(title: nil, body: text))
         }
 
         return sections
