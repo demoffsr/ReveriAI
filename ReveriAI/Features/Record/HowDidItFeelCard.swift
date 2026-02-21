@@ -21,7 +21,7 @@ struct HowDidItFeelCard: View {
                         .padding(.vertical, 8)
                         .background(Capsule().fill(savedColor.opacity(0.1)))
                         .reveriGlass(.capsule, interactive: false)
-                        .transition(.blurReplace)
+                        .transition(.opacity)
                 } else {
                     // "How did it feel?" capsule
                     Button(action: onTap) {
@@ -34,7 +34,7 @@ struct HowDidItFeelCard: View {
                     }
                     .buttonStyle(.plain)
                     .reveriGlass(.capsule)
-                    .transition(.blurReplace)
+                    .transition(.opacity)
 
                     // Close button
                     Button(action: onDismiss) {
@@ -45,10 +45,10 @@ struct HowDidItFeelCard: View {
                     }
                     .buttonStyle(.plain)
                     .reveriGlass(.circle)
-                    .transition(.blurReplace)
+                    .transition(.opacity)
                 }
             }
         }
-        .animation(.spring(duration: 0.4), value: showSavedState)
+
     }
 }
