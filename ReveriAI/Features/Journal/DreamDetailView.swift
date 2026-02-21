@@ -372,10 +372,10 @@ struct DreamDetailView: View {
                                     Text("•")
                                         .font(.subheadline)
                                         .foregroundStyle(.black.opacity(0.8))
-                                    renderSegments(line.segments)
+                                    line.renderedText
                                 }
                             } else {
-                                renderSegments(line.segments)
+                                line.renderedText
                             }
                         }
                     }
@@ -401,6 +401,7 @@ struct DreamDetailView: View {
     private struct ParsedLine {
         let isBullet: Bool
         let segments: [TextSegment]
+        let renderedText: Text
     }
 
     private struct ParsedSection {
@@ -439,9 +440,11 @@ struct DreamDetailView: View {
                 guard !trimmed.isEmpty else { return nil }
                 if trimmed.hasPrefix("•") || trimmed.hasPrefix("-") {
                     let content = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
-                    return ParsedLine(isBullet: true, segments: parseBoldSegments(content))
+                    let segments = parseBoldSegments(content)
+                    return ParsedLine(isBullet: true, segments: segments, renderedText: renderSegments(segments))
                 } else {
-                    return ParsedLine(isBullet: false, segments: parseBoldSegments(trimmed))
+                    let segments = parseBoldSegments(trimmed)
+                    return ParsedLine(isBullet: false, segments: segments, renderedText: renderSegments(segments))
                 }
             }
             return ParsedSection(title: section.title, lines: lines)
