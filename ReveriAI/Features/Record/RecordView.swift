@@ -16,6 +16,7 @@ struct RecordView: View {
     @State private var totalRecordingSeconds: Int = 0
     @State private var timerTask: Task<Void, Never>?
     @State private var reviewText: String = ""
+    @State private var headerContentVisible: Bool = true
     var audioRecorder: AudioRecorder
     var speechService: SpeechRecognitionService
     var isVisible: Bool = true
@@ -50,7 +51,7 @@ struct RecordView: View {
     private let baseHeaderHeight: CGFloat = 220
 
     private var headerRatio: CGFloat {
-        isTextFocused ? 0.38 : 1.0
+        isTextFocused ? 0.22 : 1.0
     }
 
     private var headerHeight: CGFloat {
@@ -72,20 +73,20 @@ struct RecordView: View {
 
                 // Layer 1: Content (below header + cloud zone)
                 contentArea
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
 
                 // Layer 2: Header gradient background (animated)
                 headerGradientBackground
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
 
                 // Layer 3: Title + icon (shifts up slightly when keyboard appears)
                 headerTitle
                     .offset(y: isTextFocused ? -25 : 0)
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
 
                 // Layer 4: Clouds + pill (animated, on top of title)
                 cloudLayer
-                    .animation(.easeOut(duration: 0.3), value: isTextFocused)
+                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
             }
             .ignoresSafeArea(edges: .top)
         }
@@ -113,6 +114,17 @@ struct RecordView: View {
                 handleDelete()
             }
         }
+        .onChange(of: isTextFocused) { _, focused in
+            if focused {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    headerContentVisible = false
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    headerContentVisible = true
+                }
+            }
+        }
         .onChange(of: selectedLocaleId, initial: true) { _, newValue in
             viewModel.speechLocaleRaw = newValue
         }
@@ -122,9 +134,9 @@ struct RecordView: View {
 
     private var headerGradientBackground: some View {
         DreamHeader()
-            .frame(height: headerHeight + cloudOverhang)
+            .frame(height: headerHeight + cloudOverhang - 8)
             .clipped()
-            .opacity(isTextFocused ? 0 : 1)
+            .opacity(headerContentVisible ? 1 : 0)
     }
 
     // MARK: - Closing Clouds (inverted clouds descend from above)
@@ -165,7 +177,7 @@ struct RecordView: View {
                 .padding(.trailing, 12)
         }
         .allowsHitTesting(false)
-        .opacity(isTextFocused ? 0 : 1)
+        .opacity(headerContentVisible ? 1 : 0)
     }
 
     // MARK: - Cloud Layer + Pill (animated, on top of title)
