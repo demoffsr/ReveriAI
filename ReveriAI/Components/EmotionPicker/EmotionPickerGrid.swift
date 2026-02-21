@@ -24,8 +24,8 @@ struct EmotionPickerGrid: View {
                             .scaleEffect(isVisible ? 1 : 0.5)
                             .opacity(isVisible ? 1 : 0)
                             .animation(
-                                .spring(duration: 0.5, bounce: 0.35)
-                                    .delay(Double(flatIndex) * 0.06),
+                                .spring(duration: 0.45, bounce: 0.3)
+                                    .delay(Double(flatIndex) * 0.03),
                                 value: isVisible
                             )
                     }
