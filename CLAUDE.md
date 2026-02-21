@@ -144,3 +144,6 @@ ReveriAI/
 - **ThemeManager background pause:** Timer stops on `didEnterBackgroundNotification`, resumes on `willEnterForegroundNotification` — no battery drain when app not visible.
 - **Search debounce:** `JournalView` search debounced 300ms via cancellable `Task` — filtering runs after typing pause, not on every keystroke.
 - **Speech recognition constants:** `SpeechRecognitionService.fillers` and `.questionWords` are `private static let` — Set literals created once, not on every `punctuateSegment()` call.
+- **CardWaveformView.unplayedBarColor:** `Color(hex: "C3C3C3")` extracted to `private static let` — hex parsing (Scanner + bit shifting) runs once at type load, not every ~100ms during playback.
+- **DreamCard cached values:** `displayTitle` and `audioURL` cached in `@State`, computed in `onAppear`/`onChange`. `recordingsDirectory` is `static let`. Eliminates FileManager I/O and split/join on every scroll render.
+- **FolderPickerSheet.filteredFolders caching:** `@State cachedFilteredFolders` with 300ms debounce via cancellable `Task` — consistent with FolderDetailView and AddDreamsToFolderSheet patterns.
