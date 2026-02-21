@@ -73,20 +73,20 @@ struct RecordView: View {
 
                 // Layer 1: Content (below header + cloud zone)
                 contentArea
-                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
+                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
 
                 // Layer 2: Header gradient background (animated)
                 headerGradientBackground
-                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
+                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
 
                 // Layer 3: Title + icon (shifts up slightly when keyboard appears)
                 headerTitle
                     .offset(y: isTextFocused ? -25 : 0)
-                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
+                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
 
                 // Layer 4: Clouds + pill (animated, on top of title)
                 cloudLayer
-                    .animation(.spring(duration: 0.5, bounce: 0.0), value: isTextFocused)
+                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
             }
             .ignoresSafeArea(edges: .top)
         }
@@ -116,11 +116,11 @@ struct RecordView: View {
         }
         .onChange(of: isTextFocused) { _, focused in
             if focused {
-                withAnimation(.easeOut(duration: 0.15)) {
+                withAnimation(.easeOut(duration: 0.1)) {
                     headerContentVisible = false
                 }
             } else {
-                withAnimation(.easeOut(duration: 0.15)) {
+                withAnimation(.easeOut(duration: 0.1)) {
                     headerContentVisible = true
                 }
             }
@@ -189,6 +189,7 @@ struct RecordView: View {
                 CloudSeparator()
                     .frame(height: cloudHeight)
                     .offset(y: cloudOverhang)
+                    .opacity(headerContentVisible ? 1 : 0)
                     .allowsHitTesting(false)
             }
             .overlay(alignment: .top) {
@@ -250,7 +251,7 @@ struct RecordView: View {
                     text: $viewModel.dreamText,
                     isFocused: $isTextFocused
                 )
-                .padding(.top, 36)
+                .padding(.top, isTextFocused ? 16 : 36)
             } else {
                 voicePlaceholder
             }
@@ -397,7 +398,7 @@ struct RecordView: View {
                     .scrollIndicators(.hidden)
                     .padding(.bottom, 100)
                     .onChange(of: speechService.transcribedText) {
-                        withAnimation(.easeOut(duration: 0.15)) {
+                        withAnimation(.easeOut(duration: 0.1)) {
                             proxy.scrollTo("captionsBottom", anchor: .bottom)
                         }
                     }
