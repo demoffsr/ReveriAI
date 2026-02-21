@@ -98,7 +98,7 @@ struct EmotionFilterBar: View {
                 .fill(.black.opacity(isDimmed ? 0.55 : 0))
                 .frame(width: circleSize, height: circleSize)
                 .allowsHitTesting(false)
-                .id("dim-\(emotion.id)-\(selectedEmotion?.id ?? "none")")
+                .transaction { $0.animation = nil }
 
             Circle()
                 .stroke(
