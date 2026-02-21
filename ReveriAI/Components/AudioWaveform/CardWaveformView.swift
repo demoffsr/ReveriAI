@@ -8,6 +8,7 @@ struct CardWaveformView: View {
 
     private static let barWidth: CGFloat = 2
     private static let frameHeight: CGFloat = 32
+    private static let unplayedBarColor = Color(hex: "C3C3C3")
 
     var body: some View {
         Canvas { context, size in
@@ -15,7 +16,7 @@ struct CardWaveformView: View {
             guard count > 0 else { return }
 
             let playedColor = theme.accent
-            let unplayedColor = Color(hex: "C3C3C3")
+            let unplayedColor = Self.unplayedBarColor
 
             // Calculate how many bars fit, then space evenly
             let minSpacing: CGFloat = 2

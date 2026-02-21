@@ -8,19 +8,13 @@ struct DreamCard: View {
     @Environment(\.theme) private var theme
     @State private var showDeleteConfirmation = false
     @State private var showFolderPicker = false
+    @State private var cachedDisplayTitle = ""
+    @State private var cachedAudioURL: URL?
 
-    private var displayTitle: String {
-        if !dream.title.isEmpty { return dream.title }
-        let words = dream.text.split(separator: " ").prefix(5)
-        return words.joined(separator: " ")
-    }
-
-    private var audioURL: URL? {
-        guard let path = dream.audioFilePath else { return nil }
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    private static let recordingsDirectory: URL = {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("recordings")
-        return dir.appendingPathComponent(path)
-    }
+    }()
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -33,7 +27,7 @@ struct DreamCard: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header
             HStack {
-                Text(displayTitle)
+                Text(cachedDisplayTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.black)
                     .lineLimit(1)
@@ -81,8 +75,8 @@ struct DreamCard: View {
             }
 
             // Audio waveform player
-            if let audioURL {
-                DreamCardPlayer(audioURL: audioURL)
+            if let cachedAudioURL {
+                DreamCardPlayer(audioURL: cachedAudioURL)
             }
 
             if !dream.text.isEmpty {
@@ -130,6 +124,23 @@ struct DreamCard: View {
         }
         .sheet(isPresented: $showFolderPicker) {
             FolderPickerSheet(dream: dream)
+        }
+        .onAppear { updateCachedValues() }
+        .onChange(of: dream.title) { _, _ in updateCachedValues() }
+        .onChange(of: dream.audioFilePath) { _, _ in updateCachedValues() }
+    }
+
+    private func updateCachedValues() {
+        if !dream.title.isEmpty {
+            cachedDisplayTitle = dream.title
+        } else {
+            let words = dream.text.split(separator: " ").prefix(5)
+            cachedDisplayTitle = words.joined(separator: " ")
+        }
+        if let path = dream.audioFilePath {
+            cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(path)
+        } else {
+            cachedAudioURL = nil
         }
     }
 }
