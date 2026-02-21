@@ -34,10 +34,7 @@ struct EmotionPickerGrid: View {
         }
         .padding(.horizontal, 20)
         .onAppear {
-            let allEmotions = gridOrder.flatMap { $0 }
-            for emotion in allEmotions {
-                visibleItems.insert(emotion)
-            }
+            visibleItems = Set(gridOrder.flatMap { $0 })
         }
         .onDisappear {
             visibleItems = []
