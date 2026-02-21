@@ -12,8 +12,8 @@ extension Color {
     static let headerMidNavy = Color(hex: "0D1B2A")
     static let headerLightNavy = Color(hex: "1A2744")
 
-    static let cloudBackDay = Color(hex: "CDB390")
-    static let cloudMidDay = Color(hex: "E0C7A6")
+    static let cloudBackDay = Color(hex: "B6BDCF")
+    static let cloudMidDay = Color(hex: "D3D3D3")
     static let cloudBackNight = Color(hex: "A1AECE")
     static let cloudMidNight = Color(hex: "B6BDCF")
     static let cloudFront = Color(hex: "F2F2F2")

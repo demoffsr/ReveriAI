@@ -70,7 +70,7 @@ ReveriAI/
 
 ## Key Patterns
 
-- **Cloud system:** 3 cloud Shape layers (Back/Mid/Front) normalized from SVG viewBox 390×159 using 0..1 coords. `CloudSeparator` composes them. `RecordView` controls sizing: `cloudHeight = 159`, `cloudOverhang = cloudHeight * 0.5`.
+- **Cloud system:** 3 cloud Shape layers (Back/Mid/Front) normalized from SVG viewBox 390×159 using 0..1 coords. `CloudSeparator` composes them. `RecordView` controls sizing: `cloudHeight = 89`, `cloudOverhang = cloudHeight * 0.5`. **Closing clouds:** `CloudClosedShape` (inverted — flat top, wavy bottom, from `clouds_closed_new.svg` 390×140) slides down from above when `isTextFocused` to cover the header. VStack: solid `theme.cloudFront` fill + `CloudClosedShape` at `cloudHeight`. Lives inside `cloudLayer` overlay (above `CloudSeparator` z-order). Offset animation: `-(baseHeaderHeight + cloudOverhang)` → `0`.
 - **CelestialIcon:** 2 glow rings (102pt/84pt) + main circle (65pt) with gradient stroke + warm shadow. Day = custom SVG sun (`SunIcon` asset), Night = SF Symbol `moon.fill`.
 - **Header background:** `DreamHeader` uses `Image("BackgroundDaylight")` with `.resizable().aspectRatio(contentMode: .fill)`, overlaid by a black-to-transparent `LinearGradient` (Figma devmode values) + `StarsCanvas`. In `RecordView`, the header frame is `headerHeight + cloudOverhang` with `.clipped()` so the photo extends behind clouds but doesn't bleed into the white content area.
 - **Header layout:** Layered ZStack in RecordView — background, content, header image, title+icon, clouds+pill. Title shifts up on keyboard focus.

@@ -46,8 +46,8 @@ struct RecordView: View {
         self.onShowHowDidItFeel = onShowHowDidItFeel
     }
 
-    private let cloudHeight: CGFloat = 159
-    private let baseHeaderHeight: CGFloat = 255
+    private let cloudHeight: CGFloat = 89
+    private let baseHeaderHeight: CGFloat = 220
 
     private var headerRatio: CGFloat {
         isTextFocused ? 0.38 : 1.0
@@ -124,6 +124,22 @@ struct RecordView: View {
         DreamHeader()
             .frame(height: headerHeight + cloudOverhang)
             .clipped()
+            .opacity(isTextFocused ? 0 : 1)
+    }
+
+    // MARK: - Closing Clouds (inverted clouds descend from above)
+
+    private var closingClouds: some View {
+        VStack(spacing: 0) {
+            // Solid fill covers header above cloud bumps
+            theme.cloudFront
+            // Cloud shape at natural proportions (matches bottom clouds)
+            CloudClosedShape()
+                .fill(theme.cloudFront)
+                .frame(height: cloudHeight)
+        }
+        .frame(height: headerHeight + cloudOverhang)
+        .offset(y: isTextFocused ? 0 : -(baseHeaderHeight + cloudOverhang))
     }
 
     // MARK: - Header Title (static — never moves)
@@ -131,15 +147,11 @@ struct RecordView: View {
     private var headerTitle: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("What did")
+                Text("Describe")
                     .font(.system(size: 36, weight: .heavy))
                     .foregroundStyle(.white)
-                Text("you dream")
+                Text("\(Text("your ").foregroundStyle(.white))\(Text("dream").foregroundStyle(theme.accent))")
                     .font(.system(size: 36, weight: .heavy))
-                    .foregroundStyle(.white)
-                Text("about...?")
-                    .font(.system(size: 36, weight: .heavy))
-                    .foregroundStyle(theme.accent)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.75)
@@ -153,6 +165,7 @@ struct RecordView: View {
                 .padding(.trailing, 12)
         }
         .allowsHitTesting(false)
+        .opacity(isTextFocused ? 0 : 1)
     }
 
     // MARK: - Cloud Layer + Pill (animated, on top of title)
@@ -166,16 +179,20 @@ struct RecordView: View {
                     .offset(y: cloudOverhang)
                     .allowsHitTesting(false)
             }
+            .overlay(alignment: .top) {
+                closingClouds
+                    .allowsHitTesting(false)
+            }
             .overlay(alignment: .bottomLeading) {
                 if isRecording {
                     timerText
                         .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 30)
+                        .offset(y: cloudOverhang + 12)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if isReviewing {
                     reviewTimerText
                         .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 30)
+                        .offset(y: cloudOverhang + 12)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if viewModel.mode == .text && viewModel.canSave {
                     SaveDreamButton {
@@ -183,7 +200,7 @@ struct RecordView: View {
                         isTextFocused = false
                     }
                     .padding(.leading, 16)
-                    .offset(y: cloudOverhang + 30)
+                    .offset(y: cloudOverhang + 12)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
@@ -193,12 +210,12 @@ struct RecordView: View {
                         handleSaveAudio()
                     }
                     .padding(.trailing, 16)
-                    .offset(y: cloudOverhang + 38)
+                    .offset(y: cloudOverhang + 16)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if !isRecording {
                     modeSwitchPill
                         .padding(.trailing, 16)
-                        .offset(y: cloudOverhang + 30)
+                        .offset(y: cloudOverhang + 12)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
@@ -376,7 +393,7 @@ struct RecordView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 44)
+        .padding(.top, 20)
     }
 
     // MARK: - Live Captions Text
