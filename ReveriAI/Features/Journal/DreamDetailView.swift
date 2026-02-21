@@ -358,7 +358,7 @@ struct DreamDetailView: View {
 
     private var interpretationSectionsView: some View {
         VStack(alignment: .leading, spacing: 20) {
-            ForEach(Array(cachedParsedSections.enumerated()), id: \.offset) { _, section in
+            ForEach(cachedParsedSections) { section in
                 VStack(alignment: .leading, spacing: 6) {
                     if let title = section.title {
                         Text(title)
@@ -366,7 +366,7 @@ struct DreamDetailView: View {
                             .foregroundStyle(.black)
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
+                        ForEach(section.lines) { line in
                             if line.isBullet {
                                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                                     Text("•")
@@ -398,13 +398,15 @@ struct DreamDetailView: View {
         let isBold: Bool
     }
 
-    private struct ParsedLine {
+    private struct ParsedLine: Identifiable {
+        let id = UUID()
         let isBullet: Bool
         let segments: [TextSegment]
         let renderedText: Text
     }
 
-    private struct ParsedSection {
+    private struct ParsedSection: Identifiable {
+        let id = UUID()
         let title: String?
         let lines: [ParsedLine]
     }
