@@ -13,11 +13,10 @@ struct ToastModifier: ViewModifier {
                 ToastView(message, icon: icon, style: style)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .padding(.top, 60)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                isPresented = false
-                            }
+                    .task {
+                        try? await Task.sleep(for: .seconds(duration))
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            isPresented = false
                         }
                     }
             }
