@@ -49,7 +49,7 @@ struct RootView: View {
                         startAutoDismissTimer()
                     }
                 )
-                .opacity(selectedTab == .record ? 1 : 0)
+                .zIndex(selectedTab == .record ? 1 : 0)
                 .allowsHitTesting(selectedTab == .record)
 
                 JournalView(
@@ -61,7 +61,7 @@ struct RootView: View {
                     detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
                     detailDreamState: detailDreamState
                 )
-                .opacity(selectedTab == .journal ? 1 : 0)
+                .zIndex(selectedTab == .journal ? 1 : 0)
                 .allowsHitTesting(selectedTab == .journal)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
