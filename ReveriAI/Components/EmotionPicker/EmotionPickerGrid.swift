@@ -49,6 +49,7 @@ struct EmotionPickerGrid: View {
         let hasSelection = !selectedEmotions.isEmpty
 
         return Button {
+            HapticService.selection()
             if isSelected {
                 selectedEmotions.remove(emotion)
             } else {

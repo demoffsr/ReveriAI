@@ -56,6 +56,7 @@ struct FolderCard: View {
                         Label("Rename", systemImage: "pencil")
                     }
                     Button(role: .destructive) {
+                        HapticService.notification(.warning)
                         onDelete()
                     } label: {
                         Label("Delete", systemImage: "trash")

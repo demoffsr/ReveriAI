@@ -41,6 +41,7 @@ struct DreamCardPlayer: View {
     }
 
     private func togglePlayback() {
+        HapticService.impact(.light)
         if player == nil {
             let p = CardAudioPlayer(url: audioURL) { time, duration in
                 playbackProgress = duration > 0 ? CGFloat(time / duration) : 0

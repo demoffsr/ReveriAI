@@ -23,6 +23,7 @@ struct EmotionFilterBar: View {
                                 if isExpanded {
                                     selectEmotion(emotion)
                                 } else {
+                                    HapticService.impact(.light)
                                     isExpanded = true
                                 }
                             }
@@ -52,6 +53,7 @@ struct EmotionFilterBar: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if !isExpanded {
+                HapticService.impact(.light)
                 isExpanded = true
             }
         }
@@ -61,6 +63,7 @@ struct EmotionFilterBar: View {
     }
 
     private func selectEmotion(_ emotion: DreamEmotion) {
+        HapticService.selection()
         if selectedEmotion == emotion {
             selectedEmotion = nil
         } else {

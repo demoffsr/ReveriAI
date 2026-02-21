@@ -120,6 +120,7 @@ struct DreamCard: View {
         }
         .confirmationDialog("Удалить сон?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Удалить", role: .destructive) {
+                HapticService.notification(.warning)
                 modelContext.delete(dream)
                 try? modelContext.save()
             }

@@ -435,6 +435,7 @@ struct RecordView: View {
                 let audioStream = audioRecorder.startRecording()
                 let locale = Locale(identifier: selectedLocaleId)
                 speechService.startTranscription(locale: locale, audioStream: audioStream)
+                HapticService.impact(.medium)
                 withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                     isRecording = true
                 }

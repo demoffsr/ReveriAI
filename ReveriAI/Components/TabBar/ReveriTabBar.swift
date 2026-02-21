@@ -52,7 +52,7 @@ struct ReveriTabBar: View {
                     }
                 }
                 .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
-                    Button("Delete", role: .destructive) { onDelete?() }
+                    Button("Delete", role: .destructive) { HapticService.notification(.warning); onDelete?() }
                     Button("Cancel", role: .cancel) { }
                 } message: {
                     Text("This action cannot be undone")
@@ -111,6 +111,7 @@ struct ReveriTabBar: View {
         return HStack(spacing: 4) {
             // Left: Stop button — labeled when recording, icon-only when paused
             Button {
+                HapticService.impact(.medium)
                 onStop?()
             } label: {
                 HStack(spacing: 6) {
@@ -136,6 +137,7 @@ struct ReveriTabBar: View {
 
             // Right: Pause/Resume button — icon-only when recording, labeled when paused
             Button {
+                HapticService.impact(.light)
                 withAnimation(.spring(duration: 0.5, bounce: 0.15)) {
                     onTogglePause?()
                     pauseFlipCount += 1
@@ -187,6 +189,7 @@ struct ReveriTabBar: View {
         HStack(spacing: 4) {
             // Preview/Play button
             Button {
+                HapticService.impact(.light)
                 withAnimation(.spring(duration: 0.7, bounce: 0.1)) {
                     onTogglePreview?()
                     previewFlipCount += 1
@@ -233,6 +236,7 @@ struct ReveriTabBar: View {
         HStack(spacing: 16) {
             // Skip back 5s
             Button {
+                HapticService.impact(.light)
                 onSkipBack?()
             } label: {
                 Image("SkipBack5Icon")
@@ -244,6 +248,7 @@ struct ReveriTabBar: View {
 
             // Large pause/play button
             Button {
+                HapticService.impact(.light)
                 withAnimation(.spring(duration: 0.7, bounce: 0.1)) {
                     onTogglePreview?()
                     previewFlipCount += 1
@@ -267,6 +272,7 @@ struct ReveriTabBar: View {
 
             // Skip forward 5s
             Button {
+                HapticService.impact(.light)
                 onSkipForward?()
             } label: {
                 Image("SkipForward5Icon")
@@ -289,6 +295,7 @@ struct ReveriTabBar: View {
     private var savingFeelingsControls: some View {
         // Save feelings button only — no journal icon during emotion selection
         Button {
+            HapticService.notification(.success)
             onSaveFeelings?()
         } label: {
             HStack(spacing: 6) {
@@ -313,6 +320,7 @@ struct ReveriTabBar: View {
     }
 
     private func handleTap(_ tab: AppTab) {
+        HapticService.selection()
         collapseTask?.cancel()
 
         if expandedTab == tab {

@@ -32,6 +32,7 @@ final class RecordViewModel {
         let dream = Dream(text: dreamText.trimmingCharacters(in: .whitespacesAndNewlines), emotions: selectedEmotions)
         context.insert(dream)
         try? context.save()
+        HapticService.notification(.success)
 
         DreamAIService.generateTitleInBackground(
             dreamID: dream.persistentModelID,
@@ -51,6 +52,7 @@ final class RecordViewModel {
         let dream = Dream(text: transcript, emotions: selectedEmotions, audioFilePath: audioPath)
         context.insert(dream)
         try? context.save()
+        HapticService.notification(.success)
 
         if !transcript.isEmpty {
             DreamAIService.generateTitleInBackground(
