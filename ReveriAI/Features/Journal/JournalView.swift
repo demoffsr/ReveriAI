@@ -53,11 +53,16 @@ struct JournalView: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
 
-            if selectedTab == .dreams {
-                dreamsContent
-            } else {
-                foldersContent
+            Group {
+                if selectedTab == .dreams {
+                    dreamsContent
+                        .transition(.opacity)
+                } else {
+                    foldersContent
+                        .transition(.opacity)
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: selectedTab)
 
             Spacer(minLength: 0)
         }
@@ -112,6 +117,7 @@ struct JournalView: View {
                             }
                         }
                     }
+                    .animation(.easeOut(duration: 0.3), value: viewModel.filteredDreams.count)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
                     .padding(.bottom, 100)
@@ -135,12 +141,15 @@ struct JournalView: View {
                                 folder: folder,
                                 onTap: { selectedFolder = folder },
                                 onDelete: {
-                                    modelContext.delete(folder)
-                                    try? modelContext.save()
+                                    withAnimation(.easeOut(duration: 0.3)) {
+                                        modelContext.delete(folder)
+                                        try? modelContext.save()
+                                    }
                                 }
                             )
                         }
                     }
+                    .animation(.easeOut(duration: 0.3), value: folders.count)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
                     .padding(.bottom, 100)

@@ -11,6 +11,16 @@ struct FolderSearchBar: View {
             TextField("Search", text: $text)
                 .font(.system(size: 17))
                 .foregroundStyle(.black)
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.black.opacity(0.3))
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, 14)
         .frame(height: 44)

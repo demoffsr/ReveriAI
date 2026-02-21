@@ -8,6 +8,7 @@ struct RecordView: View {
     @AppStorage("speechRecognitionLocale") private var selectedLocaleId: String = SpeechLocale.defaultLocale.identifier
     @State private var viewModel = RecordViewModel()
     @FocusState private var isTextFocused: Bool
+    @FocusState private var isReviewTextFocused: Bool
 
     @Binding var isRecording: Bool
     @Binding var isPaused: Bool
@@ -360,6 +361,7 @@ struct RecordView: View {
             // Captions: editable in review mode, read-only during recording
             if isReviewing {
                 TextEditor(text: $reviewText)
+                    .focused($isReviewTextFocused)
                     .font(.system(size: 15))
                     .tracking(-0.23)
                     .lineSpacing(5)
@@ -407,6 +409,16 @@ struct RecordView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isTextFocused = false
+                    isReviewTextFocused = false
+                }
+                .fontWeight(.medium)
+            }
+        }
     }
 
     // MARK: - Live Captions Text

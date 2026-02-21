@@ -23,7 +23,7 @@ struct DreamCardPlayer: View {
                     .background(theme.accent)
                     .clipShape(Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressableButtonStyle())
 
             CardWaveformView(
                 bars: bars,

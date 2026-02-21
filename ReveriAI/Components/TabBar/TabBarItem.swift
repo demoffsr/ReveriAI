@@ -34,7 +34,7 @@ struct TabBarItem: View {
                     .fill(isSelected ? accentColor.opacity(0.15) : .clear)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
         .contentShape(Capsule())
     }
 }

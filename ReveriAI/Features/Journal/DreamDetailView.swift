@@ -22,6 +22,7 @@ struct DreamDetailView: View {
     @State private var isLoadingQuestions = false
     @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
     @State private var cachedInterpretationSections: [InterpretationSection] = []
+    @State private var showImageError = false
 
     private enum DetailTab: String, CaseIterable {
         case dream = "Dream"
@@ -157,6 +158,7 @@ struct DreamDetailView: View {
         .fullScreenCover(isPresented: $showFullscreenImage) {
             fullscreenImageView
         }
+        .toast(isPresented: $showImageError, message: "Failed to generate image", icon: "xmark.circle.fill", style: .error, duration: 3.0)
         .sheet(isPresented: $showQuestionsSheet) {
             questionsSheet
         }
@@ -557,6 +559,9 @@ struct DreamDetailView: View {
         ) { imageURL in
             isGenerating = false
             detailDreamHasImage = imageURL != nil
+            if imageURL == nil {
+                showImageError = true
+            }
         }
     }
 
