@@ -14,6 +14,8 @@ struct JournalView: View {
     @Binding var detailDreamIsGenerating: Bool
     @Binding var detailDreamGenerateTrigger: Bool
     var detailDreamState: DetailDreamState
+    var notificationService: NotificationService
+    var dreamReminderManager: DreamReminderManager
     @Environment(\.theme) private var theme
     @State private var viewModel = JournalViewModel()
     @State private var selectedTab: JournalTab = .dreams
@@ -21,6 +23,7 @@ struct JournalView: View {
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
     @State private var selectedFolder: DreamFolder?
+    @State private var showProfile = false
     @State private var searchDebounceTask: Task<Void, Never>?
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
     @Query(sort: \DreamFolder.createdAt, order: .reverse) private var folders: [DreamFolder]
@@ -42,7 +45,8 @@ struct JournalView: View {
                 emotionOrder: $emotionOrder,
                 selectedTimeRange: $viewModel.selectedTimeRange,
                 isFoldersTab: selectedTab == .folders,
-                showNewFolderAlert: $showNewFolderAlert
+                showNewFolderAlert: $showNewFolderAlert,
+                onProfileTap: { showProfile = true }
             )
 
             Picker("", selection: $selectedTab) {
@@ -73,6 +77,9 @@ struct JournalView: View {
         }
         .navigationDestination(item: $selectedFolder) { folder in
             folderDetail(for: folder)
+        }
+        .navigationDestination(isPresented: $showProfile) {
+            ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager)
         }
         .onAppear { refreshFilters() }
         .onChange(of: selectedEmotion) { _, newValue in

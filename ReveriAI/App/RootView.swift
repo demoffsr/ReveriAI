@@ -23,7 +23,12 @@ struct RootView: View {
     @State private var detailDreamGenerateTrigger = false
     @State private var detailDreamState = DetailDreamState()
     @State private var liveActivityManager = LiveActivityManager()
+    @State private var notificationService = NotificationService()
+    @State private var dreamReminderManager = DreamReminderManager()
+    @State private var startRecordingTrigger = false
+    @State private var startTextModeTrigger = false
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -37,8 +42,11 @@ struct RootView: View {
                     speechService: speechService,
                     isVisible: selectedTab == .record,
                     liveActivityManager: liveActivityManager,
+                    startRecordingTrigger: $startRecordingTrigger,
+                    startTextModeTrigger: $startTextModeTrigger,
                     onDreamSaved: { dream in
                         savedDreamForEmotion = dream
+                        dreamReminderManager.end()
                     },
                     onShowHowDidItFeel: {
                         dismissTask?.cancel()
@@ -59,7 +67,9 @@ struct RootView: View {
                     detailDreamHasImage: $detailDreamHasImage,
                     detailDreamIsGenerating: $detailDreamIsGenerating,
                     detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
-                    detailDreamState: detailDreamState
+                    detailDreamState: detailDreamState,
+                    notificationService: notificationService,
+                    dreamReminderManager: dreamReminderManager
                 )
                 .zIndex(selectedTab == .journal ? 1 : 0)
                 .allowsHitTesting(selectedTab == .journal)
@@ -170,6 +180,53 @@ struct RootView: View {
                 autoDismissTask?.cancel()
                 dismissTask?.cancel()
             }
+        }
+        .onAppear {
+            dreamReminderManager.reconnect()
+            dreamReminderManager.validateAndAutoStart()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                dreamReminderManager.reconnect()
+                dreamReminderManager.validateAndAutoStart()
+            }
+        }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .dreamReminderRecord)) { _ in
+            selectedTab = .record
+            startRecordingTrigger.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .dreamReminderWrite)) { _ in
+            selectedTab = .record
+            startTextModeTrigger.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .dreamReminderStartActivity)) { _ in
+            if !dreamReminderManager.isActive {
+                dreamReminderManager.start()
+            }
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "reveri" else { return }
+        switch url.host {
+        case "record":
+            selectedTab = .record
+            startRecordingTrigger.toggle()
+        case "write":
+            selectedTab = .record
+            startTextModeTrigger.toggle()
+        case "stop-recording":
+            if isRecording {
+                withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
+                    isRecording = false
+                    isPaused = false
+                }
+            }
+        default:
+            break
         }
     }
 

@@ -22,7 +22,8 @@ struct RecordView: View {
     var speechService: SpeechRecognitionService
     var isVisible: Bool = true
     var liveActivityManager: LiveActivityManager?
-
+    @Binding var startRecordingTrigger: Bool
+    @Binding var startTextModeTrigger: Bool
     var onDreamSaved: ((Dream) -> Void)?
     var onShowHowDidItFeel: (() -> Void)?
 
@@ -34,6 +35,8 @@ struct RecordView: View {
         speechService: SpeechRecognitionService,
         isVisible: Bool = true,
         liveActivityManager: LiveActivityManager? = nil,
+        startRecordingTrigger: Binding<Bool> = .constant(false),
+        startTextModeTrigger: Binding<Bool> = .constant(false),
         onDreamSaved: ((Dream) -> Void)? = nil,
         onShowHowDidItFeel: (() -> Void)? = nil
     ) {
@@ -44,6 +47,8 @@ struct RecordView: View {
         self.speechService = speechService
         self.isVisible = isVisible
         self.liveActivityManager = liveActivityManager
+        self._startRecordingTrigger = startRecordingTrigger
+        self._startTextModeTrigger = startTextModeTrigger
         self.onDreamSaved = onDreamSaved
         self.onShowHowDidItFeel = onShowHowDidItFeel
     }
@@ -128,6 +133,15 @@ struct RecordView: View {
         }
         .onChange(of: selectedLocaleId, initial: true) { _, newValue in
             viewModel.speechLocaleRaw = newValue
+        }
+        .onChange(of: startRecordingTrigger) { _, _ in
+            guard !isRecording && !isReviewing else { return }
+            requestMicAndRecord()
+        }
+        .onChange(of: startTextModeTrigger) { _, _ in
+            guard !isRecording && !isReviewing else { return }
+            viewModel.mode = .text
+            isTextFocused = true
         }
     }
 
@@ -348,6 +362,7 @@ struct RecordView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.bottom, 12)
+
             }
 
             // Captions: editable in review mode, read-only during recording

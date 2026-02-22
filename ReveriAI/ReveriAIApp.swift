@@ -5,6 +5,10 @@ import SwiftData
 struct ReveriAIApp: App {
     @State private var theme = ThemeManager()
 
+    init() {
+        NotificationService.setupDelegate()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

@@ -45,6 +45,7 @@ final class RecordViewModel {
         onDreamSaved?(dream)
         dreamText = ""
         state = .saved
+        NotificationService.removeDeliveredNotifications()
         onShowHowDidItFeel?()
     }
 
@@ -66,6 +67,7 @@ final class RecordViewModel {
         savedDream = dream
         onDreamSaved?(dream)
         state = .saved
+        NotificationService.removeDeliveredNotifications()
         onShowHowDidItFeel?()
     }
 

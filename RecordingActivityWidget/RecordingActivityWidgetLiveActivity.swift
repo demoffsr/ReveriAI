@@ -16,6 +16,13 @@ struct RecordingActivityWidgetLiveActivity: Widget {
                 Circle()
                     .fill(context.state.isPaused ? .yellow : .red)
                     .frame(width: 8, height: 8)
+                Link(destination: URL(string: "reveri://stop-recording")!) {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(.red, in: .circle)
+                }
             }
             .padding()
         } dynamicIsland: { context in

@@ -7,33 +7,18 @@ struct JournalHeader: View {
     @Binding var selectedTimeRange: JournalViewModel.TimeRange
     var isFoldersTab: Bool
     @Binding var showNewFolderAlert: Bool
+    var onProfileTap: () -> Void
     @State private var isEmotionsExpanded = false
-    @AppStorage("speechRecognitionLocale") private var selectedLocaleId: String = SpeechLocale.defaultLocale.identifier
     @Environment(\.theme) private var theme
-
-    private var selectedLocale: SpeechLocale {
-        SpeechLocale(rawValue: selectedLocaleId) ?? .defaultLocale
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Profile + Search bar + Calendar
             GlassEffectContainer(spacing: 12) {
                 HStack(spacing: 12) {
-                    // Profile button with locale picker
-                    Menu {
-                        ForEach(SpeechLocale.allCases) { locale in
-                            Button {
-                                selectedLocaleId = locale.identifier
-                            } label: {
-                                HStack {
-                                    Text(locale.displayName)
-                                    if locale == selectedLocale {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
+                    // Profile button
+                    Button {
+                        onProfileTap()
                     } label: {
                         Image(systemName: "person.fill")
                             .font(.system(size: 18, weight: .medium))
