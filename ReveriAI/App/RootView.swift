@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct RootView: View {
+    var onReady: (() -> Void)? = nil
+
     @State private var selectedTab: AppTab = .record
     @State private var savedDreamForEmotion: Dream?
     @State private var isRecording = false
@@ -27,6 +29,7 @@ struct RootView: View {
     @State private var dreamReminderManager = DreamReminderManager()
     @State private var startRecordingTrigger = false
     @State private var startTextModeTrigger = false
+    @State private var journalMounted = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
@@ -60,19 +63,21 @@ struct RootView: View {
                 .zIndex(selectedTab == .record ? 1 : 0)
                 .allowsHitTesting(selectedTab == .record)
 
-                JournalView(
-                    selectedEmotion: $selectedEmotionFilter,
-                    emotionOrder: $emotionOrder,
-                    isInDetailDreamTab: $isInDetailDreamTab,
-                    detailDreamHasImage: $detailDreamHasImage,
-                    detailDreamIsGenerating: $detailDreamIsGenerating,
-                    detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
-                    detailDreamState: detailDreamState,
-                    notificationService: notificationService,
-                    dreamReminderManager: dreamReminderManager
-                )
-                .zIndex(selectedTab == .journal ? 1 : 0)
-                .allowsHitTesting(selectedTab == .journal)
+                if journalMounted {
+                    JournalView(
+                        selectedEmotion: $selectedEmotionFilter,
+                        emotionOrder: $emotionOrder,
+                        isInDetailDreamTab: $isInDetailDreamTab,
+                        detailDreamHasImage: $detailDreamHasImage,
+                        detailDreamIsGenerating: $detailDreamIsGenerating,
+                        detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
+                        detailDreamState: detailDreamState,
+                        notificationService: notificationService,
+                        dreamReminderManager: dreamReminderManager
+                    )
+                    .zIndex(selectedTab == .journal ? 1 : 0)
+                    .allowsHitTesting(selectedTab == .journal)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -163,6 +168,7 @@ struct RootView: View {
         .animation(.spring(duration: 0.4), value: showEmotionGrid)
         .onChange(of: isRecording) { _, recording in
             if recording {
+                dreamReminderManager.end()
                 showEmotionGrid = false
                 showHowDidItFeel = false
                 showDreamSaved = false
@@ -171,7 +177,11 @@ struct RootView: View {
                 dismissTask?.cancel()
             }
         }
-        .onChange(of: selectedTab) { _, _ in
+        .onChange(of: selectedTab) { _, newTab in
+            // Mount JournalView immediately on first switch
+            if newTab == .journal && !journalMounted {
+                journalMounted = true
+            }
             if showHowDidItFeel && !showEmotionGrid {
                 withAnimation(.easeOut(duration: 0.3)) {
                     showHowDidItFeel = false
@@ -183,12 +193,25 @@ struct RootView: View {
         }
         .onAppear {
             dreamReminderManager.reconnect()
-            dreamReminderManager.validateAndAutoStart()
+            if !isRecording && !isReviewing {
+                dreamReminderManager.validateAndAutoStart()
+            }
+        }
+        .task {
+            // Wait for RecordView to finish its first render pass
+            try? await Task.sleep(for: .milliseconds(300))
+            onReady?()
+
+            // Mount JournalView after loader dismisses (heavy: NavigationStack + @Query)
+            try? await Task.sleep(for: .seconds(1))
+            journalMounted = true
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 dreamReminderManager.reconnect()
-                dreamReminderManager.validateAndAutoStart()
+                if !isRecording && !isReviewing {
+                    dreamReminderManager.validateAndAutoStart()
+                }
             }
         }
         .onOpenURL { url in
@@ -205,6 +228,20 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .dreamReminderStartActivity)) { _ in
             if !dreamReminderManager.isActive {
                 dreamReminderManager.start()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("startDreamRecordingFromLA"))) { _ in
+            guard !isRecording && !isReviewing else { return }
+            dreamReminderManager.end()
+            selectedTab = .record
+            startRecordingTrigger.toggle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("stopDreamRecording"))) { _ in
+            if isRecording {
+                withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
+                    isRecording = false
+                    isPaused = false
+                }
             }
         }
     }

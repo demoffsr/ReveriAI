@@ -111,6 +111,7 @@ struct RecordView: View {
                     liveActivityManager?.pause(elapsedSeconds: elapsedSeconds)
                 } else {
                     audioRecorder.resumeRecording()
+                    liveActivityManager?.startLevelSampling(audioRecorder: audioRecorder)
                     liveActivityManager?.resume(elapsedSeconds: elapsedSeconds)
                 }
             }
@@ -422,6 +423,7 @@ struct RecordView: View {
                 elapsedSeconds = 0
                 startTimer()
                 liveActivityManager?.startRecording()
+                liveActivityManager?.startLevelSampling(audioRecorder: audioRecorder)
             }
         }
     }
@@ -431,6 +433,7 @@ struct RecordView: View {
         speechService.stopTranscription()
         timerTask?.cancel()
         timerTask = nil
+        liveActivityManager?.stopLevelSampling()
         liveActivityManager?.end()
 
         guard elapsedSeconds > 1 else {
@@ -498,6 +501,7 @@ struct RecordView: View {
                 guard !Task.isCancelled else { break }
                 if !isPaused {
                     elapsedSeconds += 1
+                    liveActivityManager?.updateLevels(elapsedSeconds: elapsedSeconds)
                 }
             }
         }
