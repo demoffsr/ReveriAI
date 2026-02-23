@@ -12,5 +12,6 @@ struct CloudSeparator: View {
             CloudFrontShape()
                 .fill(theme.cloudFront)
         }
+
     }
 }
