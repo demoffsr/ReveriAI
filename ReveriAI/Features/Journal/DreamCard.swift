@@ -84,6 +84,15 @@ struct DreamCard: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.black.opacity(0.5))
                     .lineLimit(2)
+            } else if dream.isTranscribingAudio {
+                Text("Обработка записи...")
+                    .font(.system(size: 13).italic())
+                    .foregroundStyle(.black.opacity(0.35))
+                    .phaseAnimator([false, true]) { content, phase in
+                        content.opacity(phase ? 0.4 : 1.0)
+                    } animation: { _ in
+                        .easeInOut(duration: 1.2)
+                    }
             }
 
             // Divider
@@ -128,6 +137,7 @@ struct DreamCard: View {
         .onAppear { updateCachedValues() }
         .onChange(of: dream.title) { _, _ in updateCachedValues() }
         .onChange(of: dream.audioFilePath) { _, _ in updateCachedValues() }
+        .onChange(of: dream.whisperTranscript) { _, _ in updateCachedValues() }
     }
 
     private func updateCachedValues() {
