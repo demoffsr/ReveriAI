@@ -56,6 +56,109 @@ enum DreamAIService {
         return response.title
     }
 
+    static func transcribeAudio(fileURL: URL, locale: SpeechLocale) async throws -> String {
+        let audioData = try Data(contentsOf: fileURL)
+        guard !audioData.isEmpty else {
+            throw Error.emptyText
+        }
+
+        let boundary = UUID().uuidString
+        let url = URL(string: "\(SupabaseConfig.projectURL)/functions/v1/transcribe-audio")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        // File field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"recording.m4a\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/mp4\r\n\r\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("\r\n".data(using: .utf8)!)
+        // Locale field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"locale\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(locale.rawValue)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        // Dedicated session with 120s timeout for long recordings
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 120
+        let session = URLSession(configuration: config)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw Error.networkError(NSError(domain: "WhisperAPI", code: (response as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: errorText]))
+        }
+
+        struct TranscriptResponse: Decodable {
+            let transcript: String
+        }
+
+        let decoded = try JSONDecoder().decode(TranscriptResponse.self, from: data)
+        guard !decoded.transcript.isEmpty else {
+            throw Error.emptyText
+        }
+
+        return decoded.transcript
+    }
+
+    private static let recordingsDirectory: URL = {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("recordings")
+    }()
+
+    static func transcribeAudioInBackground(
+        dreamID: PersistentIdentifier,
+        audioFileName: String,
+        locale: SpeechLocale,
+        modelContainer: ModelContainer
+    ) {
+        Task { @MainActor in
+            let fileURL = recordingsDirectory.appendingPathComponent(audioFileName)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                logger.error("Audio file not found: \(audioFileName)")
+                return
+            }
+
+            do {
+                let transcript = try await transcribeAudio(fileURL: fileURL, locale: locale)
+                let context = modelContainer.mainContext
+                guard let dream = context.model(for: dreamID) as? Dream else {
+                    logger.warning("Dream not found for Whisper update")
+                    return
+                }
+                dream.whisperTranscript = transcript
+                dream.text = transcript
+                try context.save()
+                logger.info("Whisper transcription saved (\(transcript.count) chars)")
+
+                // Generate title from high-quality Whisper text
+                if dream.title.isEmpty {
+                    generateTitleInBackground(
+                        dreamID: dreamID,
+                        dreamText: transcript,
+                        locale: locale,
+                        modelContainer: modelContainer
+                    )
+                }
+            } catch {
+                logger.error("Whisper transcription failed: \(error.localizedDescription)")
+                // Fallback: ensure dream.text has the original transcript
+                let context = modelContainer.mainContext
+                if let dream = context.model(for: dreamID) as? Dream,
+                   dream.text.isEmpty,
+                   let original = dream.originalTranscript {
+                    dream.text = original
+                    try? context.save()
+                }
+            }
+        }
+    }
+
     static func generateQuestions(for dreamText: String, locale: SpeechLocale) async throws -> [String] {
         guard !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.emptyText
