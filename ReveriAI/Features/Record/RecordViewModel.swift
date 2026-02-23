@@ -50,19 +50,36 @@ final class RecordViewModel {
     }
 
     func saveAudioDream(audioPath: String, transcript: String = "", context: ModelContext) {
-        let dream = Dream(text: transcript, emotions: selectedEmotions, audioFilePath: audioPath)
+        let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dream = Dream(
+            text: trimmedTranscript,
+            emotions: selectedEmotions,
+            audioFilePath: audioPath,
+            originalTranscript: trimmedTranscript.isEmpty ? nil : trimmedTranscript
+        )
         context.insert(dream)
         try? context.save()
         HapticService.notification(.success)
 
-        if !transcript.isEmpty {
+        let locale = SpeechLocale(rawValue: speechLocaleRaw) ?? .russian
+
+        // Title from live captions (will be overwritten after Whisper if empty)
+        if !trimmedTranscript.isEmpty {
             DreamAIService.generateTitleInBackground(
                 dreamID: dream.persistentModelID,
-                dreamText: transcript,
-                locale: SpeechLocale(rawValue: speechLocaleRaw) ?? .russian,
+                dreamText: trimmedTranscript,
+                locale: locale,
                 modelContainer: context.container
             )
         }
+
+        // Whisper transcription in background
+        DreamAIService.transcribeAudioInBackground(
+            dreamID: dream.persistentModelID,
+            audioFileName: audioPath,
+            locale: locale,
+            modelContainer: context.container
+        )
 
         savedDream = dream
         onDreamSaved?(dream)
