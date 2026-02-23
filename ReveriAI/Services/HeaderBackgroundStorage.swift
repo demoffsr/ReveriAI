@@ -8,7 +8,13 @@ final class HeaderBackgroundStorage {
     private static let fileName = "header_background.jpg"
 
     init() {
-        loadFromDisk()
+        // Don't load in init — call loadFromDisk() when ready
+    }
+
+    func loadFromDisk() {
+        guard let data = try? Data(contentsOf: Self.fileURL),
+              let image = UIImage(data: data) else { return }
+        backgroundImage = image
     }
 
     func save(uiImage: UIImage) {
@@ -20,12 +26,6 @@ final class HeaderBackgroundStorage {
     func delete() {
         backgroundImage = nil
         try? FileManager.default.removeItem(at: Self.fileURL)
-    }
-
-    private func loadFromDisk() {
-        guard let data = try? Data(contentsOf: Self.fileURL),
-              let image = UIImage(data: data) else { return }
-        backgroundImage = image
     }
 
     private static var fileURL: URL {

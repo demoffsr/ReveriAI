@@ -5,8 +5,6 @@ import os
 private let launchLog = Logger(subsystem: "com.reveri", category: "Launch")
 
 struct RootView: View {
-    var onReady: (() -> Void)? = nil
-
     @State private var selectedTab: AppTab = .record
     @State private var savedDreamForEmotion: Dream?
     @State private var isRecording = false
@@ -207,15 +205,11 @@ struct RootView: View {
             }
         }
         .task {
-            let t0 = CFAbsoluteTimeGetCurrent()
             launchLog.info("⏱ RootView .task started")
-            // Signal ready after brief yield
-            try? await Task.sleep(for: .milliseconds(50))
-            onReady?()
-            launchLog.info("⏱ RootView onReady: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms")
 
-            // JournalView mounts lazily on first tab switch (onChange handler below)
-            // — avoids @Query + NavigationStack blocking main thread on device
+            // Load deferred images (not in init to keep launch fast)
+            avatarStorage.loadFromDisk()
+            headerBackgroundStorage.loadFromDisk()
 
             // Defer dream reminder — not startup critical
             try? await Task.sleep(for: .seconds(2))

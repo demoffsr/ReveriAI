@@ -39,16 +39,16 @@ struct ReveriTabBar: View {
                 Group {
                     if isRecording {
                         recordingControls
-                            .transition(.blurReplace)
+                            .transition(.opacity)
                     } else if isReviewing {
                         reviewControls
-                            .transition(.blurReplace)
+                            .transition(.opacity)
                     } else if isSavingFeelings {
                         savingFeelingsControls
-                            .transition(.blurReplace)
+                            .transition(.opacity)
                     } else {
                         normalTabs
-                            .transition(.blurReplace)
+                            .transition(.opacity)
                     }
                 }
                 .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
@@ -123,7 +123,7 @@ struct ReveriTabBar: View {
                             .font(.system(size: 13, weight: .medium))
                             .tracking(-0.08)
                             .foregroundStyle(stopColor)
-                            .transition(.blurReplace)
+                            .transition(.opacity)
                     }
                 }
                 .padding(.horizontal, isPaused ? 12 : 16)
@@ -157,7 +157,7 @@ struct ReveriTabBar: View {
                             .font(.system(size: 13, weight: .medium))
                             .tracking(-0.08)
                             .foregroundStyle(theme.accent)
-                            .transition(.blurReplace)
+                            .transition(.opacity)
                     }
                 }
                 .padding(.horizontal, isPaused ? 16 : 12)
@@ -176,10 +176,10 @@ struct ReveriTabBar: View {
         Group {
             if isPlayingPreview {
                 playbackControls
-                    .transition(.blurReplace)
+                    .transition(.opacity)
             } else {
                 reviewIdleControls
-                    .transition(.blurReplace)
+                    .transition(.opacity)
             }
         }
         .animation(.spring(duration: 0.4, bounce: 0.15), value: isPlayingPreview)
