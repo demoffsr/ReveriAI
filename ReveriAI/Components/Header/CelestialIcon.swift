@@ -5,26 +5,20 @@ struct CelestialIcon: View {
 
     var body: some View {
         ZStack {
-            // Outer ring: blurred fill+stroke + crisp stroke on top
+            // Outer glow ring (replaces blur+drawingGroup — no Metal shader needed)
             Circle()
-                .fill(theme.accent.opacity(0.1))
-                .overlay(Circle().stroke(theme.accent.opacity(0.5), lineWidth: 0.8))
-                .frame(width: 102, height: 102)
-                .blur(radius: 2)
-                .drawingGroup()
+                .fill(theme.accent.opacity(0.08))
+                .frame(width: 106, height: 106)
             Circle()
-                .stroke(theme.accent.opacity(0.5), lineWidth: 0.8)
+                .stroke(theme.accent.opacity(0.35), lineWidth: 1.2)
                 .frame(width: 102, height: 102)
 
-            // Inner ring: blurred fill+stroke + crisp stroke on top
+            // Inner glow ring
             Circle()
-                .fill(theme.accent.opacity(0.2))
-                .overlay(Circle().stroke(theme.accent.opacity(0.5), lineWidth: 0.6))
-                .frame(width: 84, height: 84)
-                .blur(radius: 1.5)
-                .drawingGroup()
+                .fill(theme.accent.opacity(0.12))
+                .frame(width: 88, height: 88)
             Circle()
-                .stroke(theme.accent.opacity(0.5), lineWidth: 0.6)
+                .stroke(theme.accent.opacity(0.35), lineWidth: 1.0)
                 .frame(width: 84, height: 84)
 
             // Main circle with gradient stroke and warm drop shadow
