@@ -14,6 +14,22 @@ enum DreamAIService {
 
     private static let logger = Logger(subsystem: "com.reveri.ai", category: "DreamAI")
 
+    /// Pre-warm the Edge Function to avoid cold start delay.
+    static func warmUp() {
+        Task {
+            do {
+                struct WarmupBody: Encodable { let warmup = true }
+                let _: [String: Bool] = try await SupabaseService.client.functions.invoke(
+                    "generate-dream-title",
+                    options: .init(body: WarmupBody())
+                )
+                logger.debug("Edge Function warmed up")
+            } catch {
+                logger.debug("Warmup ping failed (non-critical): \(error.localizedDescription)")
+            }
+        }
+    }
+
     static func generateTitle(for dreamText: String, locale: SpeechLocale) async throws -> String {
         guard !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.emptyText

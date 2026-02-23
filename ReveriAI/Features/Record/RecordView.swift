@@ -417,6 +417,7 @@ struct RecordView: View {
             Task { @MainActor in
                 guard granted else { return }
                 waveformState.reset()
+                DreamAIService.warmUp()
                 let audioStream = audioRecorder.startRecording()
                 let locale = Locale(identifier: selectedLocaleId)
                 speechService.startTranscription(locale: locale, audioStream: audioStream)

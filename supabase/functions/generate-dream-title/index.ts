@@ -14,7 +14,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401, headers: corsHeaders })
   }
 
-  const { dreamText, locale } = await req.json()
+  const { dreamText, locale, warmup } = await req.json()
+  if (warmup) {
+    return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders })
+  }
+
   if (!dreamText || dreamText.trim().length === 0) {
     return new Response(JSON.stringify({ error: 'Empty dream text' }), { status: 400, headers: corsHeaders })
   }
