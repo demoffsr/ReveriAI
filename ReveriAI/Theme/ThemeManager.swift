@@ -7,17 +7,21 @@ final class ThemeManager {
     private var timer: Timer?
     private var backgroundObserver: Any?
     private var foregroundObserver: Any?
+    private var themeOverrideObserver: Any?
 
     init() {
         self.isDayTime = Self.calculateIsDayTime()
+        applyOverride()
         startMonitoring()
         observeAppLifecycle()
+        observeThemeOverride()
     }
 
     deinit {
         timer?.invalidate()
         if let obs = backgroundObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = foregroundObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = themeOverrideObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
     private static func calculateIsDayTime() -> Bool {
@@ -26,9 +30,29 @@ final class ThemeManager {
     }
 
     private func updateIfNeeded() {
-        let newValue = Self.calculateIsDayTime()
-        guard newValue != isDayTime else { return }
-        isDayTime = newValue
+        applyOverride()
+    }
+
+    private func applyOverride() {
+        let override = UserDefaults.standard.string(forKey: "themeOverride") ?? "auto"
+        switch override {
+        case "day":
+            isDayTime = true
+        case "night":
+            isDayTime = false
+        default:
+            let newValue = Self.calculateIsDayTime()
+            isDayTime = newValue
+        }
+    }
+
+    private func observeThemeOverride() {
+        themeOverrideObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.applyOverride()
+        }
     }
 
     private func startMonitoring() {

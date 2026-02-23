@@ -24,6 +24,7 @@ struct RecordView: View {
     var speechService: SpeechRecognitionService
     var isVisible: Bool = true
     var liveActivityManager: LiveActivityManager?
+    var headerBackgroundStorage: HeaderBackgroundStorage
     @Binding var startRecordingTrigger: Bool
     @Binding var startTextModeTrigger: Bool
     var onDreamSaved: ((Dream) -> Void)?
@@ -37,6 +38,7 @@ struct RecordView: View {
         speechService: SpeechRecognitionService,
         isVisible: Bool = true,
         liveActivityManager: LiveActivityManager? = nil,
+        headerBackgroundStorage: HeaderBackgroundStorage,
         startRecordingTrigger: Binding<Bool> = .constant(false),
         startTextModeTrigger: Binding<Bool> = .constant(false),
         onDreamSaved: ((Dream) -> Void)? = nil,
@@ -49,6 +51,7 @@ struct RecordView: View {
         self.speechService = speechService
         self.isVisible = isVisible
         self.liveActivityManager = liveActivityManager
+        self.headerBackgroundStorage = headerBackgroundStorage
         self._startRecordingTrigger = startRecordingTrigger
         self._startTextModeTrigger = startTextModeTrigger
         self.onDreamSaved = onDreamSaved
@@ -152,7 +155,7 @@ struct RecordView: View {
     // MARK: - Header Gradient Background (animated)
 
     private var headerGradientBackground: some View {
-        DreamHeader()
+        DreamHeader(headerBackgroundStorage: headerBackgroundStorage)
             .frame(height: headerHeight + cloudOverhang - 8)
             .clipped()
             .opacity(headerContentVisible ? 1 : 0)

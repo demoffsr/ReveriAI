@@ -30,6 +30,8 @@ struct RootView: View {
     @State private var liveActivityManager = LiveActivityManager()
     @State private var notificationService = NotificationService()
     @State private var dreamReminderManager = DreamReminderManager()
+    @State private var avatarStorage = AvatarStorage()
+    @State private var headerBackgroundStorage = HeaderBackgroundStorage()
     @State private var startRecordingTrigger = false
     @State private var startTextModeTrigger = false
     @State private var journalMounted = false
@@ -37,49 +39,59 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
+    private var recordTab: some View {
+        RecordView(
+            isRecording: $isRecording,
+            isPaused: $isPaused,
+            isReviewing: $isReviewing,
+            audioRecorder: audioRecorder,
+            speechService: speechService,
+            isVisible: selectedTab == .record,
+            liveActivityManager: liveActivityManager,
+            headerBackgroundStorage: headerBackgroundStorage,
+            startRecordingTrigger: $startRecordingTrigger,
+            startTextModeTrigger: $startTextModeTrigger,
+            onDreamSaved: { dream in
+                savedDreamForEmotion = dream
+                dreamReminderManager.end()
+            },
+            onShowHowDidItFeel: {
+                dismissTask?.cancel()
+                showDreamSaved = false
+                withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
+                    showHowDidItFeel = true
+                }
+                startAutoDismissTimer()
+            }
+        )
+        .zIndex(selectedTab == .record ? 1 : 0)
+        .allowsHitTesting(selectedTab == .record)
+    }
+
+    private var journalTab: some View {
+        JournalView(
+            selectedEmotion: $selectedEmotionFilter,
+            emotionOrder: $emotionOrder,
+            isInDetailDreamTab: $isInDetailDreamTab,
+            detailDreamHasImage: $detailDreamHasImage,
+            detailDreamIsGenerating: $detailDreamIsGenerating,
+            detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
+            detailDreamState: detailDreamState,
+            notificationService: notificationService,
+            dreamReminderManager: dreamReminderManager,
+            avatarStorage: avatarStorage,
+            headerBackgroundStorage: headerBackgroundStorage
+        )
+        .zIndex(selectedTab == .journal ? 1 : 0)
+        .allowsHitTesting(selectedTab == .journal)
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ZStack {
-                RecordView(
-                    isRecording: $isRecording,
-                    isPaused: $isPaused,
-                    isReviewing: $isReviewing,
-                    audioRecorder: audioRecorder,
-                    speechService: speechService,
-                    isVisible: selectedTab == .record,
-                    liveActivityManager: liveActivityManager,
-                    startRecordingTrigger: $startRecordingTrigger,
-                    startTextModeTrigger: $startTextModeTrigger,
-                    onDreamSaved: { dream in
-                        savedDreamForEmotion = dream
-                        dreamReminderManager.end()
-                    },
-                    onShowHowDidItFeel: {
-                        dismissTask?.cancel()
-                        showDreamSaved = false
-                        withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
-                            showHowDidItFeel = true
-                        }
-                        startAutoDismissTimer()
-                    }
-                )
-                .zIndex(selectedTab == .record ? 1 : 0)
-                .allowsHitTesting(selectedTab == .record)
-
+                recordTab
                 if journalMounted {
-                    JournalView(
-                        selectedEmotion: $selectedEmotionFilter,
-                        emotionOrder: $emotionOrder,
-                        isInDetailDreamTab: $isInDetailDreamTab,
-                        detailDreamHasImage: $detailDreamHasImage,
-                        detailDreamIsGenerating: $detailDreamIsGenerating,
-                        detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
-                        detailDreamState: detailDreamState,
-                        notificationService: notificationService,
-                        dreamReminderManager: dreamReminderManager
-                    )
-                    .zIndex(selectedTab == .journal ? 1 : 0)
-                    .allowsHitTesting(selectedTab == .journal)
+                    journalTab
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

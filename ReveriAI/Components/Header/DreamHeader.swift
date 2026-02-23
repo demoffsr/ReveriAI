@@ -22,14 +22,30 @@ struct StarsCanvas: View {
 }
 
 struct DreamHeader: View {
+    var headerBackgroundStorage: HeaderBackgroundStorage?
     @Environment(\.theme) private var theme
+
+    private var hasCustomBackground: Bool {
+        headerBackgroundStorage?.backgroundImage != nil
+    }
 
     var body: some View {
         ZStack {
-            // Background image (future: user-selected photo)
-            Image("BackgroundDaylight")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+            // Background image
+            if let bg = headerBackgroundStorage?.backgroundImage {
+                Image(uiImage: bg)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Image("BackgroundDaylight")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            }
+
+            // Extra darkening for custom photos
+            if hasCustomBackground {
+                Color.black.opacity(0.45)
+            }
 
             // Darkening gradient overlay for text readability
             LinearGradient(

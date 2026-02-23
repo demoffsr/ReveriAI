@@ -7,6 +7,7 @@ struct JournalHeader: View {
     @Binding var selectedTimeRange: JournalViewModel.TimeRange
     var isFoldersTab: Bool
     @Binding var showNewFolderAlert: Bool
+    var avatarStorage: AvatarStorage
     var onProfileTap: () -> Void
     @State private var isEmotionsExpanded = false
     @Environment(\.theme) private var theme
@@ -20,11 +21,20 @@ struct JournalHeader: View {
                     Button {
                         onProfileTap()
                     } label: {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .frame(width: 44, height: 44)
-                            .reveriGlass(.circle)
+                        if let avatarImage = avatarStorage.avatarImage {
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44)
+                                .clipShape(Circle())
+                                .reveriGlass(.circle, interactive: false)
+                        } else {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.9))
+                                .frame(width: 44, height: 44)
+                                .reveriGlass(.circle)
+                        }
                     }
 
                     // Search button

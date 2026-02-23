@@ -16,6 +16,8 @@ struct JournalView: View {
     var detailDreamState: DetailDreamState
     var notificationService: NotificationService
     var dreamReminderManager: DreamReminderManager
+    var avatarStorage: AvatarStorage
+    var headerBackgroundStorage: HeaderBackgroundStorage
     @Environment(\.theme) private var theme
     @State private var viewModel = JournalViewModel()
     @State private var selectedTab: JournalTab = .dreams
@@ -46,6 +48,7 @@ struct JournalView: View {
                 selectedTimeRange: $viewModel.selectedTimeRange,
                 isFoldersTab: selectedTab == .folders,
                 showNewFolderAlert: $showNewFolderAlert,
+                avatarStorage: avatarStorage,
                 onProfileTap: { showProfile = true }
             )
 
@@ -79,7 +82,7 @@ struct JournalView: View {
             folderDetail(for: folder)
         }
         .navigationDestination(isPresented: $showProfile) {
-            ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager)
+            ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage)
         }
         .onAppear { refreshFilters() }
         .onChange(of: selectedEmotion) { _, newValue in

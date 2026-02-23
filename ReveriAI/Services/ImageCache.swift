@@ -16,6 +16,12 @@ final class ImageCache {
         cache.object(forKey: url.absoluteString as NSString)
     }
 
+    func clearAll() {
+        cache.removeAllObjects()
+        inFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
+    }
+
     func load(url: URL) async -> UIImage? {
         let key = url.absoluteString as NSString
 
