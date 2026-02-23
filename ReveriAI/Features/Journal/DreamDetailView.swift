@@ -24,6 +24,7 @@ struct DreamDetailView: View {
     @State private var cachedParsedSections: [ParsedSection] = []
     @State private var showImageError = false
     @State private var sheetDismissTask: Task<Void, Never>?
+    @State private var showingOriginal = false
 
     private enum DetailTab: String, CaseIterable {
         case dream = "Dream"
@@ -97,11 +98,7 @@ struct DreamDetailView: View {
                     Group {
                         switch selectedTab {
                         case .dream:
-                            Text(dream.text)
-                                .font(.system(size: 15))
-                                .lineSpacing(4)
-                                .tracking(-0.23)
-                                .foregroundStyle(.black.opacity(0.8))
+                            dreamTextContent
                         case .meaning:
                             meaningContent
                         }
@@ -212,6 +209,45 @@ struct DreamDetailView: View {
                                 ProgressView()
                             }
                     }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dreamTextContent: some View {
+        let displayText = showingOriginal
+            ? (dream.originalTranscript ?? dream.text)
+            : dream.text
+
+        if displayText.isEmpty && dream.isTranscribingAudio {
+            VStack(spacing: 12) {
+                ProgressView()
+                Text("Обработка записи...")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 40)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(displayText)
+                    .font(.system(size: 15))
+                    .lineSpacing(4)
+                    .tracking(-0.23)
+                    .foregroundStyle(.black.opacity(0.8))
+
+                if dream.hasTranscriptToggle {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showingOriginal.toggle()
+                        }
+                    } label: {
+                        Text(showingOriginal ? "Whisper" : "Оригинал")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 8)
                 }
             }
         }
