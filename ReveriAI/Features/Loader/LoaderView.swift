@@ -1,9 +1,17 @@
 import SwiftUI
 
 struct LoaderView: View {
-    // Figma: #FFAA00 base, #FF5900 radial glow
-    private let baseColor = Color(hex: "FFAA00")
-    private let glowColor = Color(hex: "FF5900")
+    // Day: #FFAA00 base, #FF5900 radial glow
+    // Night: #0E0E1A base, #00AAFF radial glow
+    private let baseColor: Color
+    private let glowColor: Color
+
+    init() {
+        let hour = Calendar.current.component(.hour, from: .now)
+        let isDayTime = hour >= 5 && hour < 21
+        baseColor = Color(hex: isDayTime ? "FFAA00" : "0E0E1A")
+        glowColor = Color(hex: isDayTime ? "FF5900" : "00AAFF")
+    }
 
     var body: some View {
         ZStack {

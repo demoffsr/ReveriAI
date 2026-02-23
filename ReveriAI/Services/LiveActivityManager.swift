@@ -9,6 +9,7 @@ final class LiveActivityManager {
     private var smoothedLevel: Float = 0
     private var sampleTask: Task<Void, Never>?
     private var totalBarsAdded: Int = 0
+    private var recordingStartDate: Date?
     private static let maxBars = 40
 
     // MARK: - Level Sampling
@@ -47,8 +48,8 @@ final class LiveActivityManager {
         let startIndex = max(0, totalBarsAdded - levelBuffer.count)
         let state = RecordingActivityAttributes.ContentState(
             isPaused: false,
-            recordingStartDate: .now,
-            pausedElapsedSeconds: elapsedSeconds,
+            recordingStartDate: recordingStartDate ?? .now,
+            elapsedSeconds: elapsedSeconds,
             levels: levelBuffer,
             levelStartIndex: startIndex
         )
@@ -60,10 +61,11 @@ final class LiveActivityManager {
     func startRecording() {
         let authInfo = ActivityAuthorizationInfo()
         guard authInfo.areActivitiesEnabled else { return }
+        recordingStartDate = .now
         let state = RecordingActivityAttributes.ContentState(
             isPaused: false,
-            recordingStartDate: .now,
-            pausedElapsedSeconds: 0
+            recordingStartDate: recordingStartDate!,
+            elapsedSeconds: 0
         )
         do {
             activity = try Activity.request(
@@ -81,8 +83,8 @@ final class LiveActivityManager {
         let startIndex = max(0, totalBarsAdded - levelBuffer.count)
         let state = RecordingActivityAttributes.ContentState(
             isPaused: true,
-            recordingStartDate: .now,
-            pausedElapsedSeconds: elapsedSeconds,
+            recordingStartDate: recordingStartDate ?? .now,
+            elapsedSeconds: elapsedSeconds,
             levels: levelBuffer,
             levelStartIndex: startIndex
         )
@@ -93,8 +95,8 @@ final class LiveActivityManager {
         let startIndex = max(0, totalBarsAdded - levelBuffer.count)
         let state = RecordingActivityAttributes.ContentState(
             isPaused: false,
-            recordingStartDate: .now,
-            pausedElapsedSeconds: elapsedSeconds,
+            recordingStartDate: recordingStartDate ?? .now,
+            elapsedSeconds: elapsedSeconds,
             levels: levelBuffer,
             levelStartIndex: startIndex
         )
@@ -105,11 +107,12 @@ final class LiveActivityManager {
         stopLevelSampling()
         levelBuffer = []
         totalBarsAdded = 0
+        recordingStartDate = nil
         Task {
             let state = RecordingActivityAttributes.ContentState(
                 isPaused: false,
                 recordingStartDate: .now,
-                pausedElapsedSeconds: 0
+                elapsedSeconds: 0
             )
             await activity?.end(.init(state: state, staleDate: nil), dismissalPolicy: .immediate)
             activity = nil

@@ -30,7 +30,7 @@ private struct LiveWaveformWidget: View {
                     .frame(width: Self.barWidth, height: height)
             }
         }
-        .frame(width: 209, height: Self.maxHeight)
+        .frame(width: 202, height: Self.maxHeight)
         .opacity(isPaused ? 0.4 : 1.0)
         .mask(
             HStack(spacing: 0) {
@@ -70,20 +70,21 @@ struct RecordingActivityWidgetLiveActivity: Widget {
                 palette: palette
             )
 
-            Spacer()
+            Spacer(minLength: 24)
 
             HStack(spacing: 12) {
                 timerView(context.state)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(.white)
+
 
                 Link(destination: URL(string: "reveri://stop-recording")!) {
                     Image("StopIconLock")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 22, height: 22)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 48, height: 48)
                         .background(Color(red: 1, green: 63 / 255, blue: 66 / 255).opacity(0.2), in: Circle())
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(
@@ -98,6 +99,7 @@ struct RecordingActivityWidgetLiveActivity: Widget {
                                 )
                         )
                 }
+                .frame(width: 48, height: 48)
             }
         }
         .padding(.horizontal, 14)
@@ -160,25 +162,14 @@ struct RecordingActivityWidgetLiveActivity: Widget {
 
     // MARK: Timer
 
-    @ViewBuilder
     private func timerView(_ state: RecordingActivityAttributes.ContentState) -> some View {
-        if state.isPaused {
-            Text(formatTime(state.pausedElapsedSeconds))
-                .monospacedDigit()
-        } else {
-            Text(
-                state.recordingStartDate
-                    .addingTimeInterval(TimeInterval(-state.pausedElapsedSeconds)),
-                style: .timer
-            )
+        Text(formatTime(state.elapsedSeconds))
             .monospacedDigit()
-        }
     }
 
     private func formatTime(_ totalSeconds: Int) -> String {
-        let h = totalSeconds / 3600
-        let m = (totalSeconds % 3600) / 60
+        let m = totalSeconds / 60
         let s = totalSeconds % 60
-        return String(format: "%02d:%02d:%02d", h, m, s)
+        return String(format: "%02d:%02d", m, s)
     }
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AVFoundation
+import os
 
 struct RecordView: View {
     @Environment(\.theme) private var theme
@@ -16,6 +17,7 @@ struct RecordView: View {
     @State private var elapsedSeconds: Int = 0
     @State private var totalRecordingSeconds: Int = 0
     @State private var timerTask: Task<Void, Never>?
+    @State private var waveformState = WaveformState()
     @State private var reviewText: String = ""
     @State private var headerContentVisible: Bool = true
     var audioRecorder: AudioRecorder
@@ -97,6 +99,7 @@ struct RecordView: View {
             .ignoresSafeArea(edges: .top)
         }
         .onAppear {
+            Logger(subsystem: "com.reveri", category: "Launch").info("⏱ RecordView appeared")
             viewModel.onDreamSaved = onDreamSaved
             viewModel.onShowHowDidItFeel = onShowHowDidItFeel
         }
@@ -216,12 +219,12 @@ struct RecordView: View {
                 if isRecording {
                     timerText
                         .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 12)
+                        .offset(y: cloudOverhang + 32)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if isReviewing {
                     reviewTimerText
                         .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 12)
+                        .offset(y: cloudOverhang + 32)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if viewModel.mode == .text && viewModel.canSave {
                     SaveDreamButton {
@@ -229,7 +232,7 @@ struct RecordView: View {
                         isTextFocused = false
                     }
                     .padding(.leading, 16)
-                    .offset(y: cloudOverhang + 12)
+                    .offset(y: cloudOverhang + 32)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
@@ -239,12 +242,12 @@ struct RecordView: View {
                         handleSaveAudio()
                     }
                     .padding(.trailing, 16)
-                    .offset(y: cloudOverhang + 16)
+                    .offset(y: cloudOverhang + 36)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if !isRecording {
                     modeSwitchPill
                         .padding(.trailing, 16)
-                        .offset(y: cloudOverhang + 12)
+                        .offset(y: cloudOverhang + 32)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
@@ -267,7 +270,7 @@ struct RecordView: View {
                     text: $viewModel.dreamText,
                     isFocused: $isTextFocused
                 )
-                .padding(.top, isTextFocused ? 16 : 36)
+                .padding(.top, isTextFocused ? 36 : 56)
             } else {
                 voicePlaceholder
             }
@@ -335,7 +338,8 @@ struct RecordView: View {
                     isAnimating: isRecording && !isPaused,
                     isReviewing: isReviewing,
                     isVisible: isVisible,
-                    audioRecorder: audioRecorder
+                    audioRecorder: audioRecorder,
+                    waveformState: waveformState
                 )
                 .padding(.bottom, 8)
             } else {
@@ -393,7 +397,7 @@ struct RecordView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 20)
+        .padding(.top, 40)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -412,6 +416,7 @@ struct RecordView: View {
         AVAudioApplication.requestRecordPermission { granted in
             Task { @MainActor in
                 guard granted else { return }
+                waveformState.reset()
                 let audioStream = audioRecorder.startRecording()
                 let locale = Locale(identifier: selectedLocaleId)
                 speechService.startTranscription(locale: locale, audioStream: audioStream)
@@ -518,6 +523,7 @@ private struct LiveWaveformView: View {
     let isReviewing: Bool
     var isVisible: Bool = true
     var audioRecorder: AudioRecorder
+    var waveformState: WaveformState
 
     var body: some View {
         AudioWaveformView(
@@ -528,7 +534,8 @@ private struct LiveWaveformView: View {
                 ? CGFloat(audioRecorder.playbackCurrentTime / audioRecorder.playbackDuration)
                 : 0,
             playbackDuration: audioRecorder.playbackDuration,
-            isVisible: isVisible
+            isVisible: isVisible,
+            waveformState: waveformState
         )
     }
 }

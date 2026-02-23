@@ -6,8 +6,6 @@
 	<dict>
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
-		<key>UIImageName</key>
-		<string>LoaderLogo</string>
 	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>

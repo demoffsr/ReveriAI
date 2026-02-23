@@ -7,19 +7,11 @@ struct AudioWaveformView: View {
     var playbackProgress: CGFloat = 0 // 0...1 current playback position
     var playbackDuration: TimeInterval = 0
     var isVisible: Bool = true
+    var waveformState: WaveformState
 
     @Environment(\.theme) private var theme
-    /// Reference-type buffer — mutations don't trigger SwiftUI state diffs
-    @State private var buffer = WaveformBuffer()
-    @State private var animationStartTime: TimeInterval?
-    @State private var accumulatedOffset: CGFloat = 0
-    /// Total scroll distance captured when recording ends — used as 100% for playback
-    @State private var totalRecordedOffset: CGFloat = 0
-    /// Playback animation state
-    @State private var playbackAnimStartTime: TimeInterval?
-    @State private var playbackAnimStartOffset: CGFloat = 0
 
-    private static let barWidth: CGFloat = 2
+    private static let barWidth: CGFloat = 3
     private static let barSpacing: CGFloat = 3.6
     private static let barSlot: CGFloat = barWidth + barSpacing
     private static let minHeight: CGFloat = 4
@@ -28,23 +20,23 @@ struct AudioWaveformView: View {
     private static let scrollSpeed: CGFloat = barSlot * CGFloat(barsPerSecond)
 
     private var isTimelinePaused: Bool {
-        (!isAnimating && playbackAnimStartTime == nil) || !isVisible
+        (!isAnimating && waveformState.playbackAnimStartTime == nil) || !isVisible
     }
 
     /// Compute scroll offset based on current mode (playback, review, or recording).
     private func scrollOffset(now: TimeInterval) -> CGFloat {
-        if let pStart = playbackAnimStartTime, playbackDuration > 0, totalRecordedOffset > 0 {
+        if let pStart = waveformState.playbackAnimStartTime, playbackDuration > 0, waveformState.totalRecordedOffset > 0 {
             // Playback: smooth 60fps scroll driven by timeline
             let elapsed = now - pStart
-            let speed = totalRecordedOffset / CGFloat(playbackDuration)
-            return min(playbackAnimStartOffset + speed * CGFloat(elapsed), totalRecordedOffset)
-        } else if totalRecordedOffset > 0 && !isAnimating {
+            let speed = waveformState.totalRecordedOffset / CGFloat(playbackDuration)
+            return min(waveformState.playbackAnimStartOffset + speed * CGFloat(elapsed), waveformState.totalRecordedOffset)
+        } else if waveformState.totalRecordedOffset > 0 && !isAnimating {
             // Review mode (paused or before play): static position from progress
-            return totalRecordedOffset * playbackProgress
+            return waveformState.totalRecordedOffset * playbackProgress
         } else {
             // Recording or idle
-            let elapsed = isAnimating ? now - (animationStartTime ?? now) : 0
-            return accumulatedOffset + Self.scrollSpeed * CGFloat(max(0, elapsed))
+            let elapsed = isAnimating ? now - (waveformState.animationStartTime ?? now) : 0
+            return waveformState.accumulatedOffset + Self.scrollSpeed * CGFloat(max(0, elapsed))
         }
     }
 
@@ -54,7 +46,7 @@ struct AudioWaveformView: View {
             let offset = scrollOffset(now: now)
 
             // Only generate new bars during recording (ternary avoids ViewBuilder ambiguity)
-            let _ = isAnimating ? buffer.update(
+            let _ = isAnimating ? waveformState.update(
                 scrollOffset: offset,
                 barSlot: Self.barSlot,
                 currentLevel: level,
@@ -63,7 +55,7 @@ struct AudioWaveformView: View {
             ) : false
 
             Canvas { context, size in
-                let bars = buffer.bars
+                let bars = waveformState.bars
                 let count = bars.count
                 guard count > 0 else { return }
 
@@ -71,12 +63,12 @@ struct AudioWaveformView: View {
 
                 // During playback/review, keep playhead near left edge so scrolling is visible immediately.
                 // During recording, scroll only once bars fill the screen width.
-                let isInPlayback = !isAnimating && totalRecordedOffset > 0
+                let isInPlayback = !isAnimating && waveformState.totalRecordedOffset > 0
                 let visibleWidth = isInPlayback ? size.width * 0.2 : size.width
                 let windowStart = max(0, offset - visibleWidth)
 
                 for i in 0..<count {
-                    let waveformX = CGFloat(i + buffer.trimOffset) * Self.barSlot
+                    let waveformX = CGFloat(i + waveformState.trimOffset) * Self.barSlot
                     let canvasX = waveformX - windowStart
                     if canvasX > size.width { break }
                     if canvasX + Self.barWidth < 0 { continue }
@@ -91,65 +83,88 @@ struct AudioWaveformView: View {
         .frame(height: Self.maxHeight + 20)
         .onChange(of: isAnimating) { _, animating in
             if animating {
-                animationStartTime = Date.now.timeIntervalSinceReferenceDate
-            } else if let start = animationStartTime {
+                waveformState.animationStartTime = Date.now.timeIntervalSinceReferenceDate
+            } else if let start = waveformState.animationStartTime {
                 let elapsed = Date.now.timeIntervalSinceReferenceDate - start
-                accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
-                animationStartTime = nil
-                totalRecordedOffset = accumulatedOffset
+                waveformState.accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
+                waveformState.animationStartTime = nil
+                waveformState.finalize()
+                waveformState.accumulatedOffset += CGFloat(8) * Self.barSlot
+                waveformState.totalRecordedOffset = waveformState.accumulatedOffset
             }
         }
         .onChange(of: isPlayingBack) { _, playing in
             if playing {
                 // Start/resume: sync with external playback position
-                playbackAnimStartOffset = totalRecordedOffset * playbackProgress
-                playbackAnimStartTime = Date.now.timeIntervalSinceReferenceDate
-            } else if let start = playbackAnimStartTime {
+                waveformState.playbackAnimStartOffset = waveformState.totalRecordedOffset * playbackProgress
+                waveformState.playbackAnimStartTime = Date.now.timeIntervalSinceReferenceDate
+            } else if let start = waveformState.playbackAnimStartTime {
                 // Pause: capture current animated position
                 let elapsed = Date.now.timeIntervalSinceReferenceDate - start
-                let speed = playbackDuration > 0 ? totalRecordedOffset / CGFloat(playbackDuration) : 0
-                playbackAnimStartOffset = min(
-                    playbackAnimStartOffset + speed * CGFloat(elapsed),
-                    totalRecordedOffset
+                let speed = playbackDuration > 0 ? waveformState.totalRecordedOffset / CGFloat(playbackDuration) : 0
+                waveformState.playbackAnimStartOffset = min(
+                    waveformState.playbackAnimStartOffset + speed * CGFloat(elapsed),
+                    waveformState.totalRecordedOffset
                 )
-                playbackAnimStartTime = nil
+                waveformState.playbackAnimStartTime = nil
             }
         }
         .onChange(of: playbackProgress) { oldVal, newVal in
-            guard playbackAnimStartTime != nil, totalRecordedOffset > 0 else { return }
+            guard waveformState.playbackAnimStartTime != nil, waveformState.totalRecordedOffset > 0 else { return }
             let delta = abs(newVal - oldVal)
             if delta > 0.02 {
-                playbackAnimStartOffset = totalRecordedOffset * newVal
-                playbackAnimStartTime = Date.now.timeIntervalSinceReferenceDate
+                waveformState.playbackAnimStartOffset = waveformState.totalRecordedOffset * newVal
+                waveformState.playbackAnimStartTime = Date.now.timeIntervalSinceReferenceDate
             }
         }
         .onAppear {
-            if isAnimating && animationStartTime == nil {
-                animationStartTime = Date.now.timeIntervalSinceReferenceDate
+            if isAnimating && waveformState.animationStartTime == nil {
+                waveformState.animationStartTime = Date.now.timeIntervalSinceReferenceDate
             }
         }
         .onDisappear {
-            if isAnimating, let start = animationStartTime {
+            if isAnimating, let start = waveformState.animationStartTime {
                 let elapsed = Date.now.timeIntervalSinceReferenceDate - start
-                accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
-                animationStartTime = nil
+                waveformState.accumulatedOffset += Self.scrollSpeed * CGFloat(max(0, elapsed))
+                waveformState.animationStartTime = nil
             }
         }
     }
 }
 
-// MARK: - WaveformBuffer
+// MARK: - WaveformState
 
-/// Reference-type buffer for waveform bars.
-/// Mutations here do NOT trigger SwiftUI state diffs — only TimelineView drives redraws.
-private final class WaveformBuffer {
+/// Reference-type container for all waveform state (bars + scroll/animation offsets).
+/// Stored as `@State` in RecordView so it survives AudioWaveformView identity changes.
+/// NOT @Observable — mutations must not trigger RecordView re-evaluation.
+final class WaveformState {
+    // Bar data
     var bars: [CGFloat] = []
     var trimOffset: Int = 0
     private var lastBarIndex: Int = -1
     private var smoothedLevel: Float = 0
 
+    // Scroll/animation state
+    var animationStartTime: TimeInterval?
+    var accumulatedOffset: CGFloat = 0
+    var totalRecordedOffset: CGFloat = 0
+    var playbackAnimStartTime: TimeInterval?
+    var playbackAnimStartOffset: CGFloat = 0
+
     init() {
         bars.reserveCapacity(4096)
+    }
+
+    func reset() {
+        bars.removeAll(keepingCapacity: true)
+        trimOffset = 0
+        lastBarIndex = -1
+        smoothedLevel = 0
+        animationStartTime = nil
+        accumulatedOffset = 0
+        totalRecordedOffset = 0
+        playbackAnimStartTime = nil
+        playbackAnimStartOffset = 0
     }
 
     @discardableResult
@@ -185,5 +200,15 @@ private final class WaveformBuffer {
             added = true
         }
         return added
+    }
+
+    func finalize(minHeight: CGFloat = 4) {
+        guard let lastHeight = bars.last, lastHeight > minHeight else { return }
+        let tailCount = 8
+        for i in 1...tailCount {
+            let t = CGFloat(i) / CGFloat(tailCount)
+            let height = lastHeight + (minHeight - lastHeight) * t
+            bars.append(height)
+        }
     }
 }

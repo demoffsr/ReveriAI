@@ -17,6 +17,7 @@ struct EmotionFilterBar: View {
                     ForEach(emotionOrder.indices, id: \.self) { index in
                         let emotion = emotionOrder[index]
                         emotionCircle(emotion)
+                            .animation(nil, value: selectedEmotion)
                             .id(emotion.id)
                             .zIndex(isExpanded ? 0 : Double(emotionOrder.count - index))
                             .onTapGesture {
@@ -24,7 +25,9 @@ struct EmotionFilterBar: View {
                                     selectEmotion(emotion)
                                 } else {
                                     HapticService.impact(.light)
-                                    isExpanded = true
+                                    withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+                                        isExpanded = true
+                                    }
                                 }
                             }
                     }
@@ -54,24 +57,28 @@ struct EmotionFilterBar: View {
         .onTapGesture {
             if !isExpanded {
                 HapticService.impact(.light)
-                isExpanded = true
+                withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+                    isExpanded = true
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: circleSize)
-        .animation(.spring(duration: 0.4, bounce: 0.15), value: isExpanded)
     }
 
     private func selectEmotion(_ emotion: DreamEmotion) {
         HapticService.selection()
-        if selectedEmotion == emotion {
-            selectedEmotion = nil
-        } else {
-            selectedEmotion = emotion
-            emotionOrder.removeAll { $0 == emotion }
-            emotionOrder.insert(emotion, at: 0)
+        let isDeselecting = selectedEmotion == emotion
+
+        selectedEmotion = isDeselecting ? nil : emotion
+
+        withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+            if !isDeselecting {
+                emotionOrder.removeAll { $0 == emotion }
+                emotionOrder.insert(emotion, at: 0)
+            }
+            isExpanded = false
         }
-        isExpanded = false
     }
 
     private func emotionCircle(_ emotion: DreamEmotion) -> some View {
@@ -92,13 +99,16 @@ struct EmotionFilterBar: View {
                 Circle()
                     .fill(emotion.color.opacity(0.25))
                     .frame(width: circleSize, height: circleSize)
+                    .transition(.identity)
             }
 
-            Circle()
-                .fill(.black.opacity(isDimmed ? 0.55 : 0))
-                .frame(width: circleSize, height: circleSize)
-                .allowsHitTesting(false)
-                .transaction { $0.animation = nil }
+            if isDimmed {
+                Circle()
+                    .fill(.black.opacity(0.55))
+                    .frame(width: circleSize, height: circleSize)
+                    .allowsHitTesting(false)
+                    .transition(.identity)
+            }
 
             Circle()
                 .stroke(

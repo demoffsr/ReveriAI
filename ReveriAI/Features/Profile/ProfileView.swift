@@ -42,6 +42,9 @@ struct ProfileView: View {
         .onAppear {
             syncDateFromStorage()
         }
+        .task {
+            notificationService.checkAuthorizationStatus()
+        }
     }
 
     // MARK: - Nav Bar

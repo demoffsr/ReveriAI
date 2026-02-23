@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let launchLog = Logger(subsystem: "com.reveri", category: "Launch")
 
 struct RootView: View {
     var onReady: (() -> Void)? = nil
@@ -30,12 +33,12 @@ struct RootView: View {
     @State private var startRecordingTrigger = false
     @State private var startTextModeTrigger = false
     @State private var journalMounted = false
+    @State private var launchComplete = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Both views stay mounted — tab switch preserves all @State
             ZStack {
                 RecordView(
                     isRecording: $isRecording,
@@ -191,26 +194,34 @@ struct RootView: View {
                 dismissTask?.cancel()
             }
         }
-        .onAppear {
-            dreamReminderManager.reconnect()
+        .task {
+            let t0 = CFAbsoluteTimeGetCurrent()
+            launchLog.info("⏱ RootView .task started")
+            // Signal ready after brief yield
+            try? await Task.sleep(for: .milliseconds(50))
+            onReady?()
+            launchLog.info("⏱ RootView onReady: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms")
+
+            // JournalView mounts lazily on first tab switch (onChange handler below)
+            // — avoids @Query + NavigationStack blocking main thread on device
+
+            // Defer dream reminder — not startup critical
+            try? await Task.sleep(for: .seconds(2))
+            launchLog.info("⏱ DreamReminder starting")
+            await dreamReminderManager.reconnect()
             if !isRecording && !isReviewing {
                 dreamReminderManager.validateAndAutoStart()
             }
-        }
-        .task {
-            // Wait for RecordView to finish its first render pass
-            try? await Task.sleep(for: .milliseconds(300))
-            onReady?()
-
-            // Mount JournalView after loader dismisses (heavy: NavigationStack + @Query)
-            try? await Task.sleep(for: .seconds(1))
-            journalMounted = true
+            launchLog.info("⏱ DreamReminder setup done")
+            launchComplete = true
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                dreamReminderManager.reconnect()
-                if !isRecording && !isReviewing {
-                    dreamReminderManager.validateAndAutoStart()
+            if phase == .active && launchComplete {
+                Task {
+                    await dreamReminderManager.reconnect()
+                    if !isRecording && !isReviewing {
+                        dreamReminderManager.validateAndAutoStart()
+                    }
                 }
             }
         }

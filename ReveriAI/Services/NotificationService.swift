@@ -13,7 +13,7 @@ final class NotificationService {
     private static let notificationDelegate = NotificationDelegate()
 
     init() {
-        checkAuthorizationStatus()
+        // isAuthorized читается только в ProfileView — проверяем там через .task
     }
 
     /// Call once from App.init — before any notification can arrive

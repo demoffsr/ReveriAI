@@ -1,6 +1,9 @@
 import ActivityKit
 import Foundation
 import Observation
+import os
+
+private let launchLog = Logger(subsystem: "com.reveri", category: "DreamReminder")
 
 @Observable
 final class DreamReminderManager {
@@ -15,16 +18,25 @@ final class DreamReminderManager {
         // End any existing reminder first
         endSync()
 
+        let attrs = DreamReminderAttributes(startTime: .now)
         let state = DreamReminderAttributes.ContentState(status: "sleeping")
-        do {
-            activity = try Activity.request(
-                attributes: DreamReminderAttributes(startTime: .now),
-                content: .init(state: state, staleDate: nil),
-                pushType: nil
-            )
-            isActive = true
-        } catch {
-            print("DreamReminderManager: start failed — \(error)")
+
+        // Activity.request() is synchronous IPC to SpringBoard — run off MainActor
+        Task {
+            let t0 = CFAbsoluteTimeGetCurrent()
+            let newActivity = await Task.detached {
+                try? Activity.request(
+                    attributes: attrs,
+                    content: .init(state: state, staleDate: nil),
+                    pushType: nil
+                )
+            }.value
+            launchLog.info("⏱ Activity.request: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms")
+
+            if let newActivity {
+                self.activity = newActivity
+                self.isActive = true
+            }
         }
     }
 
@@ -65,10 +77,14 @@ final class DreamReminderManager {
     }
 
     /// Reconnect to an existing Live Activity after app restart
-    func reconnect() {
-        let activities = Activity<DreamReminderAttributes>.activities
+    func reconnect() async {
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let activities = await Task.detached {
+            Activity<DreamReminderAttributes>.activities
+        }.value
         activity = activities.first
         isActive = activity != nil
+        launchLog.info("⏱ reconnect: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms, active=\(self.isActive)")
     }
 
     /// Validates existing Live Activity or auto-starts one if within sleep window.

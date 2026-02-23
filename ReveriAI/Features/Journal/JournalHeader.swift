@@ -12,9 +12,9 @@ struct JournalHeader: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Profile + Search bar + Calendar
-            GlassEffectContainer(spacing: 12) {
+        GlassEffectContainer(spacing: 12) {
+            VStack(alignment: .leading, spacing: 20) {
+                // Profile + Search bar + Calendar
                 HStack(spacing: 12) {
                     // Profile button
                     Button {
@@ -66,37 +66,37 @@ struct JournalHeader: View {
                             .reveriGlass(.circle)
                     }
                 }
-            }
 
-            // Bottom row: title + filters/actions (fixed 42pt to match emotion circles)
-            HStack(spacing: 24) {
-                Text("My Dreams")
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(.white)
-                    .fixedSize()
-                if isFoldersTab {
-                    Spacer(minLength: 0)
-                    Button {
-                        showNewFolderAlert = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image("FolderAddIcon")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 16, height: 16)
-                            Text("New Folder")
-                                .font(.system(size: 13, weight: .medium))
+                // Bottom row: title + filters/actions (fixed 42pt to match emotion circles)
+                HStack(spacing: 24) {
+                    Text("My Dreams")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(.white)
+                        .fixedSize()
+                    if isFoldersTab {
+                        Spacer(minLength: 0)
+                        Button {
+                            showNewFolderAlert = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image("FolderAddIcon")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 22, height: 22)
+                                Text("New Folder")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(height: 36)
+                            .padding(.horizontal, 14)
+                            .reveriGlass(.capsule)
                         }
-                        .foregroundStyle(.white.opacity(0.7))
-                        .frame(minHeight: 34)
-                        .padding(.horizontal, 14)
-                        .reveriGlass(.capsule)
+                    } else {
+                        EmotionFilterBar(selectedEmotion: $selectedEmotion, emotionOrder: $emotionOrder, isExpanded: $isEmotionsExpanded)
                     }
-                } else {
-                    EmotionFilterBar(selectedEmotion: $selectedEmotion, emotionOrder: $emotionOrder, isExpanded: $isEmotionsExpanded)
                 }
+                .frame(height: 42)
             }
-            .frame(height: 42)
         }
         .padding(.horizontal, 20)
         .padding(.top, 68)
