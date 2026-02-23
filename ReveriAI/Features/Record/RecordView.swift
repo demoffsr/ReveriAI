@@ -86,9 +86,10 @@ struct RecordView: View {
                 theme.cloudFront
                     .ignoresSafeArea()
 
-                // Layer 1: Header background (fixed size — never re-renders Metal texture)
+                // Layer 1: Header background (fixed size — cached as Metal texture)
                 DreamHeader(headerBackgroundStorage: headerBackgroundStorage)
                     .frame(height: baseHeaderHeight + cloudOverhang - 8)
+                    .drawingGroup(opaque: true)
                     .opacity(headerContentVisible ? 1 : 0)
 
                 // Layer 2: Title + icon
@@ -103,7 +104,7 @@ struct RecordView: View {
                 closingClouds
                     .allowsHitTesting(false)
             }
-            .animation(.spring(duration: 0.38, bounce: 0.0), value: isTextFocused)
+            .animation(.spring(duration: 0.35, bounce: 0.0), value: isTextFocused)
             .ignoresSafeArea(edges: .top)
         }
         .onAppear {
