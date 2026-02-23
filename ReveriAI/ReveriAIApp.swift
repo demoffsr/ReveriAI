@@ -62,12 +62,13 @@ struct ReveriAIApp: App {
                     NotificationService.setupDelegate()
                 }
 
-                // RootView body eval already happened (during iOS launch screen).
-                // Wait for .task callback to fire.
+                // Wait for RootView ready + minimum display time for animation
+                let minimum = Task { try? await Task.sleep(for: .seconds(1.8)) }
                 while !rootReady {
                     try? await Task.sleep(for: .milliseconds(50))
                 }
                 launchLog.info("⏱ rootReady: \(Int((CFAbsoluteTimeGetCurrent() - taskStart) * 1000))ms")
+                _ = await minimum.value  // ensure loader shows at least 1.8s
 
                 // Fade out loader
                 withAnimation(.easeOut(duration: 0.5)) {
