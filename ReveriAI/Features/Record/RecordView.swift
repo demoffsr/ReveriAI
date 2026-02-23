@@ -74,31 +74,36 @@ struct RecordView: View {
         cloudHeight * 0.5
     }
 
+    /// How far the shield slides up in text mode
+    private var shieldOffset: CGFloat {
+        isTextFocused ? -(baseHeaderHeight - baseHeaderHeight * 0.22) : 0
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Main layered layout
             ZStack(alignment: .top) {
-                // Layer 0: Light background fills entire screen
+                // Layer 0: Light background
                 theme.cloudFront
                     .ignoresSafeArea()
 
-                // Layer 1: Content (below header + cloud zone)
-                contentArea
-                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
+                // Layer 1: Header background (fixed size — never re-renders Metal texture)
+                DreamHeader(headerBackgroundStorage: headerBackgroundStorage)
+                    .frame(height: baseHeaderHeight + cloudOverhang - 8)
+                    .opacity(headerContentVisible ? 1 : 0)
 
-                // Layer 2: Header gradient background (animated)
-                headerGradientBackground
-                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
-
-                // Layer 3: Title + icon (shifts up slightly when keyboard appears)
+                // Layer 2: Title + icon
                 headerTitle
                     .offset(y: isTextFocused ? -25 : 0)
-                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
 
-                // Layer 4: Clouds + pill (animated, on top of title)
-                cloudLayer
-                    .animation(.spring(duration: 0.45, bounce: 0.0), value: isTextFocused)
+                // Layer 3: Shield — CloudSeparator + pills + white content (slides up)
+                contentShield
+                    .offset(y: shieldOffset)
+
+                // Layer 4: Closing cloud — ON TOP of everything, slides down to cover header
+                closingClouds
+                    .allowsHitTesting(false)
             }
+            .animation(.spring(duration: 0.38, bounce: 0.0), value: isTextFocused)
             .ignoresSafeArea(edges: .top)
         }
         .onAppear {
@@ -152,31 +157,28 @@ struct RecordView: View {
         }
     }
 
-    // MARK: - Header Gradient Background (animated)
+    // MARK: - Closing Clouds (slides down from top to cover header)
 
-    private var headerGradientBackground: some View {
-        DreamHeader(headerBackgroundStorage: headerBackgroundStorage)
-            .frame(height: headerHeight + cloudOverhang - 8)
-            .clipped()
-            .opacity(headerContentVisible ? 1 : 0)
+    /// Closing cloud height: sized so wavy bottom aligns with shield's CloudSeparator bottom
+    private var closingCloudHeight: CGFloat {
+        // Shield CloudSeparator bottom when focused:
+        // (baseHeaderHeight - cloudOverhang) + shieldOffset + cloudHeight
+        let shieldTopFocused = (baseHeaderHeight - cloudOverhang) + (-(baseHeaderHeight - baseHeaderHeight * 0.22))
+        return shieldTopFocused + cloudHeight
     }
-
-    // MARK: - Closing Clouds (inverted clouds descend from above)
 
     private var closingClouds: some View {
         VStack(spacing: 0) {
-            // Solid fill covers header above cloud bumps
-            theme.cloudFront
-            // Cloud shape at natural proportions (matches bottom clouds)
+            theme.cloudFront // thin solid fill above cloud bumps
             CloudClosedShape()
                 .fill(theme.cloudFront)
                 .frame(height: cloudHeight)
         }
-        .frame(height: headerHeight + cloudOverhang)
-        .offset(y: isTextFocused ? 0 : -(baseHeaderHeight + cloudOverhang))
+        .frame(height: closingCloudHeight)
+        .offset(y: isTextFocused ? 0 : -closingCloudHeight)
     }
 
-    // MARK: - Header Title (static — never moves)
+    // MARK: - Header Title
 
     private var headerTitle: some View {
         HStack(alignment: .top) {
@@ -202,32 +204,24 @@ struct RecordView: View {
         .opacity(headerContentVisible ? 1 : 0)
     }
 
-    // MARK: - Cloud Layer + Pill (animated, on top of title)
+    // MARK: - Content Shield (CloudSeparator + pills + content — one sliding unit)
 
-    private var cloudLayer: some View {
-        Color.clear
-            .frame(height: headerHeight)
-            .overlay(alignment: .bottom) {
-                CloudSeparator()
-                    .frame(height: cloudHeight)
-                    .offset(y: cloudOverhang)
-                    .opacity(headerContentVisible ? 1 : 0)
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .top) {
-                closingClouds
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .bottomLeading) {
+    private var contentShield: some View {
+        VStack(spacing: 0) {
+            // Cloud separator — bumps stick up into header area
+            CloudSeparator()
+                .frame(height: cloudHeight)
+                .allowsHitTesting(false)
+
+            // Pills (timer / save / mode switch)
+            HStack {
                 if isRecording {
                     timerText
                         .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 32)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if isReviewing {
                     reviewTimerText
                         .padding(.leading, 20)
-                        .offset(y: cloudOverhang + 32)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if viewModel.mode == .text && viewModel.canSave {
                     SaveDreamButton {
@@ -235,39 +229,29 @@ struct RecordView: View {
                         isTextFocused = false
                     }
                     .padding(.leading, 16)
-                    .offset(y: cloudOverhang + 32)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
-            }
-            .overlay(alignment: .bottomTrailing) {
+
+                Spacer(minLength: 0)
+
                 if isReviewing {
                     SaveDreamButton {
                         handleSaveAudio()
                     }
                     .padding(.trailing, 16)
-                    .offset(y: cloudOverhang + 36)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if !isRecording {
                     modeSwitchPill
                         .padding(.trailing, 16)
-                        .offset(y: cloudOverhang + 32)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
+            .padding(.top, 8)
             .animation(.easeOut(duration: 0.25), value: viewModel.canSave)
             .animation(.spring(duration: 0.35, bounce: 0.15), value: isRecording)
             .animation(.spring(duration: 0.35, bounce: 0.15), value: isReviewing)
-    }
 
-    // MARK: - Content
-
-    private var contentArea: some View {
-        VStack(spacing: 0) {
-            // Reserve space for header + cloud overhang
-            Color.clear
-                .frame(height: headerHeight + cloudOverhang)
-
-            // Text editor or voice placeholder
+            // Content
             if viewModel.mode == .text {
                 TextModeView(
                     text: $viewModel.dreamText,
@@ -277,7 +261,18 @@ struct RecordView: View {
             } else {
                 voicePlaceholder
             }
+
+            Spacer(minLength: 0)
         }
+        .frame(maxHeight: .infinity)
+        .background(alignment: .top) {
+            // White background starts where cloud bumps end (solid fill area)
+            theme.cloudFront
+                .padding(.top, cloudHeight * 0.5)
+        }
+        // Position so CloudSeparator overlaps bottom of header
+        // Top of cloud bumps at: baseHeaderHeight - cloudOverhang = 175.5pt
+        .padding(.top, baseHeaderHeight - cloudOverhang)
     }
 
     // MARK: - Mode Switch Pill
