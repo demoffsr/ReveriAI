@@ -119,13 +119,21 @@ enum DreamAIService {
     ) {
         Task { @MainActor in
             let fileURL = recordingsDirectory.appendingPathComponent(audioFileName)
-            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            logger.info("📂 Whisper: looking for file at \(fileURL.path)")
+            let exists = FileManager.default.fileExists(atPath: fileURL.path)
+            logger.info("📂 Whisper: file exists = \(exists)")
+            guard exists else {
                 logger.error("Audio file not found: \(audioFileName)")
                 return
             }
 
+            let fileSize = (try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? Int) ?? 0
+            logger.info("📂 Whisper: file size = \(fileSize) bytes")
+
             do {
+                logger.info("🌐 Whisper: starting transcription request...")
                 let transcript = try await transcribeAudio(fileURL: fileURL, locale: locale)
+                logger.info("✅ Whisper: got transcript (\(transcript.count) chars): \(transcript.prefix(80))")
                 let context = modelContainer.mainContext
                 guard let dream = context.model(for: dreamID) as? Dream else {
                     logger.warning("Dream not found for Whisper update")

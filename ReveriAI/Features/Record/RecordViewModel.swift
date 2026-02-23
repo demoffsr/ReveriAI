@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
+import os
 
 @Observable
 final class RecordViewModel {
+    private static let logger = Logger(subsystem: "com.reveri", category: "RecordVM")
     enum Mode {
         case voice
         case text
@@ -74,6 +76,7 @@ final class RecordViewModel {
         }
 
         // Whisper transcription in background
+        Self.logger.info("🎙️ saveAudioDream: audioPath=\(audioPath), transcript=\(trimmedTranscript.prefix(50)), originalTranscript=\(dream.originalTranscript ?? "nil")")
         DreamAIService.transcribeAudioInBackground(
             dreamID: dream.persistentModelID,
             audioFileName: audioPath,

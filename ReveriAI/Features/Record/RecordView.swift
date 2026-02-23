@@ -258,7 +258,7 @@ struct RecordView: View {
                     text: $viewModel.dreamText,
                     isFocused: $isTextFocused
                 )
-                .padding(.top, isTextFocused ? 36 : 56)
+                .padding(.top, isTextFocused ? 16 : 24)
             } else {
                 voicePlaceholder
             }
@@ -396,7 +396,7 @@ struct RecordView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 40)
+        .padding(.top, 16)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()

@@ -4,6 +4,12 @@ import SwiftUI
 
 struct DreamCardPlayer: View {
     let audioURL: URL
+    var style: Style = .compact
+
+    enum Style {
+        case compact   // DreamCard in journal list
+        case detail    // DreamDetailView
+    }
 
     @Environment(\.theme) private var theme
     @State private var player: CardAudioPlayer?
@@ -11,15 +17,20 @@ struct DreamCardPlayer: View {
     @State private var isPlaying = false
     @State private var playbackProgress: CGFloat = 0
 
+    private var buttonSize: CGFloat { style == .detail ? 44 : 32 }
+    private var iconSize: CGFloat { style == .detail ? 16 : 12 }
+    private var waveformHeight: CGFloat { style == .detail ? 48 : 32 }
+    private var spacing: CGFloat { style == .detail ? 14 : 9 }
+
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: spacing) {
             Button {
                 togglePlayback()
             } label: {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 12))
+                    .font(.system(size: iconSize))
                     .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
+                    .frame(width: buttonSize, height: buttonSize)
                     .background(theme.accent)
                     .clipShape(Circle())
             }
@@ -27,7 +38,8 @@ struct DreamCardPlayer: View {
 
             CardWaveformView(
                 bars: bars,
-                playbackProgress: playbackProgress
+                playbackProgress: playbackProgress,
+                frameHeight: waveformHeight
             )
         }
         .task {

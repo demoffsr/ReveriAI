@@ -3,11 +3,11 @@ import SwiftUI
 struct CardWaveformView: View {
     let bars: [CGFloat]
     var playbackProgress: CGFloat = 0 // 0...1
+    var frameHeight: CGFloat = 32
 
     @Environment(\.theme) private var theme
 
     private static let barWidth: CGFloat = 2
-    private static let frameHeight: CGFloat = 32
     private static let unplayedBarColor = Color(hex: "C3C3C3")
 
     var body: some View {
@@ -33,13 +33,14 @@ struct CardWaveformView: View {
                 let barProgress = CGFloat(i) / CGFloat(max(maxBars - 1, 1))
                 let canvasX = CGFloat(i) * slot
 
-                let height = bars[i]
+                let scale = size.height / 32
+                let height = bars[i] * scale
                 let y = (size.height - height) / 2
                 let rect = CGRect(x: canvasX, y: y, width: Self.barWidth, height: height)
                 let color = barProgress <= playbackProgress ? playedColor : unplayedColor
                 context.fill(Path(roundedRect: rect, cornerRadius: 1), with: .color(color))
             }
         }
-        .frame(height: Self.frameHeight)
+        .frame(height: frameHeight)
     }
 }

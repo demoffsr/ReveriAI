@@ -25,6 +25,12 @@ struct DreamDetailView: View {
     @State private var showImageError = false
     @State private var sheetDismissTask: Task<Void, Never>?
     @State private var showingOriginal = false
+    @State private var cachedAudioURL: URL?
+
+    private static let recordingsDirectory: URL = {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("recordings")
+    }()
 
     private enum DetailTab: String, CaseIterable {
         case dream = "Dream"
@@ -118,6 +124,9 @@ struct DreamDetailView: View {
             detailDreamIsGenerating = isGenerating
             detailState.isActive = true
             detailState.hasInterpretation = dream.interpretation != nil
+            if let path = dream.audioFilePath {
+                cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(path)
+            }
             if let text = dream.interpretation {
                 cachedParsedSections = parseAndStyleSections(text)
             }
@@ -231,6 +240,12 @@ struct DreamDetailView: View {
             .padding(.top, 40)
         } else {
             VStack(alignment: .leading, spacing: 0) {
+                // Audio waveform player
+                if let cachedAudioURL {
+                    DreamCardPlayer(audioURL: cachedAudioURL, style: .detail)
+                        .padding(.bottom, 20)
+                }
+
                 Text(displayText)
                     .font(.system(size: 15))
                     .lineSpacing(4)
@@ -243,8 +258,8 @@ struct DreamDetailView: View {
                             showingOriginal.toggle()
                         }
                     } label: {
-                        Text(showingOriginal ? "Whisper" : "Оригинал")
-                            .font(.system(size: 12, weight: .medium))
+                        Text(showingOriginal ? "Whisper" : "Original")
+                            .font(.system(size: 15))
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 8)
