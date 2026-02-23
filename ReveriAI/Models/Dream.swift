@@ -15,6 +15,8 @@ final class Dream {
     var audioFilePath: String?
     var imageURL: String?
     var interpretation: String?
+    var whisperTranscript: String?
+    var originalTranscript: String?
     var isTranslated: Bool
     var folder: DreamFolder?
 
@@ -47,6 +49,14 @@ final class Dream {
         }
     }
 
+    var isTranscribingAudio: Bool {
+        audioFilePath != nil && whisperTranscript == nil
+    }
+
+    var hasTranscriptToggle: Bool {
+        whisperTranscript != nil && originalTranscript != nil
+    }
+
     init(
         text: String,
         title: String = "",
@@ -54,7 +64,9 @@ final class Dream {
         createdAt: Date = .now,
         audioFilePath: String? = nil,
         imageURL: String? = nil,
-        isTranslated: Bool = false
+        isTranslated: Bool = false,
+        whisperTranscript: String? = nil,
+        originalTranscript: String? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -65,5 +77,7 @@ final class Dream {
         self.audioFilePath = audioFilePath
         self.imageURL = imageURL
         self.isTranslated = isTranslated
+        self.whisperTranscript = whisperTranscript
+        self.originalTranscript = originalTranscript
     }
 }
