@@ -7,7 +7,7 @@ struct WatchRecordingView: View {
     @State private var showEmotionPicker = false
     @State private var recordedAudioURL: URL?
     @State private var recordedCreatedAt: Date?
-    @State private var waveformBars: [Float] = Array(repeating: 0, count: 12)
+    @State private var waveformState = WatchWaveformState()
 
     var body: some View {
         NavigationStack {
@@ -34,11 +34,6 @@ struct WatchRecordingView: View {
                 .environment(theme)
             }
         }
-        .onChange(of: recorder.currentLevel) { _, newLevel in
-            guard recorder.isRecording else { return }
-            waveformBars.removeFirst()
-            waveformBars.append(newLevel)
-        }
     }
 
     // MARK: - Idle
@@ -55,7 +50,7 @@ struct WatchRecordingView: View {
 
             Text("Tap to Record")
                 .font(.system(size: 16, weight: .medium, design: .default))
-                .foregroundStyle(.white)
+                .foregroundStyle(.white.opacity(0.7))
                 .padding(.bottom, 4)
         }
     }
@@ -63,50 +58,41 @@ struct WatchRecordingView: View {
     // MARK: - Recording
 
     private var recordingContent: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Spacer()
 
-            HStack(spacing: 4) {
-                WatchWaveformView(
-                    bars: Array(waveformBars.prefix(6)),
-                    accentColor: theme.accent
-                )
+            WatchLiveWaveformView(
+                recorder: recorder,
+                waveformState: waveformState,
+                accentColor: theme.accent
+            )
 
-                // Stop button with glass
-                Button {
-                    stopRecording()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(.red.opacity(0.8))
-                            .frame(width: 50, height: 50)
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.white)
-                            .frame(width: 20, height: 20)
-                    }
-                    .glassEffect(.regular.interactive(), in: .circle)
-                }
-                .buttonStyle(.plain)
-
-                WatchWaveformView(
-                    bars: Array(waveformBars.suffix(6)),
-                    accentColor: theme.accent
-                )
-            }
-
-            // Timer
             Text(formatDuration(recorder.duration))
                 .font(.system(.title2, design: .monospaced))
-                .foregroundStyle(theme.accent)
+                .foregroundStyle(.white)
 
             Spacer()
+
+            Button {
+                stopRecording()
+            } label: {
+                Text("Stop")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .glassEffect(.regular.interactive(), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .handGestureShortcut(.primaryAction)
+            .padding(.bottom, 4)
         }
     }
 
     // MARK: - Actions
 
     private func startRecording() {
-        waveformBars = Array(repeating: 0, count: 12)
+        waveformState.reset()
         try? recorder.startRecording()
     }
 
@@ -129,6 +115,25 @@ struct WatchRecordingView: View {
     private func formatDuration(_ t: TimeInterval) -> String {
         let m = Int(t) / 60
         let s = Int(t) % 60
-        return String(format: "%d:%02d", m, s)
+        return String(format: "%02d:%02d", m, s)
+    }
+}
+
+// MARK: - Observation Isolation
+
+/// Small wrapper that isolates observation of `recorder.currentLevel` (~10Hz updates)
+/// so the parent `WatchRecordingView` body doesn't re-evaluate on every metering tick.
+private struct WatchLiveWaveformView: View {
+    let recorder: WatchAudioRecorder
+    let waveformState: WatchWaveformState
+    let accentColor: Color
+
+    var body: some View {
+        WatchScrollingWaveformView(
+            isAnimating: recorder.isRecording,
+            level: recorder.currentLevel,
+            waveformState: waveformState,
+            accentColor: accentColor
+        )
     }
 }

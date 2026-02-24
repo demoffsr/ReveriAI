@@ -57,6 +57,7 @@ struct WatchRecordButton: View {
             .frame(width: 150, height: 150)
         }
         .buttonStyle(.plain)
+        .handGestureShortcut(.primaryAction)
         .onAppear { isPulsing = true }
     }
 }
