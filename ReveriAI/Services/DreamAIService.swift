@@ -10,6 +10,7 @@ enum DreamAIService {
         case emptyText
         case emptyTitle
         case emptyURL
+        case hallucination
     }
 
     private static let logger = Logger(subsystem: "com.reveri.ai", category: "DreamAI")
@@ -103,13 +104,127 @@ enum DreamAIService {
             throw Error.emptyText
         }
 
+        if isHallucination(decoded.transcript) {
+            logger.warning("🚨 Whisper hallucination detected: \(decoded.transcript.prefix(100))")
+            throw Error.hallucination
+        }
+
         return decoded.transcript
+    }
+
+    // MARK: - Whisper Hallucination Detection
+
+    /// Detects common Whisper hallucination patterns:
+    /// - Repetitive phrases (same phrase 3+ times = >50% of text)
+    /// - Known hallucination phrases in any language
+    private static func isHallucination(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        // Known Whisper hallucination phrases (case-insensitive)
+        let knownHallucinations = [
+            "подпишитесь на канал",
+            "звук сообщения",
+            "спасибо за просмотр",
+            "спасибо за внимание",
+            "thanks for watching",
+            "subscribe to the channel",
+            "thank you for watching",
+            "like and subscribe",
+            "please subscribe",
+            "music playing",
+            "subtitles by",
+        ]
+
+        let lower = trimmed.lowercased()
+        for phrase in knownHallucinations {
+            if lower.contains(phrase) {
+                return true
+            }
+        }
+
+        // Repetition detection: split into sentences, check if any repeats 3+ times
+        let sentences = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { $0.count > 3 }
+
+        guard sentences.count >= 3 else { return false }
+
+        var freq: [String: Int] = [:]
+        for s in sentences { freq[s, default: 0] += 1 }
+        if let maxCount = freq.values.max(), maxCount >= 3 {
+            let repetitionRatio = Double(maxCount) / Double(sentences.count)
+            if repetitionRatio > 0.4 {
+                return true
+            }
+        }
+
+        // Word-level repetition: if >60% of words are from one 2-3 word phrase repeating
+        let words = lower.split(separator: " ").map(String.init)
+        if words.count >= 6 {
+            var bigramFreq: [String: Int] = [:]
+            for i in 0..<(words.count - 1) {
+                let bigram = "\(words[i]) \(words[i+1])"
+                bigramFreq[bigram, default: 0] += 1
+            }
+            if let (_, maxCount) = bigramFreq.max(by: { $0.value < $1.value }),
+               maxCount >= 4, Double(maxCount * 2) / Double(words.count) > 0.4 {
+                return true
+            }
+        }
+
+        return false
     }
 
     private static let recordingsDirectory: URL = {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("recordings")
     }()
+
+    // MARK: - One-time Hallucination Cleanup
+
+    /// Scans all dreams for hallucinated Whisper transcripts, reverts to original, re-triggers transcription.
+    static func cleanupHallucinatedTranscripts(modelContainer: ModelContainer) {
+        Task { @MainActor in
+            let context = modelContainer.mainContext
+            let descriptor = FetchDescriptor<Dream>()
+            guard let dreams = try? context.fetch(descriptor) else { return }
+
+            var fixedCount = 0
+            for dream in dreams {
+                guard let whisper = dream.whisperTranscript,
+                      isHallucination(whisper) else { continue }
+
+                logger.warning("🧹 Hallucination cleanup: dream \(dream.id) — \(whisper.prefix(60))")
+
+                // Revert text to original
+                if let original = dream.originalTranscript {
+                    dream.text = original
+                }
+                dream.whisperTranscript = nil
+                fixedCount += 1
+
+                // Re-trigger Whisper transcription if audio file exists
+                if let audioFileName = dream.audioFilePath {
+                    let locale = SpeechLocale(rawValue: UserDefaults.standard.string(forKey: "speechRecognitionLocale") ?? "") ?? .russian
+                    transcribeAudioInBackground(
+                        dreamID: dream.persistentModelID,
+                        audioFileName: audioFileName,
+                        locale: locale,
+                        modelContainer: modelContainer
+                    )
+                }
+            }
+
+            if fixedCount > 0 {
+                try? context.save()
+                logger.info("🧹 Hallucination cleanup: fixed \(fixedCount) dream(s)")
+            }
+        }
+    }
+
+    private static let maxWhisperRetries = 2
 
     static func transcribeAudioInBackground(
         dreamID: PersistentIdentifier,
@@ -130,38 +245,62 @@ enum DreamAIService {
             let fileSize = (try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? Int) ?? 0
             logger.info("📂 Whisper: file size = \(fileSize) bytes")
 
-            do {
-                logger.info("🌐 Whisper: starting transcription request...")
-                let transcript = try await transcribeAudio(fileURL: fileURL, locale: locale)
-                logger.info("✅ Whisper: got transcript (\(transcript.count) chars): \(transcript.prefix(80))")
-                let context = modelContainer.mainContext
-                guard let dream = context.model(for: dreamID) as? Dream else {
-                    logger.warning("Dream not found for Whisper update")
-                    return
-                }
-                dream.whisperTranscript = transcript
-                dream.text = transcript
-                try context.save()
-                logger.info("Whisper transcription saved (\(transcript.count) chars)")
+            var lastError: Swift.Error?
+            for attempt in 1...maxWhisperRetries {
+                do {
+                    logger.info("🌐 Whisper: attempt \(attempt)/\(maxWhisperRetries)...")
+                    let transcript = try await transcribeAudio(fileURL: fileURL, locale: locale)
+                    logger.info("✅ Whisper: got transcript (\(transcript.count) chars): \(transcript.prefix(80))")
+                    let context = modelContainer.mainContext
+                    guard let dream = context.model(for: dreamID) as? Dream else {
+                        logger.warning("Dream not found for Whisper update")
+                        return
+                    }
+                    dream.whisperTranscript = transcript
+                    dream.text = transcript
+                    try context.save()
+                    logger.info("Whisper transcription saved (\(transcript.count) chars)")
 
-                // Generate title from high-quality Whisper text
-                if dream.title.isEmpty {
+                    // Generate title from high-quality Whisper text
+                    if dream.title.isEmpty {
+                        generateTitleInBackground(
+                            dreamID: dreamID,
+                            dreamText: transcript,
+                            locale: locale,
+                            modelContainer: modelContainer
+                        )
+                    }
+                    return // success — exit
+                } catch Error.hallucination {
+                    logger.warning("🚨 Whisper hallucination on attempt \(attempt)")
+                    lastError = Error.hallucination
+                    if attempt < maxWhisperRetries {
+                        // Brief delay before retry
+                        try? await Task.sleep(for: .seconds(1))
+                    }
+                } catch {
+                    logger.error("Whisper transcription failed: \(error.localizedDescription)")
+                    lastError = error
+                    break // non-hallucination errors — don't retry
+                }
+            }
+
+            // All retries exhausted or non-retryable error — keep original transcript
+            logger.warning("Whisper failed after retries, keeping original transcript")
+            let context = modelContainer.mainContext
+            if let dream = context.model(for: dreamID) as? Dream {
+                if dream.text.isEmpty, let original = dream.originalTranscript {
+                    dream.text = original
+                    try? context.save()
+                }
+                // Generate title from whatever text we have
+                if dream.title.isEmpty, !dream.text.isEmpty {
                     generateTitleInBackground(
                         dreamID: dreamID,
-                        dreamText: transcript,
+                        dreamText: dream.text,
                         locale: locale,
                         modelContainer: modelContainer
                     )
-                }
-            } catch {
-                logger.error("Whisper transcription failed: \(error.localizedDescription)")
-                // Fallback: ensure dream.text has the original transcript
-                let context = modelContainer.mainContext
-                if let dream = context.model(for: dreamID) as? Dream,
-                   dream.text.isEmpty,
-                   let original = dream.originalTranscript {
-                    dream.text = original
-                    try? context.save()
                 }
             }
         }

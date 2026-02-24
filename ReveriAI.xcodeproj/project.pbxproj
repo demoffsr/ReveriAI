@@ -10,6 +10,7 @@
 		AA0000000000000000000D /* RecordingActivityWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001 /* RecordingActivityWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D81345BD2F4116840055480B /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = F5957BCD1AF2452D80A2EF02 /* Functions */; };
 		D81345BE2F4116840055480B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B9C80B2D210B4F7F88088751 /* Supabase */; };
+		D889BC422F4D0F0700132B25 /* Reveri Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D889BC382F4D0F0600132B25 /* Reveri Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -19,6 +20,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA00000000000000000005;
 			remoteInfo = RecordingActivityWidgetExtension;
+		};
+		D889BC402F4D0F0700132B25 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D83221832F3BC14C009A1692 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D889BC372F4D0F0600132B25;
+			remoteInfo = "Reveri Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -34,12 +42,24 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D889BC432F4D0F0700132B25 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				D889BC422F4D0F0700132B25 /* Reveri Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		AA00000000000000000001 /* RecordingActivityWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RecordingActivityWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AABB00112F5000000055480B /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		D832218B2F3BC14C009A1692 /* ReveriAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReveriAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D889BC382F4D0F0600132B25 /* Reveri Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Reveri Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -57,6 +77,17 @@
 			);
 			target = D832218A2F3BC14C009A1692 /* ReveriAI */;
 		};
+		D889BC5D2F4D11CA00132B25 /* Exceptions for "ReveriAI" folder in "Reveri Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Extensions/Color+Hex.swift",
+				Models/Dream.swift,
+				Models/DreamEmotion.swift,
+				Models/DreamFolder.swift,
+				Theme/ThemeColors.swift,
+			);
+			target = D889BC372F4D0F0600132B25 /* Reveri Watch App */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -72,8 +103,14 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				AABB00222F5000000055480B /* Exceptions for "ReveriAI" folder in "ReveriAI" target */,
+				D889BC5D2F4D11CA00132B25 /* Exceptions for "ReveriAI" folder in "Reveri Watch App" target */,
 			);
 			path = ReveriAI;
+			sourceTree = "<group>";
+		};
+		D889BC392F4D0F0600132B25 /* Reveri Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Reveri Watch App";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -95,6 +132,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D889BC352F4D0F0600132B25 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -104,6 +148,7 @@
 				AABB00112F5000000055480B /* Secrets.xcconfig */,
 				D832218D2F3BC14C009A1692 /* ReveriAI */,
 				AA00000000000000000009 /* RecordingActivityWidget */,
+				D889BC392F4D0F0600132B25 /* Reveri Watch App */,
 				D832218C2F3BC14C009A1692 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -113,6 +158,7 @@
 			children = (
 				D832218B2F3BC14C009A1692 /* ReveriAI.app */,
 				AA00000000000000000001 /* RecordingActivityWidgetExtension.appex */,
+				D889BC382F4D0F0600132B25 /* Reveri Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -148,11 +194,13 @@
 				D83221882F3BC14C009A1692 /* Frameworks */,
 				D83221892F3BC14C009A1692 /* Resources */,
 				AA0000000000000000000A /* Embed Foundation Extensions */,
+				D889BC432F4D0F0700132B25 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				AA0000000000000000000B /* PBXTargetDependency */,
+				D889BC412F4D0F0700132B25 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D832218D2F3BC14C009A1692 /* ReveriAI */,
@@ -164,6 +212,28 @@
 			);
 			productName = ReveriAI;
 			productReference = D832218B2F3BC14C009A1692 /* ReveriAI.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D889BC372F4D0F0600132B25 /* Reveri Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D889BC462F4D0F0700132B25 /* Build configuration list for PBXNativeTarget "Reveri Watch App" */;
+			buildPhases = (
+				D889BC342F4D0F0600132B25 /* Sources */,
+				D889BC352F4D0F0600132B25 /* Frameworks */,
+				D889BC362F4D0F0600132B25 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D889BC392F4D0F0600132B25 /* Reveri Watch App */,
+			);
+			name = "Reveri Watch App";
+			packageProductDependencies = (
+			);
+			productName = "Reveri Watch App";
+			productReference = D889BC382F4D0F0600132B25 /* Reveri Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -180,6 +250,9 @@
 						CreatedOnToolsVersion = 26.1.1;
 					};
 					D832218A2F3BC14C009A1692 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					D889BC372F4D0F0600132B25 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -203,6 +276,7 @@
 			targets = (
 				D832218A2F3BC14C009A1692 /* ReveriAI */,
 				AA00000000000000000005 /* RecordingActivityWidgetExtension */,
+				D889BC372F4D0F0600132B25 /* Reveri Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -216,6 +290,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D83221892F3BC14C009A1692 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D889BC362F4D0F0600132B25 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -239,6 +320,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D889BC342F4D0F0600132B25 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -246,6 +334,11 @@
 			isa = PBXTargetDependency;
 			target = AA00000000000000000005 /* RecordingActivityWidgetExtension */;
 			targetProxy = AA0000000000000000000C /* PBXContainerItemProxy */;
+		};
+		D889BC412F4D0F0700132B25 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D889BC372F4D0F0600132B25 /* Reveri Watch App */;
+			targetProxy = D889BC402F4D0F0700132B25 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -431,6 +524,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ReveriAI/ReveriAI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4LZ84Z78M7;
@@ -439,6 +533,7 @@
 				INFOPLIST_FILE = ReveriAI/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ReveriAI needs microphone access to record your dream descriptions.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "ReveriAI uses speech recognition for live captions while recording your dreams.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -466,6 +561,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ReveriAI/ReveriAI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4LZ84Z78M7;
@@ -474,6 +570,7 @@
 				INFOPLIST_FILE = ReveriAI/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ReveriAI needs microphone access to record your dream descriptions.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "ReveriAI uses speech recognition for live captions while recording your dreams.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -492,6 +589,74 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D889BC442F4D0F0700132B25 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4LZ84Z78M7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Reveri;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Reveri needs microphone access to record your dreams by voice.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ReveriAI.ReveriAI;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ReveriAI.ReveriAI.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
+			};
+			name = Debug;
+		};
+		D889BC452F4D0F0700132B25 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4LZ84Z78M7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Reveri;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Reveri needs microphone access to record your dreams by voice.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ReveriAI.ReveriAI;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ReveriAI.ReveriAI.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.1;
 			};
 			name = Release;
 		};
@@ -521,6 +686,15 @@
 			buildConfigurations = (
 				D83221972F3BC14E009A1692 /* Debug */,
 				D83221982F3BC14E009A1692 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D889BC462F4D0F0700132B25 /* Build configuration list for PBXNativeTarget "Reveri Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D889BC442F4D0F0700132B25 /* Debug */,
+				D889BC452F4D0F0700132B25 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

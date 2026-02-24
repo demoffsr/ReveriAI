@@ -1,0 +1,134 @@
+import SwiftUI
+
+struct WatchRecordingView: View {
+    @Environment(WatchSessionManager.self) private var sessionManager
+    @Environment(WatchThemeManager.self) private var theme
+    @State private var recorder = WatchAudioRecorder()
+    @State private var showEmotionPicker = false
+    @State private var recordedAudioURL: URL?
+    @State private var recordedCreatedAt: Date?
+    @State private var waveformBars: [Float] = Array(repeating: 0, count: 12)
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // Cosmic background
+                Image("BackgroundDaylight")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+
+                if recorder.isRecording {
+                    recordingContent
+                } else {
+                    idleContent
+                }
+            }
+            .navigationTitle(recorder.isRecording ? "Recording" : "Reveri")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarForegroundStyle(theme.accent, for: .automatic)
+            .navigationDestination(isPresented: $showEmotionPicker) {
+                WatchEmotionPickerView { emotion in
+                    sendToPhone(emotion: emotion)
+                }
+                .environment(theme)
+            }
+        }
+        .onChange(of: recorder.currentLevel) { _, newLevel in
+            guard recorder.isRecording else { return }
+            waveformBars.removeFirst()
+            waveformBars.append(newLevel)
+        }
+    }
+
+    // MARK: - Idle
+
+    private var idleContent: some View {
+        VStack {
+            Spacer()
+
+            WatchRecordButton(accent: theme.accent) {
+                startRecording()
+            }
+
+            Spacer()
+
+            Text("Tap to Record")
+                .font(.system(size: 16, weight: .medium, design: .default))
+                .foregroundStyle(.white)
+                .padding(.bottom, 4)
+        }
+    }
+
+    // MARK: - Recording
+
+    private var recordingContent: some View {
+        VStack(spacing: 8) {
+            Spacer()
+
+            HStack(spacing: 4) {
+                WatchWaveformView(
+                    bars: Array(waveformBars.prefix(6)),
+                    accentColor: theme.accent
+                )
+
+                // Stop button with glass
+                Button {
+                    stopRecording()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.red.opacity(0.8))
+                            .frame(width: 50, height: 50)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(.white)
+                            .frame(width: 20, height: 20)
+                    }
+                    .glassEffect(.regular.interactive(), in: .circle)
+                }
+                .buttonStyle(.plain)
+
+                WatchWaveformView(
+                    bars: Array(waveformBars.suffix(6)),
+                    accentColor: theme.accent
+                )
+            }
+
+            // Timer
+            Text(formatDuration(recorder.duration))
+                .font(.system(.title2, design: .monospaced))
+                .foregroundStyle(theme.accent)
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Actions
+
+    private func startRecording() {
+        waveformBars = Array(repeating: 0, count: 12)
+        try? recorder.startRecording()
+    }
+
+    private func stopRecording() {
+        recorder.stopRecording()
+        recordedAudioURL = recorder.audioFileURL
+        recordedCreatedAt = Date()
+        showEmotionPicker = true
+    }
+
+    private func sendToPhone(emotion: DreamEmotion?) {
+        guard let url = recordedAudioURL,
+              let createdAt = recordedCreatedAt else { return }
+        let emotions = emotion.map { [$0.rawValue] } ?? []
+        sessionManager.transferAudioFile(url: url, createdAt: createdAt, emotions: emotions)
+        recordedAudioURL = nil
+        recordedCreatedAt = nil
+    }
+
+    private func formatDuration(_ t: TimeInterval) -> String {
+        let m = Int(t) / 60
+        let s = Int(t) % 60
+        return String(format: "%d:%02d", m, s)
+    }
+}

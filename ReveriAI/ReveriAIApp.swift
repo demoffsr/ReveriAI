@@ -10,6 +10,7 @@ struct ReveriAIApp: App {
     @State private var modelContainer: ModelContainer?
     @State private var loaderOpacity: Double = 1.0
     @State private var loaderRemoved = false
+    @State private var phoneSessionManager = PhoneSessionManager()
 
     init() {
         // INSTANT init — no heavy work. ModelContainer created after first frame.
@@ -64,6 +65,10 @@ struct ReveriAIApp: App {
 
                 // Mount RootView
                 modelContainer = container
+                phoneSessionManager.configure(with: container)
+
+                // One-time: fix hallucinated Whisper transcripts & re-transcribe
+                DreamAIService.cleanupHallucinatedTranscripts(modelContainer: container)
 
                 // Let RootView render
                 try? await Task.sleep(for: .milliseconds(100))
