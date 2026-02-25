@@ -16,12 +16,17 @@ struct WatchRecordingView: View {
                 Image("BackgroundDaylight")
                     .resizable()
                     .scaledToFill()
+                    .overlay(Color.black.opacity(0.55))
                     .ignoresSafeArea()
 
-                if recorder.isRecording {
-                    recordingContent
-                } else {
-                    idleContent
+                GeometryReader { geo in
+                    if recorder.isRecording {
+                        recordingContent
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    } else {
+                        idleContent
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    }
                 }
             }
             .navigationTitle(recorder.isRecording ? "Recording" : "Reveri")
@@ -68,7 +73,7 @@ struct WatchRecordingView: View {
             )
 
             Text(formatDuration(recorder.duration))
-                .font(.system(.title2, design: .monospaced))
+                .font(.system(size: 16, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white)
 
             Spacer()
@@ -77,10 +82,10 @@ struct WatchRecordingView: View {
                 stopRecording()
             } label: {
                 Text("Stop")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 36)
+                    .padding(.vertical, 12)
                     .glassEffect(.regular.interactive(), in: .capsule)
             }
             .buttonStyle(.plain)

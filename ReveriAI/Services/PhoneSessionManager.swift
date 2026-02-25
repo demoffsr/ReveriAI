@@ -17,6 +17,7 @@ final class PhoneSessionManager: NSObject, WCSessionDelegate {
 
     func configure(with container: ModelContainer) {
         self.modelContainer = container
+        Self.fixWatchAudioPaths(container: container)
         processPendingTransfers()
     }
 
@@ -100,14 +101,57 @@ final class PhoneSessionManager: NSObject, WCSessionDelegate {
         }
     }
 
+    /// One-time fix: strip "recordings/" prefix from Watch dream audioFilePaths
+    private static func fixWatchAudioPaths(container: ModelContainer) {
+        Task { @MainActor in
+            let context = container.mainContext
+            let descriptor = FetchDescriptor<Dream>()
+            guard let dreams = try? context.fetch(descriptor) else { return }
+            var fixed = 0
+            for dream in dreams {
+                guard let path = dream.audioFilePath,
+                      path.hasPrefix("recordings/") else { continue }
+                dream.audioFilePath = String(path.dropFirst("recordings/".count))
+                fixed += 1
+                // Re-trigger transcription if needed
+                if dream.whisperTranscript == nil {
+                    let locale = SpeechLocale(
+                        rawValue: UserDefaults.standard.string(forKey: "speechRecognitionLocale") ?? ""
+                    ) ?? .russian
+                    DreamAIService.transcribeAudioInBackground(
+                        dreamID: dream.persistentModelID,
+                        audioFileName: dream.audioFilePath!,
+                        locale: locale,
+                        modelContainer: container
+                    )
+                }
+            }
+            if fixed > 0 {
+                try? context.save()
+                print("Fixed \(fixed) Watch dream audio path(s)")
+            }
+        }
+    }
+
     private func processTransfer(_ transfer: PendingAudioTransfer, container: ModelContainer) {
         Task { @MainActor in
             let context = container.mainContext
             let dream = Dream(text: "", createdAt: transfer.createdAt)
             dream.emotionValues = transfer.emotions
-            dream.audioFilePath = "recordings/\(transfer.fileName)"
+            dream.audioFilePath = transfer.fileName
             context.insert(dream)
             try? context.save()
+
+            // Trigger Whisper transcription
+            let locale = SpeechLocale(
+                rawValue: UserDefaults.standard.string(forKey: "speechRecognitionLocale") ?? ""
+            ) ?? .russian
+            DreamAIService.transcribeAudioInBackground(
+                dreamID: dream.persistentModelID,
+                audioFileName: transfer.fileName,
+                locale: locale,
+                modelContainer: container
+            )
         }
     }
 }

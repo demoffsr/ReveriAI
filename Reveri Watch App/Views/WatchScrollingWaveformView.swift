@@ -64,7 +64,7 @@ struct WatchScrollingWaveformView: View {
     private static let barSpacing: CGFloat = 3.05
     private static let barSlot: CGFloat = barWidth + barSpacing
     private static let minHeight: CGFloat = 5
-    private static let maxHeight: CGFloat = 52
+    private static let maxHeight: CGFloat = 72
     private static let barsPerSecond: Double = 20
     private static let scrollSpeed: CGFloat = barSlot * CGFloat(barsPerSecond)
 
