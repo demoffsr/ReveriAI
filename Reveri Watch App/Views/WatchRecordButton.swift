@@ -2,9 +2,30 @@ import SwiftUI
 
 struct WatchRecordButton: View {
     let accent: Color
+    let isDayTime: Bool
     let action: () -> Void
 
     @State private var isPulsing = false
+
+    // MARK: - Theme Colors
+
+    private var gradientTop: Color {
+        isDayTime
+            ? Color(red: 1.0, green: 0.57, blue: 0.0)
+            : Color(red: 0.0, green: 0.8, blue: 1.0)
+    }
+
+    private var strokeColor: Color {
+        isDayTime
+            ? Color(red: 1.0, green: 0.73, blue: 0.19)
+            : Color(red: 0.3, green: 0.8, blue: 1.0)
+    }
+
+    private var glowColor: Color {
+        isDayTime
+            ? Color(red: 1.0, green: 0.49, blue: 0.0)
+            : Color(red: 0.0, green: 0.55, blue: 1.0)
+    }
 
     var body: some View {
         Button(action: action) {
@@ -29,7 +50,7 @@ struct WatchRecordButton: View {
                     .fill(
                         LinearGradient(
                             stops: [
-                                .init(color: Color(red: 1.0, green: 0.57, blue: 0.0), location: 0.29),
+                                .init(color: gradientTop, location: 0.29),
                                 .init(color: accent, location: 1.0)
                             ],
                             startPoint: .top, endPoint: .bottom
@@ -38,14 +59,14 @@ struct WatchRecordButton: View {
                     .overlay(
                         Circle().stroke(
                             LinearGradient(
-                                colors: [Color(red: 1.0, green: 0.73, blue: 0.19), Color(red: 1.0, green: 0.73, blue: 0.19).opacity(0)],
+                                colors: [strokeColor, strokeColor.opacity(0)],
                                 startPoint: .top, endPoint: .bottom
                             ), lineWidth: 1.5
                         )
                     )
                     .padding(32)
-                    .shadow(color: Color(red: 1.0, green: 0.49, blue: 0.0).opacity(0.9), radius: isPulsing ? 42 : 35)
-                    .shadow(color: Color(red: 1.0, green: 0.49, blue: 0.0).opacity(0.5), radius: isPulsing ? 70 : 60)
+                    .shadow(color: glowColor.opacity(0.9), radius: isPulsing ? 42 : 35)
+                    .shadow(color: glowColor.opacity(0.5), radius: isPulsing ? 70 : 60)
                     .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: isPulsing)
 
                 // Mic icon (custom SVG)

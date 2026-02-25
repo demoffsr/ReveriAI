@@ -14,7 +14,7 @@ struct ReveriComplication: Widget {
             }
         }
         .configurationDisplayName("Reveri")
-        .description("Быстрая запись сна")
+        .description("Quick dream recording")
         .supportedFamilies([.accessoryCircular, .accessoryCorner])
     }
 }

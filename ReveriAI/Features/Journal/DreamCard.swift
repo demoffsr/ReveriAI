@@ -10,6 +10,7 @@ struct DreamCard: View {
     @State private var showFolderPicker = false
     @State private var cachedDisplayTitle = ""
     @State private var cachedAudioURL: URL?
+    @State private var isEmotionScrolled = false
 
     private static let recordingsDirectory: URL = {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -66,11 +67,30 @@ struct DreamCard: View {
 
             // Emotion pins
             if !dream.emotions.isEmpty {
-                HStack(spacing: 4) {
-                    ForEach(dream.emotions) { emotion in
-                        EmotionTagBadge(emotion: emotion)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(dream.emotions) { emotion in
+                            EmotionTagBadge(emotion: emotion)
+                        }
                     }
                 }
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.x > 2
+                } action: { _, scrolled in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isEmotionScrolled = scrolled
+                    }
+                }
+                .mask(
+                    HStack(spacing: 0) {
+                        if isEmotionScrolled {
+                            LinearGradient(colors: [.clear, .black],
+                                           startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                        }
+                        Color.black
+                    }
+                )
                 .padding(.top, -6)
             }
 

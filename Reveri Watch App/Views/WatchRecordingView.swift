@@ -13,7 +13,7 @@ struct WatchRecordingView: View {
         NavigationStack {
             ZStack {
                 // Cosmic background
-                Image("BackgroundDaylight")
+                Image(theme.isDayTime ? "BackgroundDaylight" : "BackgroundNight")
                     .resizable()
                     .scaledToFill()
                     .overlay(Color.black.opacity(0.55))
@@ -33,8 +33,8 @@ struct WatchRecordingView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarForegroundStyle(theme.accent, for: .automatic)
             .navigationDestination(isPresented: $showEmotionPicker) {
-                WatchEmotionPickerView { emotion in
-                    sendToPhone(emotion: emotion)
+                WatchEmotionPickerView { emotions in
+                    sendToPhone(emotions: emotions)
                 }
                 .environment(theme)
             }
@@ -47,7 +47,7 @@ struct WatchRecordingView: View {
         VStack {
             Spacer()
 
-            WatchRecordButton(accent: theme.accent) {
+            WatchRecordButton(accent: theme.accent, isDayTime: theme.isDayTime) {
                 startRecording()
             }
 
@@ -108,11 +108,11 @@ struct WatchRecordingView: View {
         showEmotionPicker = true
     }
 
-    private func sendToPhone(emotion: DreamEmotion?) {
+    private func sendToPhone(emotions: [DreamEmotion]) {
         guard let url = recordedAudioURL,
               let createdAt = recordedCreatedAt else { return }
-        let emotions = emotion.map { [$0.rawValue] } ?? []
-        sessionManager.transferAudioFile(url: url, createdAt: createdAt, emotions: emotions)
+        let emotionStrings = emotions.map(\.rawValue)
+        sessionManager.transferAudioFile(url: url, createdAt: createdAt, emotions: emotionStrings)
         recordedAudioURL = nil
         recordedCreatedAt = nil
     }
