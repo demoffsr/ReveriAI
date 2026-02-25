@@ -26,6 +26,8 @@ struct JournalView: View {
     @State private var newFolderName = ""
     @State private var selectedFolder: DreamFolder?
     @State private var showProfile = false
+    @State private var isSearchActive = false
+    @State private var searchQuery = ""
     @State private var searchDebounceTask: Task<Void, Never>?
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
     @Query(sort: \DreamFolder.createdAt, order: .reverse) private var folders: [DreamFolder]
@@ -33,24 +35,63 @@ struct JournalView: View {
 
     var body: some View {
         NavigationStack {
-            journalContent
+            ZStack(alignment: .top) {
+                journalContent
+
+                if isSearchActive {
+                    SearchOverlayView(
+                        dreams: allDreams,
+                        folders: folders,
+                        viewModel: viewModel,
+                        onDreamTap: { dream in
+                            selectedDream = dream
+                        },
+                        onFolderTap: { folder in
+                            selectedFolder = folder
+                        },
+                        onDismiss: {
+                            isSearchActive = false
+                        },
+                        searchQuery: $searchQuery
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+                }
+
+                // Header always above the dim overlay
+                journalHeader
+                    .ignoresSafeArea(edges: .top)
+                    .zIndex(2)
+            }
+            .animation(.spring(duration: 0.35, bounce: 0.15), value: isSearchActive)
         }
+    }
+
+    // MARK: - Header (above dim overlay)
+
+    private var journalHeader: some View {
+        JournalHeader(
+            searchText: $viewModel.searchText,
+            selectedEmotion: $selectedEmotion,
+            emotionOrder: $emotionOrder,
+            selectedTimeRange: $viewModel.selectedTimeRange,
+            isFoldersTab: selectedTab == .folders,
+            showNewFolderAlert: $showNewFolderAlert,
+            avatarStorage: avatarStorage,
+            isSearchActive: isSearchActive,
+            searchQuery: $searchQuery,
+            onProfileTap: { showProfile = true },
+            onSearchTap: { isSearchActive = true },
+            onSearchClose: { isSearchActive = false }
+        )
     }
 
     // MARK: - Main Content
 
     private var journalContent: some View {
         VStack(spacing: 0) {
-            JournalHeader(
-                searchText: $viewModel.searchText,
-                selectedEmotion: $selectedEmotion,
-                emotionOrder: $emotionOrder,
-                selectedTimeRange: $viewModel.selectedTimeRange,
-                isFoldersTab: selectedTab == .folders,
-                showNewFolderAlert: $showNewFolderAlert,
-                avatarStorage: avatarStorage,
-                onProfileTap: { showProfile = true }
-            )
+            // Spacer matching header height (68 top + 44 row + 20 spacing + 42 row + 16 bottom = 190)
+            Color.clear.frame(height: 190)
 
             Picker("", selection: $selectedTab) {
                 Text("Dreams").tag(JournalTab.dreams)
@@ -99,6 +140,9 @@ struct JournalView: View {
             }
         }
         .onChange(of: viewModel.selectedTimeRange) { _, _ in refreshFilters() }
+        .onChange(of: isSearchActive) { _, active in
+            if !active { searchQuery = "" }
+        }
         .onChange(of: selectedDream) { _, newValue in
             if newValue == nil { isInDetailDreamTab = false }
         }
