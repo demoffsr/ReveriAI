@@ -45,97 +45,104 @@ struct JournalHeader: View {
                     .transition(.scale(scale: 0, anchor: .leading).combined(with: .opacity))
                 }
 
-                // Search capsule — single view, content changes based on state
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.7))
+                // Search + calendar/X — adjacent glass in container
+                GlassEffectContainer(spacing: 12) {
+                    HStack(spacing: 12) {
+                        // Search capsule
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.7))
 
-                    ZStack(alignment: .leading) {
-                        Text("Search")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .opacity(isSearchActive ? 0 : 1)
+                            ZStack(alignment: .leading) {
+                                Text(String(localized: "journal.search", defaultValue: "Search"))
+                                    .font(.system(size: 17, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .opacity(isSearchActive ? 0 : 1)
 
-                        TextField("Search for dream or folder...", text: $searchQuery)
-                            .font(.system(size: 17))
-                            .foregroundStyle(.white)
-                            .focused($isSearchFocused)
-                            .tint(.white)
-                            .submitLabel(.search)
-                            .opacity(isSearchActive ? 1 : 0)
-                            .allowsHitTesting(isSearchActive)
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.leading, 14)
-                .reveriGlass(.capsule)
-                .onTapGesture {
-                    if !isSearchActive { onSearchTap() }
-                }
-
-                // Calendar filter / Close search button
-                if isSearchActive {
-                    Button {
-                        onSearchClose()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .frame(width: 44, height: 44)
-                            .reveriGlass(.circle)
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                } else {
-                    Menu {
-                        ForEach(JournalViewModel.TimeRange.allCases, id: \.self) { range in
-                            Button {
-                                selectedTimeRange = range
-                            } label: {
-                                HStack {
-                                    Text(range.rawValue)
-                                    if range == selectedTimeRange {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
+                                TextField(String(localized: "journal.searchPlaceholder", defaultValue: "Search for dream or folder..."), text: $searchQuery)
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(.white)
+                                    .focused($isSearchFocused)
+                                    .tint(.white)
+                                    .submitLabel(.search)
+                                    .opacity(isSearchActive ? 1 : 0)
+                                    .allowsHitTesting(isSearchActive)
                             }
                         }
-                    } label: {
-                        Image("CalendarIcon")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 22, height: 22)
-                            .frame(width: 44, height: 44)
-                            .reveriGlass(.circle)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.leading, 14)
+                        .reveriGlass(.capsule)
+                        .onTapGesture {
+                            if !isSearchActive { onSearchTap() }
+                        }
+
+                        // Calendar filter / Close search button
+                        if isSearchActive {
+                            Button {
+                                onSearchClose()
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .frame(width: 44, height: 44)
+                                    .reveriGlass(.circle)
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        } else {
+                            Menu {
+                                ForEach(JournalViewModel.TimeRange.allCases, id: \.self) { range in
+                                    Button {
+                                        selectedTimeRange = range
+                                    } label: {
+                                        HStack {
+                                            Text(range.displayName)
+                                            if range == selectedTimeRange {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Image("CalendarIcon")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 22, height: 22)
+                                    .frame(width: 44, height: 44)
+                                    .reveriGlass(.circle)
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        }
                     }
-                    .transition(.scale.combined(with: .opacity))
                 }
             }
             .animation(.spring(duration: 0.35, bounce: 0.15), value: isSearchActive)
 
             // Bottom row: title + filters/actions (fixed 42pt to match emotion circles)
             HStack(spacing: 24) {
-                Text("My Dreams")
+                Text(String(localized: "journal.myDreams", defaultValue: "My Dreams"))
                     .font(.title.weight(.bold))
                     .foregroundStyle(.white)
                     .fixedSize()
                 if isFoldersTab {
                     Spacer(minLength: 0)
-                    Button {
-                        showNewFolderAlert = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image("FolderAddIcon")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 22, height: 22)
-                            Text("New Folder")
-                                .font(.system(size: 15, weight: .medium))
+                    GlassEffectContainer {
+                        Button {
+                            showNewFolderAlert = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image("FolderAddIcon")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 22, height: 22)
+                                Text(String(localized: "folder.newFolder", defaultValue: "New Folder"))
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(height: 36)
+                            .padding(.horizontal, 14)
+                            .reveriGlass(.capsule)
                         }
-                        .foregroundStyle(.white.opacity(0.9))
-                        .frame(height: 36)
-                        .padding(.horizontal, 14)
-                        .reveriGlass(.capsule)
                     }
                 } else {
                     EmotionFilterBar(selectedEmotion: $selectedEmotion, emotionOrder: $emotionOrder, isExpanded: $isEmotionsExpanded)
@@ -159,14 +166,27 @@ struct JournalHeader: View {
             ZStack {
                 Color.black
 
-                // Blur gradient orb
-                (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
-                    .frame(width: 189, height: 196)
-                    .blur(radius: 100)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                // Blur gradient orb — hidden when search active for fully dark background
+                if !isSearchActive {
+                    (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
+                        .frame(width: 189, height: 196)
+                        .blur(radius: 100)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
             .drawingGroup()
             .ignoresSafeArea(edges: .top)
         }
+        .overlay(alignment: .bottom) {
+            // Dim bottom row (My Dreams + filters) when search is active
+            // Background is already pure black (gradient orb hidden), so only bottom needs dimming
+            if isSearchActive {
+                Color.black.opacity(0.85)
+                    .frame(height: 78) // 20 (spacing) + 42 (row) + 16 (padding)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.spring(duration: 0.35, bounce: 0.15), value: isSearchActive)
     }
 }
