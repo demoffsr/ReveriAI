@@ -8,7 +8,7 @@ struct FolderSearchBar: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15))
                 .foregroundStyle(.black.opacity(0.4))
-            TextField("Search", text: $text)
+            TextField(String(localized: "journal.search", defaultValue: "Search"), text: $text)
                 .font(.system(size: 17))
                 .foregroundStyle(.black)
             if !text.isEmpty {

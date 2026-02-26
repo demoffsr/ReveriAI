@@ -34,7 +34,7 @@ struct FolderPickerSheet: View {
                     .padding(.top, 8)
 
                 if cachedFilteredFolders.isEmpty {
-                    ContentUnavailableView("No folders", systemImage: "folder", description: Text("Create a folder first"))
+                    ContentUnavailableView(String(localized: "folder.noFolders", defaultValue: "No folders"), systemImage: "folder", description: Text(String(localized: "folder.createFirst", defaultValue: "Create a folder first")))
                         .frame(maxHeight: .infinity)
                 } else {
                     ScrollView {
@@ -54,7 +54,7 @@ struct FolderPickerSheet: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Add to Folder")
+            .navigationTitle(String(localized: "folder.addToFolder", defaultValue: "Add to Folder"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -79,15 +79,15 @@ struct FolderPickerSheet: View {
                     updateFilteredFolders()
                 }
             }
-            .alert("New Folder", isPresented: $showNewFolderAlert) {
-                TextField("Folder name", text: $newFolderName)
-                Button("Create") {
+            .alert(String(localized: "folder.newFolder", defaultValue: "New Folder"), isPresented: $showNewFolderAlert) {
+                TextField(String(localized: "folder.folderName", defaultValue: "Folder name"), text: $newFolderName)
+                Button(String(localized: "folder.create", defaultValue: "Create")) {
                     guard !newFolderName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                     let folder = DreamFolder(name: newFolderName.trimmingCharacters(in: .whitespaces))
                     modelContext.insert(folder)
                     try? modelContext.save()
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(String(localized: "folder.cancel", defaultValue: "Cancel"), role: .cancel) {}
             }
         }
     }

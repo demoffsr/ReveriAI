@@ -28,6 +28,7 @@ struct HeaderBackgroundPickerSheet: View {
             }
             .background(Color(.systemGroupedBackground))
             .toolbar(.hidden, for: .navigationBar)
+            .enableSwipeBack()
             .onChange(of: selectedPhoto) { _, item in
                 loadPhoto(item)
             }
@@ -44,7 +45,7 @@ struct HeaderBackgroundPickerSheet: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 40))
                         .foregroundStyle(theme.accent)
-                    Text("Choose Photo")
+                    Text(String(localized: "profile.choosePhoto", defaultValue: "Choose Photo"))
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(.primary)
                 }
@@ -81,7 +82,7 @@ struct HeaderBackgroundPickerSheet: View {
         VStack(spacing: 0) {
             // Nav bar
             HStack {
-                Button("Cancel") {
+                Button(String(localized: "profile.cancel", defaultValue: "Cancel")) {
                     sourceImage = nil
                     selectedPhoto = nil
                     scale = 1.0
@@ -91,12 +92,12 @@ struct HeaderBackgroundPickerSheet: View {
 
                 Spacer()
 
-                Text("Position & Scale")
+                Text(String(localized: "profile.positionAndScale", defaultValue: "Position & Scale"))
                     .font(.headline)
 
                 Spacer()
 
-                Button("Save") {
+                Button(String(localized: "profile.save", defaultValue: "Save")) {
                     saveCroppedImage(image)
                 }
                 .fontWeight(.semibold)
@@ -120,7 +121,7 @@ struct HeaderBackgroundPickerSheet: View {
 
             Spacer()
 
-            Text("Pinch to zoom, drag to reposition")
+            Text(String(localized: "profile.pinchToZoom", defaultValue: "Pinch to zoom, drag to reposition"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 40)

@@ -149,6 +149,7 @@ struct JournalHeader: View {
                 }
             }
             .frame(height: 42)
+            .opacity(isSearchActive ? 0 : 1)
         }
         .padding(.horizontal, 20)
         .padding(.top, 68)
@@ -176,16 +177,6 @@ struct JournalHeader: View {
             }
             .drawingGroup()
             .ignoresSafeArea(edges: .top)
-        }
-        .overlay(alignment: .bottom) {
-            // Dim bottom row (My Dreams + filters) when search is active
-            // Background is already pure black (gradient orb hidden), so only bottom needs dimming
-            if isSearchActive {
-                Color.black.opacity(0.85)
-                    .frame(height: 78) // 20 (spacing) + 42 (row) + 16 (padding)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
         }
         .animation(.spring(duration: 0.35, bounce: 0.15), value: isSearchActive)
     }

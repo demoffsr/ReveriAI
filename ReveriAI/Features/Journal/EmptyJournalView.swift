@@ -8,10 +8,10 @@ struct EmptyJournalView: View {
             Text("😊")
                 .font(.system(size: 64))
 
-            Text("Sweet dreams ahead")
+            Text(String(localized: "journal.sweetDreams", defaultValue: "Sweet dreams ahead"))
                 .font(.title3.weight(.semibold))
 
-            Text("Tap Record after you wake up\nto start your journal")
+            Text(String(localized: "journal.tapRecord", defaultValue: "Tap Record after you wake up\nto start your journal"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

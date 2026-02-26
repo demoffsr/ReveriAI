@@ -15,31 +15,83 @@ private struct CelestialDecoration: View {
     }
 }
 
-// MARK: - Widget
+// MARK: - Content View (iPhone / Watch branching)
 
-struct DreamReminderLiveActivity: Widget {
-    var body: some WidgetConfiguration {
-        ActivityConfiguration(for: DreamReminderAttributes.self) { _ in
-            lockScreenBanner
-        } dynamicIsland: { _ in
-            dynamicIslandConfig
+private struct DreamReminderContentView: View {
+    @Environment(\.activityFamily) var activityFamily
+
+    var body: some View {
+        switch activityFamily {
+        case .small:
+            WatchDreamReminderView()
+        case .medium:
+            iPhoneDreamReminderView()
+        @unknown default:
+            iPhoneDreamReminderView()
         }
     }
+}
 
-    // MARK: Lock Screen Banner
+// MARK: - Watch Dream Reminder View
 
-    private var lockScreenBanner: some View {
+private struct WatchDreamReminderView: View {
+    @Environment(\.isLuminanceReduced) var isLuminanceReduced
+
+    var body: some View {
         let palette = WidgetPalette.current
 
-        // Content drives the size; gradient, noise, celestial are layered behind via background/overlay
-        return VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(String(localized: "widget.didYouSleepWell", defaultValue: "Did you sleep well?"))
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.6))
+
+            HStack(spacing: 10) {
+                // Moon icon in accent circle
+                Image("MoonWatch")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .frame(width: 36, height: 36)
+                    .background(palette.accent.opacity(0.3), in: Circle())
+
+                // Record button — Link opens Watch app with deep link
+                Link(destination: URL(string: "reveri://record")!) {
+                    Text(String(localized: "widget.record", defaultValue: "Record"))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(palette.accent, in: Capsule())
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .containerBackground(for: .widget) {
+            LinearGradient(
+                colors: [palette.gradientStart, palette.gradientEnd],
+                startPoint: UnitPoint(x: 0.1, y: 0),
+                endPoint: UnitPoint(x: 0.9, y: 1)
+            )
+            .opacity(isLuminanceReduced ? 0.5 : 1.0)
+        }
+    }
+}
+
+// MARK: - iPhone Dream Reminder View
+
+private struct iPhoneDreamReminderView: View {
+    var body: some View {
+        let palette = WidgetPalette.current
+
+        VStack(spacing: 16) {
             // Top row: title + subtitle
             VStack(alignment: .leading, spacing: 2) {
-                Text("Did you sleep well?")
+                Text(String(localized: "widget.didYouSleepWell", defaultValue: "Did you sleep well?"))
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
 
-                Text("Tell us about it")
+                Text(String(localized: "widget.tellUsAboutIt", defaultValue: "Tell us about it"))
                     .font(.system(size: 15))
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -48,7 +100,7 @@ struct DreamReminderLiveActivity: Widget {
             // Bottom row: Record + Write buttons
             HStack(spacing: 8) {
                 Button(intent: StartDreamRecordingIntent()) {
-                    Text("Record")
+                    Text(String(localized: "widget.record", defaultValue: "Record"))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -84,14 +136,12 @@ struct DreamReminderLiveActivity: Widget {
         .padding(.vertical, 14)
         .background {
             ZStack {
-                // Gradient
                 LinearGradient(
                     colors: [palette.gradientStart, palette.gradientEnd],
                     startPoint: UnitPoint(x: 0.1, y: 0),
                     endPoint: UnitPoint(x: 0.9, y: 1)
                 )
 
-                // Noise texture
                 Image("NoiseTexture")
                     .resizable(resizingMode: .tile)
                     .opacity(0.5)
@@ -99,9 +149,6 @@ struct DreamReminderLiveActivity: Widget {
             }
         }
         .overlay(alignment: .topTrailing) {
-            // Celestial decoration — doesn't affect layout
-            // SVG viewBox 101×102, visual center at (76,24) — with topTrailing alignment
-            // this naturally places the celestial at the correct position, no offset needed.
             CelestialDecoration(palette: palette)
                 .frame(width: 101, height: 102)
                 .allowsHitTesting(false)
@@ -112,6 +159,19 @@ struct DreamReminderLiveActivity: Widget {
                 .stroke(.white.opacity(0.2), lineWidth: 1)
         )
         .activityBackgroundTint(.clear)
+    }
+}
+
+// MARK: - Widget
+
+struct DreamReminderLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: DreamReminderAttributes.self) { _ in
+            DreamReminderContentView()
+        } dynamicIsland: { _ in
+            dynamicIslandConfig
+        }
+        .supplementalActivityFamilies([.small])
     }
 
     // MARK: Dynamic Island
@@ -125,7 +185,7 @@ struct DreamReminderLiveActivity: Widget {
                     .foregroundStyle(palette.accent)
             }
             DynamicIslandExpandedRegion(.center) {
-                Text("Record your dream")
+                Text(String(localized: "widget.recordYourDream", defaultValue: "Record your dream"))
                     .font(.headline)
             }
             DynamicIslandExpandedRegion(.trailing) {
@@ -138,7 +198,7 @@ struct DreamReminderLiveActivity: Widget {
             DynamicIslandExpandedRegion(.bottom) {
                 HStack(spacing: 8) {
                     Button(intent: StartDreamRecordingIntent()) {
-                        Text("Record")
+                        Text(String(localized: "widget.record", defaultValue: "Record"))
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -161,7 +221,7 @@ struct DreamReminderLiveActivity: Widget {
             Image(systemName: palette.isNight ? "moon.fill" : "sun.max.fill")
                 .foregroundStyle(palette.accent)
         } compactTrailing: {
-            Text("Dream")
+            Text(String(localized: "widget.dream", defaultValue: "Dream"))
                 .font(.system(.caption, design: .rounded))
                 .foregroundStyle(palette.accent)
         } minimal: {

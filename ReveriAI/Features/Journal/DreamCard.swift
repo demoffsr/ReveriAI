@@ -39,22 +39,22 @@ struct DreamCard: View {
                     Button {
                         // Rename — no-op for now
                     } label: {
-                        Label("Rename", systemImage: "pencil")
+                        Label(String(localized: "dreamCard.rename", defaultValue: "Rename"), systemImage: "pencil")
                     }
                     Button {
                         showFolderPicker = true
                     } label: {
-                        Label("Add to Folder", systemImage: "folder.badge.plus")
+                        Label(String(localized: "dreamCard.addToFolder", defaultValue: "Add to Folder"), systemImage: "folder.badge.plus")
                     }
                     Button {
                         // Share — no-op for now
                     } label: {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label(String(localized: "dreamCard.share", defaultValue: "Share"), systemImage: "square.and.arrow.up")
                     }
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label(String(localized: "dreamCard.delete", defaultValue: "Delete"), systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -105,7 +105,7 @@ struct DreamCard: View {
                     .foregroundStyle(.black.opacity(0.5))
                     .lineLimit(2)
             } else if dream.isTranscribingAudio {
-                Text("Обработка записи...")
+                Text(String(localized: "dreamCard.processing", defaultValue: "Processing recording..."))
                     .font(.system(size: 13).italic())
                     .foregroundStyle(.black.opacity(0.35))
                     .phaseAnimator([false, true]) { content, phase in
@@ -141,15 +141,15 @@ struct DreamCard: View {
         .onTapGesture {
             onTap()
         }
-        .confirmationDialog("Удалить сон?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Удалить", role: .destructive) {
+        .confirmationDialog(String(localized: "dreamCard.deleteConfirmation", defaultValue: "Delete dream?"), isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button(String(localized: "dreamCard.deleteAction", defaultValue: "Delete"), role: .destructive) {
                 HapticService.notification(.warning)
                 withAnimation(.easeOut(duration: 0.3)) {
                     modelContext.delete(dream)
                     try? modelContext.save()
                 }
             }
-            Button("Отмена", role: .cancel) {}
+            Button(String(localized: "dreamCard.cancel", defaultValue: "Cancel"), role: .cancel) {}
         }
         .sheet(isPresented: $showFolderPicker) {
             FolderPickerSheet(dream: dream)

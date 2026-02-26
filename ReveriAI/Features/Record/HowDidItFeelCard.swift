@@ -13,7 +13,7 @@ struct HowDidItFeelCard: View {
             HStack(spacing: 8) {
                 if showSavedState {
                     // "Dream saved" capsule (green)
-                    Text("Dream saved")
+                    Text(String(localized: "record.dreamSaved", defaultValue: "Dream saved"))
                         .font(.subheadline.weight(.medium))
                         .tracking(-0.23)
                         .foregroundStyle(savedColor)
@@ -25,7 +25,7 @@ struct HowDidItFeelCard: View {
                 } else {
                     // "How did it feel?" capsule
                     Button(action: onTap) {
-                        Text("How did it feel?")
+                        Text(String(localized: "record.howDidItFeel", defaultValue: "How did it feel?"))
                             .font(.subheadline.weight(.medium))
                             .tracking(-0.23)
                             .foregroundStyle(Color.black.opacity(0.6))

@@ -3,6 +3,7 @@ import ActivityKit
 
 struct StartDreamRecordingIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Start Recording"
+    static var openAppWhenRun: Bool { true }
 
     func perform() async throws -> some IntentResult {
         await MainActor.run {

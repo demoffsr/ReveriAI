@@ -51,11 +51,11 @@ struct ReveriTabBar: View {
                             .transition(.opacity)
                     }
                 }
-                .alert("Delete recording?", isPresented: $showDeleteConfirmation) {
-                    Button("Delete", role: .destructive) { HapticService.notification(.warning); onDelete?() }
-                    Button("Cancel", role: .cancel) { }
+                .alert(String(localized: "tabBar.deleteRecording", defaultValue: "Delete recording?"), isPresented: $showDeleteConfirmation) {
+                    Button(String(localized: "tabBar.delete", defaultValue: "Delete"), role: .destructive) { HapticService.notification(.warning); onDelete?() }
+                    Button(String(localized: "tabBar.cancel", defaultValue: "Cancel"), role: .cancel) { }
                 } message: {
-                    Text("This action cannot be undone")
+                    Text(String(localized: "tabBar.cannotBeUndone", defaultValue: "This action cannot be undone"))
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
@@ -119,7 +119,7 @@ struct ReveriTabBar: View {
                         .renderingMode(.original)
                         .frame(width: 22, height: 22)
                     if !isPaused {
-                        Text("Stop")
+                        Text(String(localized: "tabBar.stop", defaultValue: "Stop"))
                             .font(.system(size: 13, weight: .medium))
                             .tracking(-0.08)
                             .foregroundStyle(stopColor)
@@ -153,7 +153,7 @@ struct ReveriTabBar: View {
                             perspective: 0.4
                         )
                     if isPaused {
-                        Text("Resume")
+                        Text(String(localized: "tabBar.resume", defaultValue: "Resume"))
                             .font(.system(size: 13, weight: .medium))
                             .tracking(-0.08)
                             .foregroundStyle(theme.accent)
@@ -204,7 +204,7 @@ struct ReveriTabBar: View {
                             axis: (x: 0, y: 1, z: 0),
                             perspective: 0.4
                         )
-                    Text("Play")
+                    Text(String(localized: "tabBar.play", defaultValue: "Play"))
                         .font(.system(size: 13, weight: .medium))
                         .tracking(-0.08)
                         .foregroundStyle(theme.accent)
@@ -302,7 +302,7 @@ struct ReveriTabBar: View {
                 Image("CheckmarkBigIcon")
                     .renderingMode(.original)
                     .frame(width: 22, height: 22)
-                Text("Save feelings")
+                Text(String(localized: "tabBar.saveFeelings", defaultValue: "Save feelings"))
                     .font(.system(size: 13, weight: .medium))
                     .tracking(-0.08)
                     .foregroundStyle(theme.accent)
@@ -374,7 +374,7 @@ private struct DetailDreamControlsView: View {
                                 .frame(width: 20, height: 20)
                                 .foregroundStyle(theme.accent)
                         }
-                        Text(mode == .generateImageAgain ? "Generate Again" : "Generate Image")
+                        Text(mode == .generateImageAgain ? String(localized: "tabBar.generateAgain", defaultValue: "Generate Again") : String(localized: "tabBar.generateImage", defaultValue: "Generate Image"))
                             .font(.subheadline.weight(.medium))
                             .tracking(-0.23)
                             .foregroundStyle(theme.accent)
@@ -401,7 +401,7 @@ private struct DetailDreamControlsView: View {
                                 .resizable()
                                 .frame(width: 20, height: 20)
                         }
-                        Text("Interpret Dream")
+                        Text(String(localized: "tabBar.interpretDream", defaultValue: "Interpret Dream"))
                             .font(.subheadline.weight(.medium))
                             .tracking(-0.23)
                             .foregroundStyle(theme.accent)

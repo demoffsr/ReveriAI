@@ -3,6 +3,7 @@ import ActivityKit
 
 struct StopDreamRecordingIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop Recording"
+    static var openAppWhenRun: Bool { true }
 
     func perform() async throws -> some IntentResult {
         await MainActor.run {

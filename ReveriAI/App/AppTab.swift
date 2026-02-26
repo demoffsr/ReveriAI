@@ -22,8 +22,8 @@ enum AppTab: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .record: "Record"
-        case .journal: "Journal"
+        case .record: String(localized: "tab.record", defaultValue: "Record")
+        case .journal: String(localized: "tab.journal", defaultValue: "Journal")
         }
     }
 }

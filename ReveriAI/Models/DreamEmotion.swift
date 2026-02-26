@@ -13,13 +13,13 @@ enum DreamEmotion: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .joyful: "Joyful"
-        case .inLove: "In Love"
-        case .calm: "Calm"
-        case .confused: "Confused"
-        case .anxious: "Anxious"
-        case .scared: "Scared"
-        case .angry: "Angry"
+        case .joyful: String(localized: "emotion.joyful", defaultValue: "Joyful")
+        case .inLove: String(localized: "emotion.inLove", defaultValue: "In Love")
+        case .calm: String(localized: "emotion.calm", defaultValue: "Calm")
+        case .confused: String(localized: "emotion.confused", defaultValue: "Confused")
+        case .anxious: String(localized: "emotion.anxious", defaultValue: "Anxious")
+        case .scared: String(localized: "emotion.scared", defaultValue: "Scared")
+        case .angry: String(localized: "emotion.angry", defaultValue: "Angry")
         }
     }
 

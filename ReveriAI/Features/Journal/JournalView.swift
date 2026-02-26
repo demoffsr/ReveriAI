@@ -37,6 +37,7 @@ struct JournalView: View {
         NavigationStack {
             ZStack(alignment: .top) {
                 journalContent
+                    .opacity(isSearchActive ? 0 : 1)
 
                 if isSearchActive {
                     SearchOverlayView(
@@ -94,8 +95,8 @@ struct JournalView: View {
             Color.clear.frame(height: 190)
 
             Picker("", selection: $selectedTab) {
-                Text("Dreams").tag(JournalTab.dreams)
-                Text("Folders").tag(JournalTab.folders)
+                Text(String(localized: "journal.dreams", defaultValue: "Dreams")).tag(JournalTab.dreams)
+                Text(String(localized: "journal.folders", defaultValue: "Folders")).tag(JournalTab.folders)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
@@ -146,10 +147,10 @@ struct JournalView: View {
         .onChange(of: selectedDream) { _, newValue in
             if newValue == nil { isInDetailDreamTab = false }
         }
-        .alert("New Folder", isPresented: $showNewFolderAlert) {
-            TextField("Folder name", text: $newFolderName)
-            Button("Create") { createFolder() }
-            Button("Cancel", role: .cancel) {}
+        .alert(String(localized: "folder.newFolder", defaultValue: "New Folder"), isPresented: $showNewFolderAlert) {
+            TextField(String(localized: "folder.folderName", defaultValue: "Folder name"), text: $newFolderName)
+            Button(String(localized: "folder.create", defaultValue: "Create")) { createFolder() }
+            Button(String(localized: "folder.cancel", defaultValue: "Cancel"), role: .cancel) {}
         }
         .onChange(of: showNewFolderAlert) { _, newValue in
             if newValue { newFolderName = "" }
@@ -185,7 +186,7 @@ struct JournalView: View {
     private var foldersContent: some View {
         Group {
             if folders.isEmpty {
-                ContentUnavailableView("No folders yet", systemImage: "folder", description: Text("Tap \"New Folder\" to create one"))
+                ContentUnavailableView(String(localized: "journal.noFoldersYet", defaultValue: "No folders yet"), systemImage: "folder", description: Text(String(localized: "journal.tapNewFolder", defaultValue: "Tap \"New Folder\" to create one")))
                     .frame(maxHeight: .infinity)
             } else {
                 ScrollView {

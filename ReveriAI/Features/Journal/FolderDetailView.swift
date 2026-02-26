@@ -39,7 +39,7 @@ struct FolderDetailView: View {
                 .padding(.bottom, 8)
 
             if cachedFilteredDreams.isEmpty {
-                ContentUnavailableView("No dreams", systemImage: "moon.zzz", description: Text("Add dreams to this folder"))
+                ContentUnavailableView(String(localized: "folder.noDreams", defaultValue: "No dreams"), systemImage: "moon.zzz", description: Text(String(localized: "folder.addDreamsToFolder", defaultValue: "Add dreams to this folder")))
                     .frame(maxHeight: .infinity)
             } else {
                 dreamsList
@@ -47,6 +47,7 @@ struct FolderDetailView: View {
         }
         .background(Color(.systemGroupedBackground))
         .toolbar(.hidden, for: .navigationBar)
+        .enableSwipeBack()
         .onAppear { updateFilteredDreams() }
         .onChange(of: searchText) { _, _ in updateFilteredDreams() }
         .onChange(of: folder.dreams.count) { _, _ in updateFilteredDreams() }
@@ -159,7 +160,7 @@ struct AddDreamsToFolderSheet: View {
                     .padding(.top, 8)
 
                 if cachedFilteredDreams.isEmpty {
-                    ContentUnavailableView("No dreams", systemImage: "moon.zzz")
+                    ContentUnavailableView(String(localized: "folder.noDreams", defaultValue: "No dreams"), systemImage: "moon.zzz")
                         .frame(maxHeight: .infinity)
                 } else {
                     ScrollView {
@@ -175,7 +176,7 @@ struct AddDreamsToFolderSheet: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Add Dreams")
+            .navigationTitle(String(localized: "folder.addDreamsTitle", defaultValue: "Add Dreams"))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 updateFilteredDreams()
@@ -193,7 +194,7 @@ struct AddDreamsToFolderSheet: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Done") { dismiss() }
+                    Button(String(localized: "folder.done", defaultValue: "Done")) { dismiss() }
                         .fontWeight(.medium)
                 }
             }

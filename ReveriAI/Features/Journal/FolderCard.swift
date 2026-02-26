@@ -25,7 +25,7 @@ struct FolderCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Top area: "Add dreams" hint or emotion icons (fixed 32pt height)
             if folder.dreams.isEmpty {
-                Text("Add dreams")
+                Text(String(localized: "folder.addDreamsHint", defaultValue: "Add dreams"))
                     .font(.system(size: 13).italic())
                     .foregroundStyle(.black.opacity(0.3))
                     .frame(height: 32, alignment: .center)
@@ -42,7 +42,7 @@ struct FolderCard: View {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(.black)
                         .lineLimit(1)
-                    Text("\(folder.dreams.count) Dreams")
+                    Text(String(localized: "\(folder.dreams.count) Dreams"))
                         .font(.system(size: 13))
                         .foregroundStyle(.black.opacity(0.5))
                 }
@@ -53,13 +53,13 @@ struct FolderCard: View {
                     Button {
                         onRename()
                     } label: {
-                        Label("Rename", systemImage: "pencil")
+                        Label(String(localized: "folder.rename", defaultValue: "Rename"), systemImage: "pencil")
                     }
                     Button(role: .destructive) {
                         HapticService.notification(.warning)
                         onDelete()
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label(String(localized: "folder.delete", defaultValue: "Delete"), systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis")

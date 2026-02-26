@@ -184,10 +184,10 @@ struct RecordView: View {
     private var headerTitle: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Describe")
+                Text(String(localized: "record.describe", defaultValue: "Describe"))
                     .font(.system(size: 36, weight: .heavy))
                     .foregroundStyle(.white)
-                Text("\(Text("your ").foregroundStyle(.white))\(Text("dream").foregroundStyle(theme.accent))")
+                Text("\(Text(String(localized: "record.your", defaultValue: "your ")).foregroundStyle(.white))\(Text(String(localized: "record.dream", defaultValue: "dream")).foregroundStyle(theme.accent))")
                     .font(.system(size: 36, weight: .heavy))
             }
             .lineLimit(1)
@@ -292,7 +292,7 @@ struct RecordView: View {
                 Image(viewModel.mode == .voice ? "TextModeIcon" : "VoiceModeIcon")
                     .renderingMode(.template)
                     .foregroundStyle(theme.accent)
-                Text(viewModel.mode == .voice ? "Text Mode" : "Voice Mode")
+                Text(viewModel.mode == .voice ? String(localized: "record.textMode", defaultValue: "Text Mode") : String(localized: "record.voiceMode", defaultValue: "Voice Mode"))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
             }
@@ -358,7 +358,7 @@ struct RecordView: View {
                         .frame(width: 40, height: 40)
                         .glassEffect(.regular, in: .circle)
 
-                        Text("Start Recording")
+                        Text(String(localized: "record.startRecording", defaultValue: "Start Recording"))
                             .font(.system(size: 15, weight: .medium))
                             .tracking(-0.23)
                             .foregroundStyle(.primary)
@@ -381,7 +381,7 @@ struct RecordView: View {
                     .padding(.bottom, 100)
                     .overlay(alignment: .topLeading) {
                         if reviewText.isEmpty {
-                            Text("Add dream description...")
+                            Text(String(localized: "record.addDreamDescription", defaultValue: "Add dream description..."))
                                 .font(.system(size: 15))
                                 .tracking(-0.23)
                                 .foregroundStyle(.black.opacity(0.3))
@@ -400,7 +400,7 @@ struct RecordView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button(String(localized: "record.done", defaultValue: "Done")) {
                     isTextFocused = false
                     isReviewTextFocused = false
                 }
@@ -570,7 +570,7 @@ private struct LiveCaptionsView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 if speechService.transcribedText.isEmpty {
-                    Text("Live Captions will appear here")
+                    Text(String(localized: "record.liveCaptions", defaultValue: "Live Captions will appear here"))
                         .font(.system(size: 15))
                         .tracking(-0.23)
                         .foregroundStyle(.black.opacity(0.3))

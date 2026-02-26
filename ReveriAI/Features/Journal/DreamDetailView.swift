@@ -34,8 +34,15 @@ struct DreamDetailView: View {
     }()
 
     private enum DetailTab: String, CaseIterable {
-        case dream = "Dream"
-        case meaning = "Meaning"
+        case dream
+        case meaning
+
+        var displayName: String {
+            switch self {
+            case .dream: String(localized: "detail.tab.dream", defaultValue: "Dream")
+            case .meaning: String(localized: "detail.tab.meaning", defaultValue: "Meaning")
+            }
+        }
     }
 
     var body: some View {
@@ -105,7 +112,7 @@ struct DreamDetailView: View {
                 // Segmented control
                 Picker("", selection: $selectedTab) {
                     ForEach(DetailTab.allCases, id: \.self) { tab in
-                        Text(tab.rawValue).tag(tab)
+                        Text(tab.displayName).tag(tab)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -138,6 +145,7 @@ struct DreamDetailView: View {
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .toolbar(.hidden, for: .navigationBar)
+        .enableSwipeBack()
         .onAppear {
             isInDetailDreamTab = true
             detailDreamHasImage = dream.imageURL != nil
@@ -186,7 +194,7 @@ struct DreamDetailView: View {
         .fullScreenCover(isPresented: $showFullscreenImage) {
             fullscreenImageView
         }
-        .toast(isPresented: $showImageError, message: "Failed to generate image", icon: "xmark.circle.fill", style: .error, duration: 3.0)
+        .toast(isPresented: $showImageError, message: String(localized: "detail.failedToGenerateImage", defaultValue: "Failed to generate image"), icon: "xmark.circle.fill", style: .error, duration: 3.0)
         .sheet(isPresented: $showQuestionsSheet) {
             questionsSheet
         }
@@ -252,7 +260,7 @@ struct DreamDetailView: View {
         if displayText.isEmpty && dream.isTranscribingAudio {
             VStack(spacing: 12) {
                 ProgressView()
-                Text("Обработка записи...")
+                Text(String(localized: "detail.processing", defaultValue: "Processing recording..."))
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
@@ -278,7 +286,7 @@ struct DreamDetailView: View {
                             showingOriginal.toggle()
                         }
                     } label: {
-                        Text(showingOriginal ? "Whisper" : "Original")
+                        Text(showingOriginal ? String(localized: "detail.whisper", defaultValue: "Whisper") : String(localized: "detail.original", defaultValue: "Original"))
                             .font(.system(size: 15))
                             .foregroundStyle(.secondary)
                     }
@@ -338,7 +346,7 @@ struct DreamDetailView: View {
 
             // Center title
             VStack(spacing: 2) {
-                Text("Dream")
+                Text(String(localized: "detail.navTitle", defaultValue: "Dream"))
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.black)
 
@@ -374,7 +382,7 @@ struct DreamDetailView: View {
     private var meaningContent: some View {
         if dream.text.trimmingCharacters(in: .whitespacesAndNewlines).count < 10 {
             centeredPlaceholder {
-                Text("Add a text description of your dream for interpretation")
+                Text(String(localized: "detail.addTextForInterpretation", defaultValue: "Add a text description of your dream for interpretation"))
                     .font(.system(size: 15))
                     .foregroundStyle(.black.opacity(0.4))
                     .multilineTextAlignment(.center)
@@ -382,7 +390,7 @@ struct DreamDetailView: View {
         } else if detailState.isGeneratingInterpretation {
             centeredPlaceholder {
                 ProgressView()
-                Text("Interpreting dream...")
+                Text(String(localized: "detail.interpretingDream", defaultValue: "Interpreting dream..."))
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
             }
@@ -399,7 +407,7 @@ struct DreamDetailView: View {
                     detailState.interpretationError = nil
                     generateInterpretation()
                 } label: {
-                    Text("Try again")
+                    Text(String(localized: "detail.tryAgain", defaultValue: "Try again"))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(theme.accent)
                 }
@@ -412,10 +420,10 @@ struct DreamDetailView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 60, height: 60)
-                Text("Curious what it means?")
+                Text(String(localized: "detail.curiousMeaning", defaultValue: "Curious what it means?"))
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.primary)
-                Text("Discover the symbols\nand emotions hidden within")
+                Text(String(localized: "detail.discoverSymbols", defaultValue: "Discover the symbols\nand emotions hidden within"))
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -655,14 +663,11 @@ struct DreamDetailView: View {
     }
 
     private var questionsSheet: some View {
-        let isRussian = speechLocale.rawValue.hasPrefix("ru")
-        return NavigationStack {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     // Subtitle
-                    Text(isRussian
-                         ? "Ответьте на вопросы, чтобы создать более детальную визуализацию вашего сна"
-                         : "Answer the questions to create a more detailed visualization of your dream")
+                    Text(String(localized: "detail.questionsSubtitle", defaultValue: "Answer the questions to create a more detailed visualization of your dream"))
                         .font(.system(size: 15))
                         .foregroundStyle(.secondary)
                         .padding(.top, 8)
@@ -670,7 +675,7 @@ struct DreamDetailView: View {
                     if isLoadingQuestions {
                         VStack(spacing: 12) {
                             ProgressView()
-                            Text(isRussian ? "Подготовка вопросов..." : "Preparing questions...")
+                            Text(String(localized: "detail.preparingQuestions", defaultValue: "Preparing questions..."))
                                 .font(.system(size: 14))
                                 .foregroundStyle(.secondary)
                         }
@@ -681,7 +686,7 @@ struct DreamDetailView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(questions[index])
                                     .font(.system(size: 15, weight: .medium))
-                                TextField(isRussian ? "Ваш ответ..." : "Your answer...", text: $answers[index])
+                                TextField(String(localized: "detail.yourAnswer", defaultValue: "Your answer..."), text: $answers[index])
                                     .textFieldStyle(.roundedBorder)
                             }
                         }
@@ -697,7 +702,7 @@ struct DreamDetailView: View {
                                 generateImage(answers: savedAnswers)
                             }
                         } label: {
-                            Text(isRussian ? "Сгенерировать" : "Generate")
+                            Text(String(localized: "detail.generate", defaultValue: "Generate"))
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
@@ -716,7 +721,7 @@ struct DreamDetailView: View {
                                 generateImage()
                             }
                         } label: {
-                            Text(isRussian ? "Пропустить" : "Skip")
+                            Text(String(localized: "detail.skip", defaultValue: "Skip"))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity)
@@ -725,7 +730,7 @@ struct DreamDetailView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .navigationTitle(isRussian ? "Визуализация сна" : "Visualize Your Dream")
+            .navigationTitle(String(localized: "detail.visualizeDream", defaultValue: "Visualize Your Dream"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

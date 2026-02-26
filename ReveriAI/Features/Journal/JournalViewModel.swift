@@ -3,10 +3,19 @@ import SwiftUI
 @Observable
 final class JournalViewModel {
     enum TimeRange: String, CaseIterable {
-        case today = "Today"
-        case thisWeek = "This week"
-        case thisMonth = "This month"
-        case allTime = "All time"
+        case today
+        case thisWeek
+        case thisMonth
+        case allTime
+
+        var displayName: String {
+            switch self {
+            case .today: String(localized: "timeRange.today", defaultValue: "Today")
+            case .thisWeek: String(localized: "timeRange.thisWeek", defaultValue: "This week")
+            case .thisMonth: String(localized: "timeRange.thisMonth", defaultValue: "This month")
+            case .allTime: String(localized: "timeRange.allTime", defaultValue: "All time")
+            }
+        }
     }
 
     var selectedTimeRange: TimeRange = .allTime
@@ -40,7 +49,9 @@ final class JournalViewModel {
 
         // Search filter
         if !searchText.isEmpty {
-            if !dream.text.localizedCaseInsensitiveContains(searchText) {
+            let matchesText = dream.text.localizedCaseInsensitiveContains(searchText)
+            let matchesTitle = !dream.title.isEmpty && dream.title.localizedCaseInsensitiveContains(searchText)
+            if !matchesText && !matchesTitle {
                 return false
             }
         }
@@ -50,5 +61,21 @@ final class JournalViewModel {
 
     func clearEmotionFilter() {
         selectedEmotion = nil
+    }
+
+    // MARK: - Search Overlay
+
+    func searchDreams(in dreams: [Dream], query: String) -> [Dream] {
+        guard !query.isEmpty else { return [] }
+        return dreams.filter { dream in
+            let matchesText = dream.text.localizedCaseInsensitiveContains(query)
+            let matchesTitle = !dream.title.isEmpty && dream.title.localizedCaseInsensitiveContains(query)
+            return matchesText || matchesTitle
+        }
+    }
+
+    func searchFolders(in folders: [DreamFolder], query: String) -> [DreamFolder] {
+        guard !query.isEmpty else { return [] }
+        return folders.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 }

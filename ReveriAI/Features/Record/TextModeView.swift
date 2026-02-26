@@ -16,7 +16,7 @@ struct TextModeView: View {
             .padding(.top, 8)
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("Enter your dream...")
+                    Text(String(localized: "record.enterDream", defaultValue: "Enter your dream..."))
                         .font(.body)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 21)

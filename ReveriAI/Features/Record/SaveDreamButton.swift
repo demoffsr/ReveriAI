@@ -9,7 +9,7 @@ struct SaveDreamButton: View {
             HStack(spacing: 6) {
                 Image("CheckmarkIconAction")
                     .renderingMode(.original)
-                Text("Save Dream")
+                Text(String(localized: "record.saveDream", defaultValue: "Save Dream"))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(theme.accent)
             }

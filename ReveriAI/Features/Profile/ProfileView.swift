@@ -51,6 +51,7 @@ struct ProfileView: View {
         }
         .background(Color(.systemGroupedBackground))
         .toolbar(.hidden, for: .navigationBar)
+        .enableSwipeBack()
         .onAppear { syncDateFromStorage() }
         .task { notificationService.checkAuthorizationStatus() }
         .onChange(of: selectedPhoto) { _, item in
@@ -78,7 +79,7 @@ struct ProfileView: View {
                     .reveriGlass(.circle)
             }
             Spacer()
-            Text("Profile")
+            Text(String(localized: "profile.title", defaultValue: "Profile"))
                 .font(.headline)
             Spacer()
             Color.clear.frame(width: 44, height: 44)
@@ -143,7 +144,7 @@ struct ProfileView: View {
             }
 
             if isEditingName {
-                TextField("Your name", text: $userName)
+                TextField(String(localized: "profile.yourName", defaultValue: "Your name"), text: $userName)
                     .font(.system(size: 17, weight: .medium))
                     .multilineTextAlignment(.center)
                     .textFieldStyle(.roundedBorder)
@@ -153,7 +154,7 @@ struct ProfileView: View {
                 Button {
                     isEditingName = true
                 } label: {
-                    Text(userName.isEmpty ? "Add name" : userName)
+                    Text(userName.isEmpty ? String(localized: "profile.addName", defaultValue: "Add name") : userName)
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(userName.isEmpty ? .secondary : .primary)
                 }
@@ -165,8 +166,8 @@ struct ProfileView: View {
     // MARK: - Settings Cards
 
     private var speechRecognitionCard: some View {
-        settingsCard(title: "Speech Recognition") {
-            settingsRow(icon: "globe", iconColor: .blue, title: "Language") {
+        settingsCard(title: String(localized: "profile.speechRecognition", defaultValue: "Speech Recognition")) {
+            settingsRow(icon: "globe", iconColor: .blue, title: String(localized: "profile.language", defaultValue: "Language")) {
                 Menu {
                     ForEach(SpeechLocale.allCases) { locale in
                         Button {
@@ -194,12 +195,12 @@ struct ProfileView: View {
     }
 
     private var reminderCard: some View {
-        settingsCard(title: "Dream Reminder") {
+        settingsCard(title: String(localized: "profile.dreamReminder", defaultValue: "Dream Reminder")) {
             VStack(spacing: 0) {
                 // Toggle row
                 HStack(spacing: 12) {
                     settingsIcon("bell.fill", color: .orange)
-                    Text("Enable Reminder")
+                    Text(String(localized: "profile.enableReminder", defaultValue: "Enable Reminder"))
                         .font(.system(size: 16))
                     Spacer()
                     Toggle("", isOn: $reminderEnabled)
@@ -222,7 +223,7 @@ struct ProfileView: View {
                     } label: {
                         HStack(spacing: 12) {
                             settingsIcon("clock.fill", color: .purple)
-                            Text("Time")
+                            Text(String(localized: "profile.time", defaultValue: "Time"))
                                 .font(.system(size: 16))
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -259,7 +260,7 @@ struct ProfileView: View {
 
                     // Weekday selector
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Days")
+                        Text(String(localized: "profile.days", defaultValue: "Days"))
                             .font(.system(size: 13))
                             .foregroundStyle(.secondary)
 
@@ -279,7 +280,7 @@ struct ProfileView: View {
                     } label: {
                         HStack(spacing: 12) {
                             settingsIcon("bell.badge.fill", color: .red)
-                            Text("Send Test Notification")
+                            Text(String(localized: "profile.sendTestNotification", defaultValue: "Send Test Notification"))
                                 .font(.system(size: 16))
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -293,19 +294,19 @@ struct ProfileView: View {
     }
 
     private var themeCard: some View {
-        settingsCard(title: "Theme") {
+        settingsCard(title: String(localized: "profile.theme", defaultValue: "Theme")) {
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
                     settingsIcon("paintbrush.fill", color: .indigo)
-                    Text("Appearance")
+                    Text(String(localized: "profile.appearance", defaultValue: "Appearance"))
                         .font(.system(size: 16))
                     Spacer()
                 }
 
                 Picker("", selection: $themeOverride) {
-                    Text("Auto").tag("auto")
-                    Text("Day").tag("day")
-                    Text("Night").tag("night")
+                    Text(String(localized: "profile.auto", defaultValue: "Auto")).tag("auto")
+                    Text(String(localized: "profile.day", defaultValue: "Day")).tag("day")
+                    Text(String(localized: "profile.night", defaultValue: "Night")).tag("night")
                 }
                 .pickerStyle(.segmented)
             }
@@ -314,7 +315,7 @@ struct ProfileView: View {
     }
 
     private var backgroundCard: some View {
-        settingsCard(title: "Record Background") {
+        settingsCard(title: String(localized: "profile.recordBackground", defaultValue: "Record Background")) {
             VStack(spacing: 0) {
                 Button {
                     showBackgroundPicker = true
@@ -336,7 +337,7 @@ struct ProfileView: View {
                                         .foregroundStyle(theme.accent)
                                 }
                         }
-                        Text("Header Photo")
+                        Text(String(localized: "profile.headerPhoto", defaultValue: "Header Photo"))
                             .font(.system(size: 16))
                             .foregroundStyle(.primary)
                         Spacer()
@@ -356,7 +357,7 @@ struct ProfileView: View {
                     } label: {
                         HStack(spacing: 12) {
                             settingsIcon("arrow.counterclockwise", color: .red)
-                            Text("Reset to Default")
+                            Text(String(localized: "profile.resetToDefault", defaultValue: "Reset to Default"))
                                 .font(.system(size: 16))
                                 .foregroundStyle(.red)
                             Spacer()
@@ -373,11 +374,11 @@ struct ProfileView: View {
     }
 
     private var supportCard: some View {
-        settingsCard(title: "Support") {
+        settingsCard(title: String(localized: "profile.support", defaultValue: "Support")) {
             VStack(spacing: 0) {
                 // Contact us
                 Link(destination: URL(string: "mailto:demidovdmitry07@gmail.com")!) {
-                    settingsRowContent(icon: "envelope.fill", iconColor: .green, title: "Contact Us")
+                    settingsRowContent(icon: "envelope.fill", iconColor: .green, title: String(localized: "profile.contactUs", defaultValue: "Contact Us"))
                 }
                 .buttonStyle(.plain)
                 .frame(height: 52)
@@ -388,7 +389,7 @@ struct ProfileView: View {
                 Button {
                     requestReview()
                 } label: {
-                    settingsRowContent(icon: "star.fill", iconColor: .yellow, title: "Rate the App")
+                    settingsRowContent(icon: "star.fill", iconColor: .yellow, title: String(localized: "profile.rateApp", defaultValue: "Rate the App"))
                 }
                 .buttonStyle(.plain)
                 .frame(height: 52)
@@ -399,7 +400,7 @@ struct ProfileView: View {
                 Button {
                     showPrivacyPolicy = true
                 } label: {
-                    settingsRowContent(icon: "lock.shield.fill", iconColor: .blue, title: "Privacy Policy")
+                    settingsRowContent(icon: "lock.shield.fill", iconColor: .blue, title: String(localized: "profile.privacyPolicy", defaultValue: "Privacy Policy"))
                 }
                 .buttonStyle(.plain)
                 .frame(height: 52)
@@ -410,7 +411,7 @@ struct ProfileView: View {
                 Button {
                     showTermsOfUse = true
                 } label: {
-                    settingsRowContent(icon: "doc.text.fill", iconColor: .gray, title: "Terms of Use")
+                    settingsRowContent(icon: "doc.text.fill", iconColor: .gray, title: String(localized: "profile.termsOfUse", defaultValue: "Terms of Use"))
                 }
                 .buttonStyle(.plain)
                 .frame(height: 52)
@@ -419,7 +420,7 @@ struct ProfileView: View {
     }
 
     private var dataCard: some View {
-        settingsCard(title: "Data") {
+        settingsCard(title: String(localized: "profile.data", defaultValue: "Data")) {
             Button {
                 ImageCache.shared.clearAll()
                 cacheCleared = true
@@ -430,7 +431,7 @@ struct ProfileView: View {
             } label: {
                 HStack(spacing: 12) {
                     settingsIcon("trash.fill", color: .red)
-                    Text("Clear Cache")
+                    Text(String(localized: "profile.clearCache", defaultValue: "Clear Cache"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -446,10 +447,10 @@ struct ProfileView: View {
     }
 
     private var aboutCard: some View {
-        settingsCard(title: "About") {
+        settingsCard(title: String(localized: "profile.about", defaultValue: "About")) {
             HStack(spacing: 12) {
                 settingsIcon("info.circle.fill", color: .secondary)
-                Text("Version")
+                Text(String(localized: "profile.version", defaultValue: "Version"))
                     .font(.system(size: 16))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
