@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { validateAuth } from "../_shared/auth.ts"
+import { validateAuth, isAuthError } from "../_shared/auth.ts"
+import { checkRateLimit } from "../_shared/rate-limit.ts"
+import { validateTextSize, validateEmotions } from "../_shared/validation.ts"
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -10,13 +12,22 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
-  const authErr = await validateAuth(req, corsHeaders)
-  if (authErr) return authErr
+  const auth = await validateAuth(req, corsHeaders)
+  if (isAuthError(auth)) return auth
+
+  const rateLimitErr = await checkRateLimit(auth.userId, 'generate-dream-interpretation', req, corsHeaders)
+  if (rateLimitErr) return rateLimitErr
 
   const { dreamText, locale, emotions } = await req.json()
   if (!dreamText || dreamText.trim().length < 10) {
     return new Response(JSON.stringify({ error: 'Dream text too short (min 10 characters)' }), { status: 400, headers: corsHeaders })
   }
+
+  const textSizeErr = validateTextSize(dreamText, corsHeaders)
+  if (textSizeErr) return textSizeErr
+
+  const emotionsErr = validateEmotions(emotions, corsHeaders)
+  if (emotionsErr) return emotionsErr
 
   const isRussian = (locale || '').startsWith('ru')
   const emotionList = (emotions || []).join(', ')

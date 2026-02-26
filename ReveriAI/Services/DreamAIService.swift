@@ -12,6 +12,8 @@ enum DreamAIService {
         case emptyURL
         case hallucination
         case rateLimited(retryAfter: Int)
+        case textTooLong(count: Int, max: Int)
+        case audioTooLarge(bytes: Int, maxBytes: Int)
 
         var isRateLimited: Bool {
             if case .rateLimited = self { return true }
@@ -19,18 +21,27 @@ enum DreamAIService {
         }
     }
 
+    private static let maxDreamTextLength = 10_000
+    private static let maxAudioSizeBytes = 25 * 1024 * 1024
+
     private static let logger = Logger(subsystem: "com.reveri.ai", category: "DreamAI")
 
-    /// Translates `FunctionsError.httpError(code: 429)` from supabase-swift SDK into our `.rateLimited` error.
-    private static func translateRateLimitError(_ error: Swift.Error) -> Swift.Error {
+    /// Translates `FunctionsError.httpError` from supabase-swift SDK into our domain errors.
+    private static func translateError(_ error: Swift.Error) -> Swift.Error {
         guard let functionsError = error as? FunctionsError,
-              case let .httpError(code, data) = functionsError,
-              code == 429 else {
+              case let .httpError(code, data) = functionsError else {
             return error
         }
-        struct RateLimitBody: Decodable { let retryAfter: Int? }
-        let retryAfter = (try? JSONDecoder().decode(RateLimitBody.self, from: data))?.retryAfter ?? 60
-        return Error.rateLimited(retryAfter: retryAfter)
+        switch code {
+        case 429:
+            struct RateLimitBody: Decodable { let retryAfter: Int? }
+            let retryAfter = (try? JSONDecoder().decode(RateLimitBody.self, from: data))?.retryAfter ?? 60
+            return Error.rateLimited(retryAfter: retryAfter)
+        case 413:
+            return Error.textTooLong(count: 0, max: maxDreamTextLength)
+        default:
+            return error
+        }
     }
 
     /// Pre-warm the Edge Function to avoid cold start delay.
@@ -53,6 +64,9 @@ enum DreamAIService {
         guard !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.emptyText
         }
+        guard dreamText.count <= maxDreamTextLength else {
+            throw Error.textTooLong(count: dreamText.count, max: maxDreamTextLength)
+        }
 
         struct RequestBody: Encodable {
             let dreamText: String
@@ -70,7 +84,7 @@ enum DreamAIService {
                 options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
             )
         } catch {
-            throw translateRateLimitError(error)
+            throw translateError(error)
         }
 
         guard !response.title.isEmpty else {
@@ -84,6 +98,9 @@ enum DreamAIService {
         let audioData = try Data(contentsOf: fileURL)
         guard !audioData.isEmpty else {
             throw Error.emptyText
+        }
+        guard audioData.count <= maxAudioSizeBytes else {
+            throw Error.audioTooLarge(bytes: audioData.count, maxBytes: maxAudioSizeBytes)
         }
 
         let boundary = UUID().uuidString
@@ -128,6 +145,9 @@ enum DreamAIService {
         if httpResponse.statusCode == 429 {
             let retryAfter = Int(httpResponse.value(forHTTPHeaderField: "Retry-After") ?? "60") ?? 60
             throw Error.rateLimited(retryAfter: retryAfter)
+        }
+        if httpResponse.statusCode == 413 {
+            throw Error.audioTooLarge(bytes: audioData.count, maxBytes: Self.maxAudioSizeBytes)
         }
         guard httpResponse.statusCode == 200 else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -349,6 +369,9 @@ enum DreamAIService {
         guard !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.emptyText
         }
+        guard dreamText.count <= maxDreamTextLength else {
+            throw Error.textTooLong(count: dreamText.count, max: maxDreamTextLength)
+        }
 
         struct RequestBody: Encodable {
             let dreamText: String
@@ -366,7 +389,7 @@ enum DreamAIService {
                 options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
             )
         } catch {
-            throw translateRateLimitError(error)
+            throw translateError(error)
         }
 
         return response.questions
@@ -375,6 +398,9 @@ enum DreamAIService {
     static func generateImage(for dreamText: String, locale: SpeechLocale, answers: [String]? = nil) async throws -> String {
         guard !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.emptyText
+        }
+        guard dreamText.count <= maxDreamTextLength else {
+            throw Error.textTooLong(count: dreamText.count, max: maxDreamTextLength)
         }
 
         struct RequestBody: Encodable {
@@ -394,7 +420,7 @@ enum DreamAIService {
                 options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue, answers: answers))
             )
         } catch {
-            throw translateRateLimitError(error)
+            throw translateError(error)
         }
 
         guard !response.imageURL.isEmpty else {
@@ -441,6 +467,9 @@ enum DreamAIService {
         guard dreamText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 10 else {
             throw Error.emptyText
         }
+        guard dreamText.count <= maxDreamTextLength else {
+            throw Error.textTooLong(count: dreamText.count, max: maxDreamTextLength)
+        }
 
         struct RequestBody: Encodable {
             let dreamText: String
@@ -463,7 +492,7 @@ enum DreamAIService {
                 ))
             )
         } catch {
-            throw translateRateLimitError(error)
+            throw translateError(error)
         }
 
         return response.interpretation

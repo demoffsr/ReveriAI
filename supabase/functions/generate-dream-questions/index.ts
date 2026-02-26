@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { validateAuth } from "../_shared/auth.ts"
+import { validateAuth, isAuthError } from "../_shared/auth.ts"
+import { checkRateLimit } from "../_shared/rate-limit.ts"
+import { validateTextSize } from "../_shared/validation.ts"
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -10,13 +12,19 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
-  const authErr = await validateAuth(req, corsHeaders)
-  if (authErr) return authErr
+  const auth = await validateAuth(req, corsHeaders)
+  if (isAuthError(auth)) return auth
+
+  const rateLimitErr = await checkRateLimit(auth.userId, 'generate-dream-questions', req, corsHeaders)
+  if (rateLimitErr) return rateLimitErr
 
   const { dreamText, locale } = await req.json()
   if (!dreamText || dreamText.trim().length === 0) {
     return new Response(JSON.stringify({ error: 'Empty dream text' }), { status: 400, headers: corsHeaders })
   }
+
+  const textSizeErr = validateTextSize(dreamText, corsHeaders)
+  if (textSizeErr) return textSizeErr
 
   const openaiKey = Deno.env.get('OPENAI_API_KEY')
   if (!openaiKey) {
