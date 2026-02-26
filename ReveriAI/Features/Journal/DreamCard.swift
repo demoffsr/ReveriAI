@@ -144,10 +144,7 @@ struct DreamCard: View {
         .confirmationDialog(String(localized: "dreamCard.deleteConfirmation", defaultValue: "Delete dream?"), isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button(String(localized: "dreamCard.deleteAction", defaultValue: "Delete"), role: .destructive) {
                 HapticService.notification(.warning)
-                withAnimation(.easeOut(duration: 0.3)) {
-                    modelContext.delete(dream)
-                    try? modelContext.save()
-                }
+                DreamCleanupService.deleteDream(dream, context: modelContext)
             }
             Button(String(localized: "dreamCard.cancel", defaultValue: "Cancel"), role: .cancel) {}
         }

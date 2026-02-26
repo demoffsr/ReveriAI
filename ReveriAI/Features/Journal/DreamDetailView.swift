@@ -148,7 +148,7 @@ struct DreamDetailView: View {
         .enableSwipeBack()
         .onAppear {
             isInDetailDreamTab = true
-            detailDreamHasImage = dream.imageURL != nil
+            detailDreamHasImage = resolvedImageURL != nil
             detailDreamIsGenerating = isGenerating
             detailState.isActive = true
             detailState.hasInterpretation = dream.interpretation != nil
@@ -201,6 +201,21 @@ struct DreamDetailView: View {
         }
     }
 
+    private var resolvedImageURL: URL? {
+        // Prefer local file
+        if let imagePath = dream.imagePath {
+            let localURL = DreamAIService.imagesDirectory.appendingPathComponent(imagePath)
+            if FileManager.default.fileExists(atPath: localURL.path) {
+                return localURL
+            }
+        }
+        // Fallback to remote URL (old dreams, not yet cached)
+        if let imageURL = dream.imageURL {
+            return URL(string: imageURL)
+        }
+        return nil
+    }
+
     @ViewBuilder
     private var dreamImageThumbnail: some View {
         ZStack {
@@ -212,7 +227,7 @@ struct DreamDetailView: View {
                     .overlay {
                         ProgressView()
                     }
-            } else if let imageURL = dream.imageURL, let url = URL(string: imageURL) {
+            } else if let url = resolvedImageURL {
                 CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
@@ -301,7 +316,7 @@ struct DreamDetailView: View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
 
-            if let imageURL = dream.imageURL, let url = URL(string: imageURL) {
+            if let url = resolvedImageURL {
                 CachedAsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):

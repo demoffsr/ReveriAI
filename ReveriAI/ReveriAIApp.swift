@@ -73,6 +73,11 @@ struct ReveriAIApp: App {
                 // One-time: fix hallucinated Whisper transcripts & re-transcribe
                 DreamAIService.cleanupHallucinatedTranscripts(modelContainer: container)
 
+                // Backfill imagePath for existing dreams + cache images to disk
+                DreamAIService.migrateImagePaths(modelContainer: container)
+                // Retry any previously failed storage deletions
+                DreamAIService.retryPendingDeletions()
+
                 // Let RootView render
                 try? await Task.sleep(for: .milliseconds(100))
                 launchLog.info("⏱ RootView rendered: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms")

@@ -395,7 +395,12 @@ enum DreamAIService {
         return response.questions
     }
 
-    static func generateImage(for dreamText: String, locale: SpeechLocale, answers: [String]? = nil) async throws -> String {
+    struct ImageResult {
+        let imageURL: String
+        let imagePath: String
+    }
+
+    static func generateImage(for dreamText: String, locale: SpeechLocale, answers: [String]? = nil) async throws -> ImageResult {
         guard !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Error.emptyText
         }
@@ -411,6 +416,7 @@ enum DreamAIService {
 
         struct ResponseBody: Decodable {
             let imageURL: String
+            let imagePath: String
         }
 
         let response: ResponseBody
@@ -427,7 +433,7 @@ enum DreamAIService {
             throw Error.emptyURL
         }
 
-        return response.imageURL
+        return ImageResult(imageURL: response.imageURL, imagePath: response.imagePath)
     }
 
     static func generateImageInBackground(
@@ -441,17 +447,34 @@ enum DreamAIService {
     ) {
         Task { @MainActor in
             do {
-                let imageURL = try await generateImage(for: dreamText, locale: locale, answers: answers)
                 let context = modelContainer.mainContext
+                let oldImagePath = (context.model(for: dreamID) as? Dream)?.imagePath
+
+                let result = try await generateImage(for: dreamText, locale: locale, answers: answers)
+
+                // Download image to local disk cache
+                await downloadImageToDisk(from: result.imageURL, fileName: result.imagePath)
+
                 guard let dream = context.model(for: dreamID) as? Dream else {
-                    logger.warning("Dream not found for image update")
+                    // Dream deleted while generating — cleanup new file
+                    logger.warning("Dream not found for image update, cleaning up")
+                    deleteImageFromStorage(imagePath: result.imagePath)
+                    deleteLocalImage(imagePath: result.imagePath)
                     onComplete?(nil)
                     return
                 }
-                dream.imageURL = imageURL
+
+                dream.imageURL = result.imageURL
+                dream.imagePath = result.imagePath
                 try context.save()
-                logger.info("Dream image generated: \(imageURL)")
-                onComplete?(imageURL)
+                logger.info("Dream image generated: \(result.imageURL)")
+                onComplete?(result.imageURL)
+
+                // Cleanup old image (local + remote)
+                if let oldPath = oldImagePath, oldPath != result.imagePath {
+                    deleteLocalImage(imagePath: oldPath)
+                    deleteImageFromStorage(imagePath: oldPath)
+                }
             } catch Error.rateLimited {
                 logger.warning("Image generation rate limited")
                 detailState?.showRateLimitToast = true
@@ -558,6 +581,119 @@ enum DreamAIService {
                 logger.info("Dream title generated: \(title)")
             } catch {
                 logger.error("Failed to generate dream title: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Image Disk Cache
+
+    static let imagesDirectory: URL = {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("dream-images")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    /// Downloads image from URL and saves to local disk cache.
+    private static func downloadImageToDisk(from urlString: String, fileName: String) async {
+        guard let url = URL(string: urlString) else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let fileURL = imagesDirectory.appendingPathComponent(fileName)
+            try data.write(to: fileURL)
+            logger.info("Cached image to disk: \(fileName)")
+        } catch {
+            logger.warning("Failed to cache image to disk: \(error.localizedDescription)")
+        }
+    }
+
+    /// Deletes a locally cached image file.
+    static func deleteLocalImage(imagePath: String) {
+        let fileURL = imagesDirectory.appendingPathComponent(imagePath)
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
+    /// Deletes image from Supabase Storage (fire-and-forget with retry queue).
+    static func deleteImageFromStorage(imagePath: String) {
+        Task {
+            do {
+                struct RequestBody: Encodable { let imagePath: String }
+                struct ResponseBody: Decodable { let success: Bool }
+                let _: ResponseBody = try await SupabaseService.client.functions.invoke(
+                    "delete-dream-image",
+                    options: .init(body: RequestBody(imagePath: imagePath))
+                )
+                logger.info("Deleted image from storage: \(imagePath)")
+            } catch {
+                logger.warning("Failed to delete image from storage, queued for retry: \(imagePath)")
+                addPendingDeletion(imagePath)
+            }
+        }
+    }
+
+    // MARK: - Pending Deletion Retry Queue
+
+    private static let pendingDeletionsKey = "pendingImageDeletions"
+
+    private static func addPendingDeletion(_ imagePath: String) {
+        var pending = pendingDeletions
+        guard !pending.contains(imagePath) else { return }
+        pending.append(imagePath)
+        if let data = try? JSONEncoder().encode(pending) {
+            UserDefaults.standard.set(data, forKey: pendingDeletionsKey)
+        }
+    }
+
+    private static var pendingDeletions: [String] {
+        guard let data = UserDefaults.standard.data(forKey: pendingDeletionsKey),
+              let paths = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+        return paths
+    }
+
+    /// Retries any previously failed storage deletions. Call on app launch.
+    static func retryPendingDeletions() {
+        let pending = pendingDeletions
+        guard !pending.isEmpty else { return }
+        logger.info("Retrying \(pending.count) pending image deletions")
+        UserDefaults.standard.removeObject(forKey: pendingDeletionsKey)
+        for path in pending {
+            deleteImageFromStorage(imagePath: path)
+        }
+    }
+
+    // MARK: - Image Path Migration
+
+    /// Backfills `imagePath` for existing dreams that have `imageURL` but no `imagePath`.
+    /// Also downloads images to local disk cache in the background.
+    static func migrateImagePaths(modelContainer: ModelContainer) {
+        Task { @MainActor in
+            let context = modelContainer.mainContext
+            let descriptor = FetchDescriptor<Dream>()
+            guard let dreams = try? context.fetch(descriptor) else { return }
+
+            var migratedCount = 0
+            for dream in dreams {
+                guard let urlString = dream.imageURL,
+                      dream.imagePath == nil,
+                      let url = URL(string: urlString),
+                      let fileName = url.lastPathComponent.components(separatedBy: "?").first,
+                      fileName.hasSuffix(".png")
+                else { continue }
+
+                dream.imagePath = fileName
+                migratedCount += 1
+
+                // Background download to disk
+                let capturedURL = urlString
+                let capturedFileName = fileName
+                Task.detached {
+                    await downloadImageToDisk(from: capturedURL, fileName: capturedFileName)
+                }
+            }
+
+            if migratedCount > 0 {
+                try? context.save()
+                logger.info("Migrated \(migratedCount) dream image paths")
             }
         }
     }

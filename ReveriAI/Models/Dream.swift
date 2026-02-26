@@ -14,6 +14,7 @@ final class Dream {
     var createdAt: Date
     var audioFilePath: String?
     var imageURL: String?
+    var imagePath: String?
     var interpretation: String?
     var whisperTranscript: String?
     var originalTranscript: String?
@@ -64,6 +65,7 @@ final class Dream {
         createdAt: Date = .now,
         audioFilePath: String? = nil,
         imageURL: String? = nil,
+        imagePath: String? = nil,
         isTranslated: Bool = false,
         whisperTranscript: String? = nil,
         originalTranscript: String? = nil
@@ -76,6 +78,7 @@ final class Dream {
         self.createdAt = createdAt
         self.audioFilePath = audioFilePath
         self.imageURL = imageURL
+        self.imagePath = imagePath
         self.isTranslated = isTranslated
         self.whisperTranscript = whisperTranscript
         self.originalTranscript = originalTranscript

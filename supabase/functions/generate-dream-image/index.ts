@@ -149,5 +149,5 @@ Rules:
     .from('dream-images')
     .getPublicUrl(fileName)
 
-  return new Response(JSON.stringify({ imageURL: urlData.publicUrl }), { headers: corsHeaders })
+  return new Response(JSON.stringify({ imageURL: urlData.publicUrl, imagePath: fileName }), { headers: corsHeaders })
 })
