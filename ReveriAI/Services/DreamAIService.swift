@@ -247,7 +247,9 @@ enum DreamAIService {
     static func cleanupHallucinatedTranscripts(modelContainer: ModelContainer) {
         Task { @MainActor in
             let context = modelContainer.mainContext
-            let descriptor = FetchDescriptor<Dream>()
+            var descriptor = FetchDescriptor<Dream>(
+                predicate: #Predicate<Dream> { $0.whisperTranscript != nil }
+            )
             guard let dreams = try? context.fetch(descriptor) else { return }
 
             var fixedCount = 0
@@ -308,7 +310,9 @@ enum DreamAIService {
             for attempt in 1...maxWhisperRetries {
                 do {
                     logger.info("🌐 Whisper: attempt \(attempt)/\(maxWhisperRetries)...")
-                    let transcript = try await transcribeAudio(fileURL: fileURL, locale: locale)
+                    let transcript = try await AITaskQueue.shared.enqueue {
+                        try await transcribeAudio(fileURL: fileURL, locale: locale)
+                    }
                     logger.info("✅ Whisper: got transcript (\(transcript.count) chars): \(transcript.prefix(80))")
                     let context = modelContainer.mainContext
                     guard let dream = context.model(for: dreamID) as? Dream else {
@@ -450,7 +454,9 @@ enum DreamAIService {
                 let context = modelContainer.mainContext
                 let oldImagePath = (context.model(for: dreamID) as? Dream)?.imagePath
 
-                let result = try await generateImage(for: dreamText, locale: locale, answers: answers)
+                let result = try await AITaskQueue.shared.enqueue {
+                    try await generateImage(for: dreamText, locale: locale, answers: answers)
+                }
 
                 // Download image to local disk cache
                 await downloadImageToDisk(from: result.imageURL, fileName: result.imagePath)
@@ -534,7 +540,9 @@ enum DreamAIService {
             detailState.isGeneratingInterpretation = true
             detailState.interpretationError = nil
             do {
-                let interpretation = try await generateInterpretation(for: dreamText, locale: locale, emotions: emotions)
+                let interpretation = try await AITaskQueue.shared.enqueue {
+                    try await generateInterpretation(for: dreamText, locale: locale, emotions: emotions)
+                }
                 let context = modelContainer.mainContext
                 guard let dream = context.model(for: dreamID) as? Dream else {
                     logger.warning("Dream not found for interpretation update")
@@ -566,7 +574,9 @@ enum DreamAIService {
     ) {
         Task { @MainActor in
             do {
-                let title = try await generateTitle(for: dreamText, locale: locale)
+                let title = try await AITaskQueue.shared.enqueue {
+                    try await generateTitle(for: dreamText, locale: locale)
+                }
                 let context = modelContainer.mainContext
                 guard let dream = context.model(for: dreamID) as? Dream else {
                     logger.warning("Dream not found for title update")
@@ -668,7 +678,9 @@ enum DreamAIService {
     static func migrateImagePaths(modelContainer: ModelContainer) {
         Task { @MainActor in
             let context = modelContainer.mainContext
-            let descriptor = FetchDescriptor<Dream>()
+            var descriptor = FetchDescriptor<Dream>(
+                predicate: #Predicate<Dream> { $0.imageURL != nil && $0.imagePath == nil }
+            )
             guard let dreams = try? context.fetch(descriptor) else { return }
 
             var migratedCount = 0
