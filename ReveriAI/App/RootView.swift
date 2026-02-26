@@ -35,6 +35,8 @@ struct RootView: View {
     @State private var startTextModeTrigger = false
     @State private var journalMounted = false
     @State private var isJournalSearchActive = false
+    @State private var tabBarSearchHidden = false
+    @State private var tabBarShowTask: Task<Void, Never>?
     @State private var launchComplete = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -181,12 +183,24 @@ struct RootView: View {
                 audioRecorder: audioRecorder,  // Reference only — NO property read in RootView
                 audioPlaybackService: audioPlaybackService
             )
-            .opacity(isJournalSearchActive ? 0 : 1)
-            .animation(.spring(duration: 0.35, bounce: 0.15), value: isJournalSearchActive)
+            .opacity(tabBarSearchHidden ? 0 : 1)
+            .animation(nil, value: tabBarSearchHidden)
         }
         .environment(\.audioPlayback, audioPlaybackService)
         .ignoresSafeArea(.keyboard)
         .animation(.spring(duration: 0.4), value: showEmotionGrid)
+        .onChange(of: isJournalSearchActive) { _, active in
+            tabBarShowTask?.cancel()
+            if active && selectedTab == .journal {
+                tabBarSearchHidden = true
+            } else {
+                tabBarShowTask = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(80))
+                    guard !Task.isCancelled else { return }
+                    tabBarSearchHidden = false
+                }
+            }
+        }
         .onChange(of: isRecording) { _, recording in
             if recording {
                 audioPlaybackService.stop()

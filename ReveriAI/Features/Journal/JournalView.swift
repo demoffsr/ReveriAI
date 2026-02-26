@@ -63,7 +63,7 @@ struct JournalView: View {
                     .ignoresSafeArea(edges: .top)
                     .zIndex(2)
             }
-            .background(Color.black.ignoresSafeArea())
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
     }
 

@@ -115,6 +115,7 @@ struct JournalHeader: View {
                     }
                 }
             }
+            .animation(.spring(duration: 0.4, bounce: 0.1), value: isSearchActive)
 
             // Bottom row: title + filters/actions (fixed 42pt to match emotion circles)
             HStack(spacing: 24) {
