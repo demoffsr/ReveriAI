@@ -11,9 +11,27 @@ enum DreamAIService {
         case emptyTitle
         case emptyURL
         case hallucination
+        case rateLimited(retryAfter: Int)
+
+        var isRateLimited: Bool {
+            if case .rateLimited = self { return true }
+            return false
+        }
     }
 
     private static let logger = Logger(subsystem: "com.reveri.ai", category: "DreamAI")
+
+    /// Translates `FunctionsError.httpError(code: 429)` from supabase-swift SDK into our `.rateLimited` error.
+    private static func translateRateLimitError(_ error: Swift.Error) -> Swift.Error {
+        guard let functionsError = error as? FunctionsError,
+              case let .httpError(code, data) = functionsError,
+              code == 429 else {
+            return error
+        }
+        struct RateLimitBody: Decodable { let retryAfter: Int? }
+        let retryAfter = (try? JSONDecoder().decode(RateLimitBody.self, from: data))?.retryAfter ?? 60
+        return Error.rateLimited(retryAfter: retryAfter)
+    }
 
     /// Pre-warm the Edge Function to avoid cold start delay.
     static func warmUp() {
@@ -45,10 +63,15 @@ enum DreamAIService {
             let title: String
         }
 
-        let response: ResponseBody = try await SupabaseService.client.functions.invoke(
-            "generate-dream-title",
-            options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
-        )
+        let response: ResponseBody
+        do {
+            response = try await SupabaseService.client.functions.invoke(
+                "generate-dream-title",
+                options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
+            )
+        } catch {
+            throw translateRateLimitError(error)
+        }
 
         guard !response.title.isEmpty else {
             throw Error.emptyTitle
@@ -99,9 +122,16 @@ enum DreamAIService {
         let session = URLSession(configuration: config)
 
         let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.networkError(NSError(domain: "WhisperAPI", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid response"]))
+        }
+        if httpResponse.statusCode == 429 {
+            let retryAfter = Int(httpResponse.value(forHTTPHeaderField: "Retry-After") ?? "60") ?? 60
+            throw Error.rateLimited(retryAfter: retryAfter)
+        }
+        guard httpResponse.statusCode == 200 else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw Error.networkError(NSError(domain: "WhisperAPI", code: (response as? HTTPURLResponse)?.statusCode ?? 0, userInfo: [NSLocalizedDescriptionKey: errorText]))
+            throw Error.networkError(NSError(domain: "WhisperAPI", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorText]))
         }
 
         struct TranscriptResponse: Decodable {
@@ -329,10 +359,15 @@ enum DreamAIService {
             let questions: [String]
         }
 
-        let response: ResponseBody = try await SupabaseService.client.functions.invoke(
-            "generate-dream-questions",
-            options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
-        )
+        let response: ResponseBody
+        do {
+            response = try await SupabaseService.client.functions.invoke(
+                "generate-dream-questions",
+                options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
+            )
+        } catch {
+            throw translateRateLimitError(error)
+        }
 
         return response.questions
     }
@@ -352,10 +387,15 @@ enum DreamAIService {
             let imageURL: String
         }
 
-        let response: ResponseBody = try await SupabaseService.client.functions.invoke(
-            "generate-dream-image",
-            options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue, answers: answers))
-        )
+        let response: ResponseBody
+        do {
+            response = try await SupabaseService.client.functions.invoke(
+                "generate-dream-image",
+                options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue, answers: answers))
+            )
+        } catch {
+            throw translateRateLimitError(error)
+        }
 
         guard !response.imageURL.isEmpty else {
             throw Error.emptyURL
@@ -370,6 +410,7 @@ enum DreamAIService {
         locale: SpeechLocale,
         answers: [String]? = nil,
         modelContainer: ModelContainer,
+        detailState: DetailDreamState? = nil,
         onComplete: (@MainActor (String?) -> Void)? = nil
     ) {
         Task { @MainActor in
@@ -385,6 +426,10 @@ enum DreamAIService {
                 try context.save()
                 logger.info("Dream image generated: \(imageURL)")
                 onComplete?(imageURL)
+            } catch Error.rateLimited {
+                logger.warning("Image generation rate limited")
+                detailState?.showRateLimitToast = true
+                onComplete?(nil)
             } catch {
                 logger.error("Failed to generate dream image: \(error.localizedDescription)")
                 onComplete?(nil)
@@ -407,14 +452,19 @@ enum DreamAIService {
             let interpretation: String
         }
 
-        let response: ResponseBody = try await SupabaseService.client.functions.invoke(
-            "generate-dream-interpretation",
-            options: .init(body: RequestBody(
-                dreamText: dreamText,
-                locale: locale.rawValue,
-                emotions: emotions.map(\.rawValue)
-            ))
-        )
+        let response: ResponseBody
+        do {
+            response = try await SupabaseService.client.functions.invoke(
+                "generate-dream-interpretation",
+                options: .init(body: RequestBody(
+                    dreamText: dreamText,
+                    locale: locale.rawValue,
+                    emotions: emotions.map(\.rawValue)
+                ))
+            )
+        } catch {
+            throw translateRateLimitError(error)
+        }
 
         return response.interpretation
     }
@@ -444,6 +494,10 @@ enum DreamAIService {
                 detailState.hasInterpretation = true
                 detailState.isGeneratingInterpretation = false
                 logger.info("Dream interpretation generated")
+            } catch Error.rateLimited {
+                logger.warning("Interpretation rate limited")
+                detailState.interpretationError = String(localized: "error.rateLimited")
+                detailState.isGeneratingInterpretation = false
             } catch {
                 logger.error("Failed to generate interpretation: \(error.localizedDescription)")
                 detailState.interpretationError = error.localizedDescription

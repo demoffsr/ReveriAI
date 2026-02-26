@@ -195,6 +195,7 @@ struct DreamDetailView: View {
             fullscreenImageView
         }
         .toast(isPresented: $showImageError, message: String(localized: "detail.failedToGenerateImage", defaultValue: "Failed to generate image"), icon: "xmark.circle.fill", style: .error, duration: 3.0)
+        .toast(isPresented: Binding(get: { detailState.showRateLimitToast }, set: { detailState.showRateLimitToast = $0 }), message: String(localized: "error.rateLimited"), icon: "clock.badge.exclamationmark", style: .error, duration: 3.0)
         .sheet(isPresented: $showQuestionsSheet) {
             questionsSheet
         }
@@ -632,6 +633,12 @@ struct DreamDetailView: View {
                     answers = Array(repeating: "", count: q.count)
                     isLoadingQuestions = false
                 }
+            } catch let error as DreamAIService.Error where error.isRateLimited {
+                await MainActor.run {
+                    isLoadingQuestions = false
+                    showQuestionsSheet = false
+                    detailState.showRateLimitToast = true
+                }
             } catch {
                 await MainActor.run {
                     isLoadingQuestions = false
@@ -652,11 +659,12 @@ struct DreamDetailView: View {
             dreamText: dream.text,
             locale: speechLocale,
             answers: finalAnswers,
-            modelContainer: modelContext.container
+            modelContainer: modelContext.container,
+            detailState: detailState
         ) { imageURL in
             isGenerating = false
             detailDreamHasImage = imageURL != nil
-            if imageURL == nil {
+            if imageURL == nil && !detailState.showRateLimitToast {
                 showImageError = true
             }
         }
