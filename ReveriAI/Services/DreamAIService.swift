@@ -67,7 +67,16 @@ enum DreamAIService {
         let url = URL(string: "\(SupabaseConfig.projectURL)/functions/v1/transcribe-audio")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        let accessToken: String
+        do {
+            accessToken = try await SupabaseService.client.auth.session.accessToken
+        } catch {
+            throw Error.networkError(
+                NSError(domain: "Auth", code: 401,
+                        userInfo: [NSLocalizedDescriptionKey: "Not authenticated — sign in failed or no network on first launch"])
+            )
+        }
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         var body = Data()

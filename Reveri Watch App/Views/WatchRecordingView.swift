@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WatchRecordingView: View {
+    @Binding var shouldAutoRecord: Bool
     @Environment(WatchSessionManager.self) private var sessionManager
     @Environment(WatchThemeManager.self) private var theme
     @State private var recorder = WatchAudioRecorder()
@@ -37,6 +38,12 @@ struct WatchRecordingView: View {
                     sendToPhone(emotions: emotions)
                 }
                 .environment(theme)
+            }
+            .onChange(of: shouldAutoRecord) { _, shouldRecord in
+                if shouldRecord && !recorder.isRecording {
+                    startRecording()
+                    shouldAutoRecord = false
+                }
             }
         }
     }

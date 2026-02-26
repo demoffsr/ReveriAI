@@ -26,7 +26,7 @@ struct JournalView: View {
     @State private var newFolderName = ""
     @State private var selectedFolder: DreamFolder?
     @State private var showProfile = false
-    @State private var isSearchActive = false
+    @Binding var isSearchActive: Bool
     @State private var searchQuery = ""
     @State private var searchDebounceTask: Task<Void, Never>?
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]

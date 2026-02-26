@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { validateAuth } from "../_shared/auth.ts"
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -9,10 +10,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401, headers: corsHeaders })
-  }
+  const authErr = await validateAuth(req, corsHeaders)
+  if (authErr) return authErr
 
   const contentType = req.headers.get('Content-Type') || ''
 

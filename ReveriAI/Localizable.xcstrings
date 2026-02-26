@@ -1725,6 +1725,7 @@
       }
     },
     "search.dreams" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1741,6 +1742,7 @@
       }
     },
     "search.folders" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

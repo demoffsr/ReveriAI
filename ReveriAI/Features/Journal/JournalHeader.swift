@@ -66,6 +66,7 @@ struct JournalHeader: View {
                                     .focused($isSearchFocused)
                                     .tint(.white)
                                     .submitLabel(.search)
+                                    .toolbarVisibility(.hidden, for: .bottomBar)
                                     .opacity(isSearchActive ? 1 : 0)
                                     .allowsHitTesting(isSearchActive)
                             }

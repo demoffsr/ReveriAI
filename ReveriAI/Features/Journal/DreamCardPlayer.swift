@@ -12,10 +12,12 @@ struct DreamCardPlayer: View {
     }
 
     @Environment(\.theme) private var theme
-    @State private var player: CardAudioPlayer?
+    @Environment(\.audioPlayback) private var playback
     @State private var bars: [CGFloat] = []
-    @State private var isPlaying = false
-    @State private var playbackProgress: CGFloat = 0
+
+    private var isActive: Bool { playback.currentURL == audioURL }
+    private var isPlaying: Bool { isActive && playback.isPlaying }
+    private var progress: CGFloat { isActive ? playback.playbackProgress : 0 }
 
     private var buttonSize: CGFloat { style == .detail ? 44 : 32 }
     private var iconSize: CGFloat { style == .detail ? 16 : 12 }
@@ -25,7 +27,8 @@ struct DreamCardPlayer: View {
     var body: some View {
         HStack(spacing: spacing) {
             Button {
-                togglePlayback()
+                HapticService.impact(.light)
+                playback.toggle(url: audioURL)
             } label: {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: iconSize))
@@ -38,110 +41,13 @@ struct DreamCardPlayer: View {
 
             CardWaveformView(
                 bars: bars,
-                playbackProgress: playbackProgress,
+                playbackProgress: progress,
                 frameHeight: waveformHeight
             )
         }
         .task {
             let analyzed = await AudioAnalysisCache.shared.bars(for: audioURL)
             bars = analyzed.isEmpty ? AudioFileAnalyzer.placeholderBars() : analyzed
-        }
-        .onDisappear {
-            player?.stop()
-            player = nil
-        }
-    }
-
-    private func togglePlayback() {
-        HapticService.impact(.light)
-        if player == nil {
-            let p = CardAudioPlayer(url: audioURL) { time, duration in
-                playbackProgress = duration > 0 ? CGFloat(time / duration) : 0
-            } onFinish: {
-                isPlaying = false
-                playbackProgress = 0
-            }
-            player = p
-        }
-
-        guard let player else { return }
-
-        if isPlaying {
-            player.pause()
-            isPlaying = false
-        } else {
-            player.play()
-            isPlaying = true
-        }
-    }
-}
-
-// MARK: - CardAudioPlayer
-
-/// Self-contained AVAudioPlayer wrapper for DreamCard playback.
-private final class CardAudioPlayer: NSObject, AVAudioPlayerDelegate {
-    private var audioPlayer: AVAudioPlayer?
-    private var timerTask: Task<Void, Never>?
-    private let onProgress: (TimeInterval, TimeInterval) -> Void
-    private let onFinish: () -> Void
-
-    init(url: URL, onProgress: @escaping (TimeInterval, TimeInterval) -> Void, onFinish: @escaping () -> Void) {
-        self.onProgress = onProgress
-        self.onFinish = onFinish
-        super.init()
-
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
-
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default)
-            try session.setActive(true)
-            let player = try AVAudioPlayer(contentsOf: url, fileTypeHint: AVFileType.m4a.rawValue)
-            player.delegate = self
-            player.prepareToPlay()
-            self.audioPlayer = player
-        } catch {
-            print("DreamCardPlayer: playback init failed — \(error)")
-        }
-    }
-
-    func play() {
-        audioPlayer?.play()
-        startTimer()
-    }
-
-    func pause() {
-        audioPlayer?.pause()
-        stopTimer()
-    }
-
-    func stop() {
-        audioPlayer?.stop()
-        stopTimer()
-        audioPlayer = nil
-    }
-
-    private func startTimer() {
-        stopTimer()
-        timerTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(100))
-                guard !Task.isCancelled, let self else { break }
-                guard let player = self.audioPlayer, player.isPlaying else { continue }
-                self.onProgress(player.currentTime, player.duration)
-            }
-        }
-    }
-
-    private func stopTimer() {
-        timerTask?.cancel()
-        timerTask = nil
-    }
-
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Task { @MainActor [weak self] in
-            self?.stopTimer()
-            self?.onFinish()
         }
     }
 }

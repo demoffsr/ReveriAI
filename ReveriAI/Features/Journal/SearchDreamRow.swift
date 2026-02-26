@@ -3,40 +3,74 @@ import SwiftUI
 struct SearchDreamRow: View {
     let dream: Dream
     var onTap: () -> Void
+    @State private var isEmotionScrolled = false
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, yyyy, hh:mma"
+        f.locale = Locale(identifier: "en_US")
+        return f
+    }()
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Title
                 Text(displayTitle)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.black)
                     .lineLimit(1)
 
+                // Emotion pins
                 if !dream.emotions.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(dream.emotions.prefix(3)) { emotion in
-                            EmotionTagBadge(emotion: emotion, iconSize: 12, fontSize: 11)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 4) {
+                            ForEach(dream.emotions) { emotion in
+                                EmotionTagBadge(emotion: emotion)
+                            }
                         }
                     }
+                    .onScrollGeometryChange(for: Bool.self) { geometry in
+                        geometry.contentOffset.x > 2
+                    } action: { _, scrolled in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isEmotionScrolled = scrolled
+                        }
+                    }
+                    .mask(
+                        HStack(spacing: 0) {
+                            if isEmotionScrolled {
+                                LinearGradient(colors: [.clear, .black],
+                                               startPoint: .leading, endPoint: .trailing)
+                                    .frame(width: 12)
+                            }
+                            Color.black
+                        }
+                    )
+                    .padding(.top, -6)
                 }
 
+                // Divider
+                Rectangle()
+                    .fill(.black.opacity(0.15))
+                    .frame(height: 0.5)
+
+                // Date row
                 HStack(spacing: 4) {
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.black.opacity(0.35))
-                    Text(dream.createdAt.formatted(.dateTime.month(.abbreviated).day().year().hour().minute()))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.black.opacity(0.35))
+                    Image("CalendarSmallIcon")
+                        .resizable()
+                        .frame(width: 16, height: 16)
+                    Text(Self.dateFormatter.string(from: dream.createdAt))
+                        .font(.system(size: 13))
                 }
+                .foregroundStyle(.black.opacity(0.35))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(14)
             .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 24))
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(.black.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(.black.opacity(0.1), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

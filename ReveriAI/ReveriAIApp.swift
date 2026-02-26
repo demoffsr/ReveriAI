@@ -67,6 +67,9 @@ struct ReveriAIApp: App {
                 modelContainer = container
                 phoneSessionManager.configure(with: container)
 
+                // Ensure anonymous auth session before any Edge Function calls
+                await AuthService.ensureAuthenticated()
+
                 // One-time: fix hallucinated Whisper transcripts & re-transcribe
                 DreamAIService.cleanupHallucinatedTranscripts(modelContainer: container)
 

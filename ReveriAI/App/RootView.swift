@@ -31,8 +31,10 @@ struct RootView: View {
     @State private var avatarStorage = AvatarStorage()
     @State private var headerBackgroundStorage = HeaderBackgroundStorage()
     @State private var startRecordingTrigger = false
+    @State private var audioPlaybackService = AudioPlaybackService()
     @State private var startTextModeTrigger = false
     @State private var journalMounted = false
+    @State private var isJournalSearchActive = false
     @State private var launchComplete = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -78,7 +80,8 @@ struct RootView: View {
             notificationService: notificationService,
             dreamReminderManager: dreamReminderManager,
             avatarStorage: avatarStorage,
-            headerBackgroundStorage: headerBackgroundStorage
+            headerBackgroundStorage: headerBackgroundStorage,
+            isSearchActive: $isJournalSearchActive
         )
         .zIndex(selectedTab == .journal ? 1 : 0)
         .allowsHitTesting(selectedTab == .journal)
@@ -149,6 +152,7 @@ struct RootView: View {
                     isPaused.toggle()
                 },
                 onTogglePreview: {
+                    audioPlaybackService.stop()
                     audioRecorder.togglePlayback()
                 },
                 onDelete: {
@@ -174,13 +178,18 @@ struct RootView: View {
                     detailDreamGenerateTrigger.toggle()
                 },
                 detailState: detailDreamState,
-                audioRecorder: audioRecorder  // Reference only — NO property read in RootView
+                audioRecorder: audioRecorder,  // Reference only — NO property read in RootView
+                audioPlaybackService: audioPlaybackService
             )
+            .opacity(isJournalSearchActive ? 0 : 1)
+            .animation(.spring(duration: 0.35, bounce: 0.15), value: isJournalSearchActive)
         }
+        .environment(\.audioPlayback, audioPlaybackService)
         .ignoresSafeArea(.keyboard)
         .animation(.spring(duration: 0.4), value: showEmotionGrid)
         .onChange(of: isRecording) { _, recording in
             if recording {
+                audioPlaybackService.stop()
                 dreamReminderManager.end()
                 showEmotionGrid = false
                 showHowDidItFeel = false
@@ -356,6 +365,7 @@ private struct TabBarWithAudioState: View {
     let onGenerateImage: () -> Void
     let detailState: DetailDreamState
     var audioRecorder: AudioRecorder  // Reference only — read .isPlaying inside body
+    var audioPlaybackService: AudioPlaybackService
 
     var body: some View {
         ReveriTabBar(
@@ -380,5 +390,10 @@ private struct TabBarWithAudioState: View {
             onGenerateImage: onGenerateImage,
             detailState: detailState
         )
+        .onChange(of: audioPlaybackService.isPlaying) { _, playing in
+            if playing && audioRecorder.isPlaying {
+                audioRecorder.togglePlayback()
+            }
+        }
     }
 }

@@ -16,13 +16,20 @@ struct SearchOverlayView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Backdrop
-            Color.black
-                .ignoresSafeArea()
-                .onTapGesture { dismiss() }
+            // Backdrop — matches header gradient style
+            ZStack {
+                Color.black
+                (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 120)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
+            .drawingGroup()
+            .ignoresSafeArea()
+            .onTapGesture { dismiss() }
 
             resultsArea
-                .padding(.top, 128)
+                .padding(.top, 73)
         }
         .offset(y: dragOffset)
         .gesture(
@@ -64,7 +71,6 @@ struct SearchOverlayView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         if !matchingDreams.isEmpty {
-                            sectionHeader(String(localized: "search.dreams", defaultValue: "Dreams"))
                             ForEach(matchingDreams, id: \.id) { dream in
                                 SearchDreamRow(dream: dream) {
                                     onDreamTap(dream)
@@ -75,8 +81,6 @@ struct SearchOverlayView: View {
                         }
 
                         if !matchingFolders.isEmpty {
-                            sectionHeader(String(localized: "search.folders", defaultValue: "Folders"))
-                                .padding(.top, matchingDreams.isEmpty ? 0 : 8)
                             ForEach(matchingFolders, id: \.id) { folder in
                                 SearchFolderRow(folder: folder) {
                                     onFolderTap(folder)
@@ -87,17 +91,10 @@ struct SearchOverlayView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 16)
                     .padding(.bottom, 100)
                 }
             }
         }
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.6))
     }
 
     private var emptyState: some View {
