@@ -55,7 +55,6 @@ struct JournalView: View {
                         },
                         searchQuery: $searchQuery
                     )
-                    .transition(.opacity)
                     .zIndex(1)
                 }
 
@@ -64,19 +63,7 @@ struct JournalView: View {
                     .ignoresSafeArea(edges: .top)
                     .zIndex(2)
             }
-            .background {
-                VStack(spacing: 0) {
-                    Color.black
-                    LinearGradient(
-                        colors: [.black, Color(.systemGroupedBackground)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 120)
-                }
-                .ignoresSafeArea()
-            }
-            .animation(.spring(duration: 0.35, bounce: 0.15), value: isSearchActive)
+            .background(Color.black.ignoresSafeArea())
         }
     }
 
