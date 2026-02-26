@@ -37,6 +37,7 @@ struct RootView: View {
     @State private var isJournalSearchActive = false
     @State private var tabBarSearchHidden = false
     @State private var tabBarShowTask: Task<Void, Never>?
+    @State private var showDeepLinkRecordConfirmation = false
     @State private var launchComplete = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -257,6 +258,16 @@ struct RootView: View {
         .onOpenURL { url in
             handleDeepLink(url)
         }
+        .confirmationDialog(
+            "Начать запись сна?",
+            isPresented: $showDeepLinkRecordConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Начать запись") {
+                startRecordingTrigger.toggle()
+            }
+            Button("Отмена", role: .cancel) {}
+        }
         .onReceive(NotificationCenter.default.publisher(for: .dreamReminderRecord)) { _ in
             selectedTab = .record
             startRecordingTrigger.toggle()
@@ -290,18 +301,14 @@ struct RootView: View {
         guard url.scheme == "reveri" else { return }
         switch url.host {
         case "record":
+            guard !isRecording && !isReviewing else { return }
             selectedTab = .record
-            startRecordingTrigger.toggle()
+            showDeepLinkRecordConfirmation = true
         case "write":
             selectedTab = .record
             startTextModeTrigger.toggle()
         case "stop-recording":
-            if isRecording {
-                withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
-                    isRecording = false
-                    isPaused = false
-                }
-            }
+            break
         default:
             break
         }

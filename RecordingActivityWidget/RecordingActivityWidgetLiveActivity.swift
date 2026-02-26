@@ -183,7 +183,7 @@ private struct iPhoneRecordingView: View {
                     .monospacedDigit()
                     .foregroundStyle(.white)
 
-                Link(destination: URL(string: "reveri://stop-recording")!) {
+                Button(intent: StopDreamRecordingIntent()) {
                     Image("StopIconLock")
                         .resizable()
                         .scaledToFit()
@@ -203,6 +203,7 @@ private struct iPhoneRecordingView: View {
                                 )
                         )
                 }
+                .buttonStyle(.plain)
                 .frame(width: 48, height: 48)
             }
         }
@@ -265,10 +266,11 @@ struct RecordingActivityWidgetLiveActivity: Widget {
                     .foregroundStyle(.white)
             }
             DynamicIslandExpandedRegion(.trailing) {
-                Link(destination: URL(string: "reveri://stop-recording")!) {
+                Button(intent: StopDreamRecordingIntent()) {
                     Image(systemName: "stop.fill")
                         .foregroundStyle(.red)
                 }
+                .buttonStyle(.plain)
             }
         } compactLeading: {
             Image(systemName: "waveform")
