@@ -167,16 +167,15 @@ struct JournalHeader: View {
             ZStack {
                 Color.black
 
-                // Blur gradient orb — hidden when search active for fully dark background
-                if !isSearchActive {
-                    (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
-                        .frame(width: 189, height: 196)
-                        .blur(radius: 100)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
+                // Blur gradient orb
+                (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
+                    .frame(width: 189, height: 196)
+                    .blur(radius: 100)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .drawingGroup()
             .ignoresSafeArea(edges: .top)
+            .opacity(isSearchActive ? 0 : 1)
         }
         .animation(.spring(duration: 0.35, bounce: 0.15), value: isSearchActive)
     }
