@@ -43,11 +43,16 @@ interface RateLimitResult {
   is_exceeded: boolean
 }
 
+type CheckResult =
+  | { kind: 'ok' }
+  | { kind: 'exceeded'; result: RateLimitResult }
+  | { kind: 'unavailable' }
+
 async function checkIdentifierLimits(
   identifier: string,
   functionName: string,
   windows: { duration_seconds: number; max_requests: number }[],
-): Promise<RateLimitResult | null> {
+): Promise<CheckResult> {
   try {
     const { data, error } = await supabaseAdmin.rpc('check_rate_limits', {
       p_identifier: identifier,
@@ -57,14 +62,14 @@ async function checkIdentifierLimits(
 
     if (error) {
       console.error(`Rate limit RPC error for ${identifier}: ${error.message}`)
-      return null // fail-open
+      return { kind: 'unavailable' }
     }
 
     const exceeded = (data as RateLimitResult[])?.find((r) => r.is_exceeded)
-    return exceeded || null
+    return exceeded ? { kind: 'exceeded', result: exceeded } : { kind: 'ok' }
   } catch (err) {
     console.error(`Rate limit check failed for ${identifier}: ${err}`)
-    return null // fail-open
+    return { kind: 'unavailable' }
   }
 }
 
@@ -96,12 +101,12 @@ export async function checkRateLimit(
 
   // Check per-user limits
   if (userWindows) {
-    const exceeded = await checkIdentifierLimits(userId, functionName, userWindows)
-    if (exceeded) {
-      const retryAfter = exceeded.window_duration_seconds
-      const window = windowLabel(exceeded.window_duration_seconds)
+    const userCheck = await checkIdentifierLimits(userId, functionName, userWindows)
+    if (userCheck.kind === 'exceeded') {
+      const retryAfter = userCheck.result.window_duration_seconds
+      const window = windowLabel(userCheck.result.window_duration_seconds)
       console.warn(
-        `[RATE_LIMIT] User ${userId} exceeded ${functionName} limit: ${exceeded.current_count}/${exceeded.max_requests} per ${window}`,
+        `[RATE_LIMIT] User ${userId} exceeded ${functionName} limit: ${userCheck.result.current_count}/${userCheck.result.max_requests} per ${window}`,
       )
       return new Response(
         JSON.stringify({
@@ -113,10 +118,17 @@ export async function checkRateLimit(
           headers: {
             ...corsHeaders,
             'Retry-After': String(retryAfter),
-            'X-RateLimit-Limit': String(exceeded.max_requests),
+            'X-RateLimit-Limit': String(userCheck.result.max_requests),
             'X-RateLimit-Remaining': '0',
           },
         },
+      )
+    }
+    if (userCheck.kind === 'unavailable' && EXPENSIVE_FUNCTIONS.has(functionName)) {
+      console.warn(`[RATE_LIMIT_FAIL_CLOSED] DB unavailable, blocking ${functionName} for user ${userId}`)
+      return new Response(
+        JSON.stringify({ error: 'Service temporarily unavailable' }),
+        { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } },
       )
     }
   }
@@ -125,12 +137,12 @@ export async function checkRateLimit(
   const clientIP = getClientIP(req)
   if (ipWindows && clientIP !== 'unknown') {
     const ipIdentifier = `ip:${clientIP}`
-    const exceeded = await checkIdentifierLimits(ipIdentifier, functionName, ipWindows)
-    if (exceeded) {
-      const retryAfter = exceeded.window_duration_seconds
-      const window = windowLabel(exceeded.window_duration_seconds)
+    const ipCheck = await checkIdentifierLimits(ipIdentifier, functionName, ipWindows)
+    if (ipCheck.kind === 'exceeded') {
+      const retryAfter = ipCheck.result.window_duration_seconds
+      const window = windowLabel(ipCheck.result.window_duration_seconds)
       console.warn(
-        `[RATE_LIMIT] IP ${clientIP} exceeded ${functionName} limit: ${exceeded.current_count}/${exceeded.max_requests} per ${window}`,
+        `[RATE_LIMIT] IP ${clientIP} exceeded ${functionName} limit: ${ipCheck.result.current_count}/${ipCheck.result.max_requests} per ${window}`,
       )
       return new Response(
         JSON.stringify({
@@ -142,10 +154,17 @@ export async function checkRateLimit(
           headers: {
             ...corsHeaders,
             'Retry-After': String(retryAfter),
-            'X-RateLimit-Limit': String(exceeded.max_requests),
+            'X-RateLimit-Limit': String(ipCheck.result.max_requests),
             'X-RateLimit-Remaining': '0',
           },
         },
+      )
+    }
+    if (ipCheck.kind === 'unavailable' && EXPENSIVE_FUNCTIONS.has(functionName)) {
+      console.warn(`[RATE_LIMIT_FAIL_CLOSED] DB unavailable, blocking ${functionName} for IP ${clientIP}`)
+      return new Response(
+        JSON.stringify({ error: 'Service temporarily unavailable' }),
+        { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } },
       )
     }
   }
