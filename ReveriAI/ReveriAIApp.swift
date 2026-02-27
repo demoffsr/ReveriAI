@@ -53,6 +53,28 @@ struct ReveriAIApp: App {
                 try? await Task.sleep(for: .milliseconds(50))
                 launchLog.info("⏱ After yield: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms")
 
+                // Protect existing SwiftData database files
+                let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                let storeURL = appSupport.appendingPathComponent("default.store")
+                if FileManager.default.fileExists(atPath: storeURL.path) {
+                    try? FileManager.default.setAttributes(
+                        [.protectionKey: FileProtectionType.complete],
+                        ofItemAtPath: storeURL.path
+                    )
+                    for suffix in ["-wal", "-shm"] {
+                        let auxPath = storeURL.path + suffix
+                        if FileManager.default.fileExists(atPath: auxPath) {
+                            try? FileManager.default.setAttributes(
+                                [.protectionKey: FileProtectionType.complete],
+                                ofItemAtPath: auxPath
+                            )
+                        }
+                    }
+                }
+
+                // Migrate existing user files to appropriate protection levels
+                FileProtectionMigration.migrateIfNeeded()
+
                 // Create ModelContainer on main thread (fast, ~560ms first launch)
                 let t1 = CFAbsoluteTimeGetCurrent()
                 let container: ModelContainer

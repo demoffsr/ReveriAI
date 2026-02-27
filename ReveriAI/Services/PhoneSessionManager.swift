@@ -47,8 +47,17 @@ final class PhoneSessionManager: NSObject, WCSessionDelegate {
         let destURL = destDir.appendingPathComponent(fileName)
 
         do {
-            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
-            try FileManager.default.moveItem(at: file.fileURL, to: destURL)
+            try FileManager.default.createDirectory(
+                at: destDir,
+                withIntermediateDirectories: true,
+                attributes: [.protectionKey: FileProtectionType.completeUnlessOpen]
+            )
+            try FileManager.default.copyItem(at: file.fileURL, to: destURL)
+            try FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUnlessOpen],
+                ofItemAtPath: destURL.path
+            )
+            try FileManager.default.removeItem(at: file.fileURL)
         } catch {
             print("Failed to save Watch audio: \(error)")
             return

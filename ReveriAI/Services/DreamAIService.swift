@@ -5,6 +5,11 @@ import SwiftData
 import os
 
 enum DreamAIService {
+    private static let imageSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        return URLSession(configuration: config)
+    }()
+
     enum Error: Swift.Error {
         case networkError(Swift.Error)
         case emptyText
@@ -608,9 +613,9 @@ enum DreamAIService {
     private static func downloadImageToDisk(from urlString: String, fileName: String) async {
         guard let url = URL(string: urlString) else { return }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, _) = try await imageSession.data(from: url)
             let fileURL = imagesDirectory.appendingPathComponent(fileName)
-            try data.write(to: fileURL)
+            try data.write(to: fileURL, options: .completeFileProtection)
             logger.info("Cached image to disk: \(fileName)")
         } catch {
             logger.warning("Failed to cache image to disk: \(error.localizedDescription)")

@@ -290,7 +290,11 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
     private static func newRecordingURL() -> URL {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appending(path: "recordings")
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(
+            at: dir,
+            withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.completeUnlessOpen]
+        )
         let name = "dream_\(Date.now.timeIntervalSince1970).m4a"
         return dir.appending(path: name)
     }

@@ -21,7 +21,8 @@ final class WatchAudioRecorder {
 
         try FileManager.default.createDirectory(
             at: Self.recordingsDirectory,
-            withIntermediateDirectories: true
+            withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.completeUnlessOpen]
         )
 
         let settings: [String: Any] = [

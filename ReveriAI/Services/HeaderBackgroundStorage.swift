@@ -20,7 +20,7 @@ final class HeaderBackgroundStorage {
     func save(uiImage: UIImage) {
         backgroundImage = uiImage
         guard let data = uiImage.jpegData(compressionQuality: 0.85) else { return }
-        try? data.write(to: Self.fileURL, options: .atomic)
+        try? data.write(to: Self.fileURL, options: [.atomic, .completeFileProtection])
     }
 
     func delete() {
