@@ -4,7 +4,7 @@ struct EmotionCarousel: View {
     @Binding var selectedEmotions: Set<DreamEmotion>
 
     private let allEmotions: [DreamEmotion] = [.confused, .joyful, .inLove, .calm, .anxious, .scared, .angry]
-    private let circleSize: CGFloat = 40
+    private let circleSize: CGFloat = 50
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -36,7 +36,7 @@ struct EmotionCarousel: View {
                     .lineLimit(1)
                     .foregroundStyle(.black.opacity(0.7))
             }
-            .frame(width: 56)
+            .frame(width: 62)
         }
         .buttonStyle(.plain)
         .animation(.spring(duration: 0.3), value: isSelected)

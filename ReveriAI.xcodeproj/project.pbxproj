@@ -11,6 +11,7 @@
 		D81345BD2F4116840055480B /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = F5957BCD1AF2452D80A2EF02 /* Functions */; };
 		D81345BE2F4116840055480B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B9C80B2D210B4F7F88088751 /* Supabase */; };
 		D889BC422F4D0F0700132B25 /* Reveri Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D889BC382F4D0F0600132B25 /* Reveri Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D8CC61092F51DA3B00C550B8 /* SwiftOGG in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D4E5F6789000000002 /* SwiftOGG */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +128,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8CC61092F51DA3B00C550B8 /* SwiftOGG in Frameworks */,
 				D81345BE2F4116840055480B /* Supabase in Frameworks */,
 				D81345BD2F4116840055480B /* Functions in Frameworks */,
 			);
@@ -707,14 +709,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/supabase/supabase-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.41.0;
-			};
-		};
 		A1B2C3D4E5F6789000000001 /* XCRemoteSwiftPackageReference "swift-ogg" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/element-hq/swift-ogg";
@@ -723,9 +717,22 @@
 				minimumVersion = 0.0.3;
 			};
 		};
+		B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.41.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		A1B2C3D4E5F6789000000002 /* SwiftOGG */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D4E5F6789000000001 /* XCRemoteSwiftPackageReference "swift-ogg" */;
+			productName = SwiftOGG;
+		};
 		B9C80B2D210B4F7F88088751 /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */;
@@ -735,11 +742,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Functions;
-		};
-		A1B2C3D4E5F6789000000002 /* SwiftOGG */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A1B2C3D4E5F6789000000001 /* XCRemoteSwiftPackageReference "swift-ogg" */;
-			productName = SwiftOGG;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

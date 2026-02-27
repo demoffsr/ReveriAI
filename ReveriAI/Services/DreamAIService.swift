@@ -615,6 +615,11 @@ enum DreamAIService {
         do {
             let (data, _) = try await imageSession.data(from: url)
             let fileURL = imagesDirectory.appendingPathComponent(fileName)
+            // Ensure parent directory exists (for userId/ prefix paths)
+            try FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             try data.write(to: fileURL, options: .completeFileProtection)
             logger.info("Cached image to disk: \(fileName)")
         } catch {
