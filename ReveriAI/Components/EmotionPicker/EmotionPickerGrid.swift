@@ -15,11 +15,12 @@ struct EmotionPickerGrid: View {
     var body: some View {
         VStack(spacing: 12) {
             ForEach(gridOrder.indices, id: \.self) { rowIndex in
-                HStack(spacing: 16) {
+                HStack(spacing: 0) {
                     ForEach(Array(gridOrder[rowIndex].enumerated()), id: \.element) { colIndex, emotion in
                         let flatIndex = rowIndex * 4 + colIndex
                         let isVisible = visibleItems.contains(emotion)
                         emotionItem(emotion)
+                            .frame(maxWidth: .infinity)
                             .offset(y: isVisible ? 0 : -30)
                             .scaleEffect(isVisible ? 1 : 0.5)
                             .opacity(isVisible ? 1 : 0)

@@ -3,9 +3,14 @@ import SwiftData
 import AVFoundation
 
 struct DreamDetailView: View {
+    enum EditAction {
+        case editText
+        case reRecord
+    }
+
     let dream: Dream
     var folderName: String? = nil
-    var openEditSheetOnAppear: Bool = false
+    var initialEditAction: EditAction? = nil
     @Binding var isInDetailDreamTab: Bool
     @Binding var detailDreamHasImage: Bool
     @Binding var detailDreamIsGenerating: Bool
@@ -38,7 +43,8 @@ struct DreamDetailView: View {
     @State private var showFolderPicker = false
 
     // Edit mode state
-    @State private var showEditSheet = false
+    @State private var showEmotionPicker = false
+    @State private var editingEmotions: Set<DreamEmotion> = []
     @State private var isEditingText = false
     @State private var editableText = ""
     @State private var isReRecording = false
@@ -103,8 +109,11 @@ struct DreamDetailView: View {
                 cachedParsedSections = parseAndStyleSections(text)
             }
             updateTabBarMode()
-            if openEditSheetOnAppear {
-                showEditSheet = true
+            if let action = initialEditAction {
+                switch action {
+                case .editText: enterTextEditMode()
+                case .reRecord: enterReRecordMode()
+                }
             }
         }
         .onDisappear {
@@ -147,26 +156,8 @@ struct DreamDetailView: View {
         .sheet(isPresented: $showQuestionsSheet) {
             questionsSheet
         }
-        .sheet(isPresented: $showEditSheet) {
-            EditDreamSheet(
-                dream: dream,
-                onEditText: {
-                    sheetDismissTask?.cancel()
-                    sheetDismissTask = Task {
-                        try? await Task.sleep(for: .seconds(0.3))
-                        guard !Task.isCancelled else { return }
-                        enterTextEditMode()
-                    }
-                },
-                onReRecord: {
-                    sheetDismissTask?.cancel()
-                    sheetDismissTask = Task {
-                        try? await Task.sleep(for: .seconds(0.3))
-                        guard !Task.isCancelled else { return }
-                        enterReRecordMode()
-                    }
-                }
-            )
+        .sheet(isPresented: $showEmotionPicker) {
+            emotionPickerSheet
         }
         .sheet(isPresented: $showFolderPicker) {
             FolderPickerSheet(dream: dream)
@@ -490,10 +481,24 @@ struct DreamDetailView: View {
 
             Menu {
                 Section {
+                    if dream.audioFilePath == nil {
+                        Button {
+                            enterTextEditMode()
+                        } label: {
+                            Label(String(localized: "detail.updateText", defaultValue: "Update Text"), image: "EditContentIcon")
+                        }
+                    }
+                    if dream.audioFilePath != nil {
+                        Button {
+                            enterReRecordMode()
+                        } label: {
+                            Label(String(localized: "detail.recordAgain", defaultValue: "Record Again"), image: "MicrophoneIcon")
+                        }
+                    }
                     Button {
-                        showEditSheet = true
+                        showEmotionPicker = true
                     } label: {
-                        Label(String(localized: "detail.editContent", defaultValue: "Edit Content"), image: "EditContentIcon")
+                        Label(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"), image: "EmotionIcon")
                     }
                     Button {
                         regenerateTitle()
@@ -1084,6 +1089,30 @@ struct DreamDetailView: View {
         }
     }
 
+    private var emotionPickerSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"))
+                .font(.system(size: 17, weight: .medium))
+                .padding(.horizontal, 20)
+
+            Rectangle()
+                .fill(.black.opacity(0.1))
+                .frame(height: 1)
+
+            EmotionPickerGrid(selectedEmotions: $editingEmotions)
+                .padding(.bottom, 8)
+        }
+        .padding(.top, 20)
+        .presentationDetents([.height(220)])
+        .onAppear {
+            editingEmotions = Set(dream.emotions)
+        }
+        .onChange(of: editingEmotions) {
+            dream.emotions = Array(editingEmotions)
+            try? modelContext.save()
+        }
+    }
+
     private var questionsSheet: some View {
         NavigationStack {
             ScrollView {
@@ -1187,7 +1216,7 @@ private struct LiveEditWaveformView: View {
 
 // MARK: - Activity View Controller
 
-private struct ActivityViewController: UIViewControllerRepresentable {
+struct ActivityViewController: UIViewControllerRepresentable {
     let activityItems: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {

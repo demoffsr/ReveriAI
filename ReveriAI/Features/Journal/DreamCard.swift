@@ -5,15 +5,20 @@ import AVFoundation
 struct DreamCard: View {
     let dream: Dream
     var onTap: () -> Void = {}
-    var onEdit: () -> Void = {}
+    var onEditAction: ((DreamDetailView.EditAction) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Environment(\.theme) private var theme
+    @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
     @State private var showDeleteConfirmation = false
     @State private var showFolderPicker = false
+    @State private var showEmotionPicker = false
+    @State private var editingEmotions: Set<DreamEmotion> = []
     @State private var cachedDisplayTitle = ""
     @State private var cachedAudioURL: URL?
     @State private var cachedDuration: TimeInterval?
     @State private var isEmotionScrolled = false
+    @State private var shareAudioURL: URL?
+    @State private var isConvertingAudio = false
 
     private static let recordingsDirectory: URL = {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -39,30 +44,56 @@ struct DreamCard: View {
                 Spacer()
 
                 Menu {
-                    Button {
-                        onEdit()
-                    } label: {
-                        Label(String(localized: "dreamCard.edit", defaultValue: "Edit"), systemImage: "pencil")
+                    Section {
+                        if dream.audioFilePath == nil {
+                            Button {
+                                onEditAction?(.editText)
+                            } label: {
+                                Label(String(localized: "detail.updateText", defaultValue: "Update Text"), image: "EditContentIcon")
+                            }
+                        }
+                        if dream.audioFilePath != nil {
+                            Button {
+                                onEditAction?(.reRecord)
+                            } label: {
+                                Label(String(localized: "detail.recordAgain", defaultValue: "Record Again"), image: "MicrophoneIcon")
+                            }
+                        }
+                        Button {
+                            showEmotionPicker = true
+                        } label: {
+                            Label(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"), image: "EmotionIcon")
+                        }
+                        Button {
+                            regenerateTitle()
+                        } label: {
+                            Label(String(localized: "detail.generateName", defaultValue: "Generate Name"), image: "GenerateNameIcon")
+                        }
                     }
-                    Button {
-                        // Rename — no-op for now
-                    } label: {
-                        Label(String(localized: "dreamCard.rename", defaultValue: "Rename"), systemImage: "character.cursor.ibeam")
+                    Section {
+                        ShareLink(item: dream.text) {
+                            Label(String(localized: "detail.shareDream", defaultValue: "Share Dream"), image: "ShareDreamIcon")
+                        }
+                        if cachedAudioURL != nil {
+                            Button {
+                                convertAndShareAudio()
+                            } label: {
+                                Label(String(localized: "detail.shareAudio", defaultValue: "Share Audio"), image: "SoundWaveIcon")
+                            }
+                            .disabled(isConvertingAudio)
+                        }
+                        Button {
+                            showFolderPicker = true
+                        } label: {
+                            Label(String(localized: "detail.addToFolder", defaultValue: "Add to Folder"), image: "FolderOpenIcon")
+                        }
                     }
-                    Button {
-                        showFolderPicker = true
-                    } label: {
-                        Label(String(localized: "dreamCard.addToFolder", defaultValue: "Add to Folder"), systemImage: "folder.badge.plus")
-                    }
-                    Button {
-                        // Share — no-op for now
-                    } label: {
-                        Label(String(localized: "dreamCard.share", defaultValue: "Share"), systemImage: "square.and.arrow.up")
-                    }
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Label(String(localized: "dreamCard.delete", defaultValue: "Delete"), systemImage: "trash")
+                    Section {
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label(String(localized: "dreamCard.delete", defaultValue: "Delete"), image: "TrashIcon")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -169,6 +200,38 @@ struct DreamCard: View {
         .sheet(isPresented: $showFolderPicker) {
             FolderPickerSheet(dream: dream)
         }
+        .sheet(isPresented: $showEmotionPicker) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"))
+                    .font(.system(size: 17, weight: .medium))
+                    .padding(.horizontal, 20)
+
+                Rectangle()
+                    .fill(.black.opacity(0.1))
+                    .frame(height: 1)
+
+                EmotionPickerGrid(selectedEmotions: $editingEmotions)
+                    .padding(.bottom, 8)
+            }
+            .padding(.top, 20)
+            .presentationDetents([.height(220)])
+            .onAppear {
+                editingEmotions = Set(dream.emotions)
+            }
+            .onChange(of: editingEmotions) {
+                dream.emotions = Array(editingEmotions)
+                try? modelContext.save()
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { shareAudioURL != nil },
+            set: { if !$0 { shareAudioURL = nil } }
+        )) {
+            if let url = shareAudioURL {
+                ActivityViewController(activityItems: [url])
+                    .presentationDetents([.medium, .large])
+            }
+        }
         .onAppear { updateCachedValues() }
         .onChange(of: dream.title) { _, _ in updateCachedValues() }
         .onChange(of: dream.audioFilePath) { _, _ in updateCachedValues() }
@@ -180,6 +243,31 @@ struct DreamCard: View {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func regenerateTitle() {
+        dream.title = ""
+        try? modelContext.save()
+        DreamAIService.generateTitleInBackground(
+            dreamID: dream.persistentModelID,
+            dreamText: dream.text,
+            locale: speechLocale,
+            modelContainer: modelContext.container
+        )
+    }
+
+    private func convertAndShareAudio() {
+        guard let audioURL = cachedAudioURL else { return }
+        isConvertingAudio = true
+        Task {
+            do {
+                let voiceURL = try await AudioConversionService.prepareForShare(source: audioURL)
+                shareAudioURL = voiceURL
+            } catch {
+                shareAudioURL = audioURL
+            }
+            isConvertingAudio = false
+        }
     }
 
     private func updateCachedValues() {

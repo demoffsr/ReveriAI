@@ -25,6 +25,7 @@ struct JournalView: View {
     @State private var showNewFolderAlert = false
     @State private var newFolderName = ""
     @State private var selectedFolder: DreamFolder?
+    @State private var pendingEditAction: DreamDetailView.EditAction? = nil
     @State private var showProfile = false
     @Binding var isSearchActive: Bool
     @State private var searchQuery = ""
@@ -166,9 +167,12 @@ struct JournalView: View {
                 ScrollView {
                     LazyVStack(spacing: 14) {
                         ForEach(viewModel.filteredDreams, id: \.id) { dream in
-                            DreamCard(dream: dream) {
+                            DreamCard(dream: dream, onTap: {
                                 selectedDream = dream
-                            }
+                            }, onEditAction: { action in
+                                pendingEditAction = action
+                                selectedDream = dream
+                            })
                         }
                     }
                     .animation(.easeOut(duration: 0.3), value: viewModel.filteredDreams.count)
@@ -215,14 +219,19 @@ struct JournalView: View {
     // MARK: - Navigation Destinations
 
     private func dreamDetail(for dream: Dream) -> some View {
-        DreamDetailView(
+        let action = pendingEditAction
+        return DreamDetailView(
             dream: dream,
+            initialEditAction: action,
             isInDetailDreamTab: $isInDetailDreamTab,
             detailDreamHasImage: $detailDreamHasImage,
             detailDreamIsGenerating: $detailDreamIsGenerating,
             detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
             detailState: detailDreamState
         )
+        .onAppear {
+            pendingEditAction = nil
+        }
     }
 
     private func folderDetail(for folder: DreamFolder) -> some View {
