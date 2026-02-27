@@ -1,12 +1,16 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { validateAuth, isAuthError, supabaseAdmin } from "../_shared/auth.ts"
+import { checkRateLimit } from "../_shared/rate-limit.ts"
 
 const corsHeaders = {
   'Content-Type': 'application/json',
 }
 
-// Full UUID v4 format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.png
-const imagePathRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.png$/
+// Strict UUID v4 regex part
+const uuidPart = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+// Only supported format: {userId}/{UUID}.png — ownership verified via path prefix
+const imagePathRegex = new RegExp(`^${uuidPart}/${uuidPart}\\.png$`)
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID().slice(0, 8)
@@ -19,13 +23,23 @@ Deno.serve(async (req) => {
     const auth = await validateAuth(req, corsHeaders)
     if (isAuthError(auth)) return auth
 
+    const rateLimitErr = await checkRateLimit(auth.userId, 'delete-dream-image', req, corsHeaders)
+    if (rateLimitErr) return rateLimitErr
+
     const { imagePath } = await req.json()
     if (!imagePath || typeof imagePath !== 'string') {
       return new Response(JSON.stringify({ error: 'Missing imagePath', requestId }), { status: 400, headers: corsHeaders })
     }
 
+    // Validate format and ownership
     if (!imagePathRegex.test(imagePath)) {
       return new Response(JSON.stringify({ error: 'Invalid imagePath format', requestId }), { status: 400, headers: corsHeaders })
+    }
+
+    const pathUserId = imagePath.split('/')[0]
+    if (pathUserId !== auth.userId) {
+      console.warn(`[delete-dream-image][${requestId}] Forbidden: userId=${auth.userId} tried to delete path=${imagePath}`)
+      return new Response(JSON.stringify({ error: 'Forbidden: not your image', requestId }), { status: 403, headers: corsHeaders })
     }
 
     console.log(`[delete-dream-image][${requestId}] userId=${auth.userId} imagePath=${imagePath}`)

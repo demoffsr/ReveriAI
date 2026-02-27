@@ -14,6 +14,7 @@ const USER_LIMITS: Record<string, { duration_seconds: number; max_requests: numb
   'generate-dream-interpretation': [{ duration_seconds: 60, max_requests: 3 },  { duration_seconds: 3600, max_requests: 15 }, { duration_seconds: 86400, max_requests: 50 }],
   'generate-dream-questions':      [{ duration_seconds: 60, max_requests: 3 },  { duration_seconds: 3600, max_requests: 15 }, { duration_seconds: 86400, max_requests: 50 }],
   'generate-dream-title':          [{ duration_seconds: 60, max_requests: 5 },  { duration_seconds: 3600, max_requests: 20 }, { duration_seconds: 86400, max_requests: 100 }],
+  'delete-dream-image':            [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 30 }],
 }
 
 // Per-IP rate limits (higher due to NAT/VPN)
@@ -23,6 +24,7 @@ const IP_LIMITS: Record<string, { duration_seconds: number; max_requests: number
   'generate-dream-interpretation': [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 40 }],
   'generate-dream-questions':      [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 40 }],
   'generate-dream-title':          [{ duration_seconds: 60, max_requests: 15 }, { duration_seconds: 3600, max_requests: 60 }],
+  'delete-dream-image':            [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 30 }],
 }
 
 function getClientIP(req: Request): string {
