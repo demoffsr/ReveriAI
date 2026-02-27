@@ -19,6 +19,7 @@ final class Dream {
     var whisperTranscript: String?
     var originalTranscript: String?
     var isTranslated: Bool
+    var audioDuration: TimeInterval?
     var folder: DreamFolder?
 
     @Transient private var _cachedEmotions: [DreamEmotion]?
@@ -58,6 +59,14 @@ final class Dream {
         whisperTranscript != nil && originalTranscript != nil
     }
 
+    /// Resets all AI-generated content so it can be regenerated after editing.
+    func resetAIContent() {
+        title = ""
+        interpretation = nil
+        imageURL = nil
+        imagePath = nil
+    }
+
     init(
         text: String,
         title: String = "",
@@ -68,7 +77,8 @@ final class Dream {
         imagePath: String? = nil,
         isTranslated: Bool = false,
         whisperTranscript: String? = nil,
-        originalTranscript: String? = nil
+        originalTranscript: String? = nil,
+        audioDuration: TimeInterval? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -82,5 +92,6 @@ final class Dream {
         self.isTranslated = isTranslated
         self.whisperTranscript = whisperTranscript
         self.originalTranscript = originalTranscript
+        self.audioDuration = audioDuration
     }
 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AVFoundation
 import os
 
 @Observable
@@ -51,13 +52,26 @@ final class RecordViewModel {
         onShowHowDidItFeel?()
     }
 
+    private static let recordingsDirectory: URL = {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("recordings")
+    }()
+
     func saveAudioDream(audioPath: String, transcript: String = "", context: ModelContext) {
         let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var duration: TimeInterval?
+        let audioURL = Self.recordingsDirectory.appendingPathComponent(audioPath)
+        if let player = try? AVAudioPlayer(contentsOf: audioURL) {
+            duration = player.duration
+        }
+
         let dream = Dream(
             text: trimmedTranscript,
             emotions: selectedEmotions,
             audioFilePath: audioPath,
-            originalTranscript: trimmedTranscript.isEmpty ? nil : trimmedTranscript
+            originalTranscript: trimmedTranscript.isEmpty ? nil : trimmedTranscript,
+            audioDuration: duration
         )
         context.insert(dream)
         try? context.save()

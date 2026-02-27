@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 struct DreamDetailView: View {
     let dream: Dream
@@ -27,6 +28,7 @@ struct DreamDetailView: View {
     @State private var sheetDismissTask: Task<Void, Never>?
     @State private var showingOriginal = false
     @State private var cachedAudioURL: URL?
+    @State private var cachedDuration: TimeInterval?
     @State private var isEmotionScrolled = false
     @State private var shareAudioURL: URL?
     @State private var isConvertingAudio = false
@@ -48,6 +50,13 @@ struct DreamDetailView: View {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("recordings")
     }()
+
+    private static func formatDuration(_ duration: TimeInterval) -> String {
+        let totalSeconds = Int(duration)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
 
     private enum DetailTab: String, CaseIterable {
         case dream
@@ -82,7 +91,13 @@ struct DreamDetailView: View {
             detailState.isActive = true
             detailState.hasInterpretation = dream.interpretation != nil
             if let path = dream.audioFilePath {
-                cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(path)
+                let url = Self.recordingsDirectory.appendingPathComponent(path)
+                cachedAudioURL = url
+                if let stored = dream.audioDuration {
+                    cachedDuration = stored
+                } else if let player = try? AVAudioPlayer(contentsOf: url) {
+                    cachedDuration = player.duration
+                }
             }
             if let text = dream.interpretation {
                 cachedParsedSections = parseAndStyleSections(text)
@@ -236,6 +251,16 @@ struct DreamDetailView: View {
                         .frame(width: 18, height: 18)
                     Text(dream.createdAt.dreamFormatted)
                         .font(.system(size: 13, weight: .medium))
+
+                    if let cachedDuration {
+                        Spacer()
+                            .frame(width: 8)
+                        Image("ClockSmallIcon")
+                            .resizable()
+                            .frame(width: 16, height: 16)
+                        Text(Self.formatDuration(cachedDuration))
+                            .font(.system(size: 13, weight: .medium))
+                    }
                 }
                 .foregroundStyle(.black.opacity(0.35))
                 .padding(.top, dream.emotions.isEmpty ? 8 : 12)
@@ -484,7 +509,7 @@ struct DreamDetailView: View {
                         Button {
                             convertAndShareAudio()
                         } label: {
-                            Label(String(localized: "detail.shareAudio", defaultValue: "Share Audio"), systemImage: "waveform")
+                            Label(String(localized: "detail.shareAudio", defaultValue: "Share Audio"), image: "SoundWaveIcon")
                         }
                         .disabled(isConvertingAudio)
                     }
@@ -493,6 +518,8 @@ struct DreamDetailView: View {
                     } label: {
                         Label(String(localized: "detail.addToFolder", defaultValue: "Add to Folder"), image: "FolderOpenIcon")
                     }
+                }
+                Section {
                     Button(role: .destructive) {
                         showDeleteAlert = true
                     } label: {
@@ -976,8 +1003,8 @@ struct DreamDetailView: View {
         isConvertingAudio = true
         Task {
             do {
-                let oggURL = try await AudioConversionService.convertToOpus(source: audioURL)
-                shareAudioURL = oggURL
+                let voiceURL = try await AudioConversionService.prepareForShare(source: audioURL)
+                shareAudioURL = voiceURL
             } catch {
                 shareAudioURL = audioURL
             }

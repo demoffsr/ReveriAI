@@ -1,15 +1,18 @@
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 struct DreamCard: View {
     let dream: Dream
     var onTap: () -> Void = {}
+    var onEdit: () -> Void = {}
     @Environment(\.modelContext) private var modelContext
     @Environment(\.theme) private var theme
     @State private var showDeleteConfirmation = false
     @State private var showFolderPicker = false
     @State private var cachedDisplayTitle = ""
     @State private var cachedAudioURL: URL?
+    @State private var cachedDuration: TimeInterval?
     @State private var isEmotionScrolled = false
 
     private static let recordingsDirectory: URL = {
@@ -37,9 +40,14 @@ struct DreamCard: View {
 
                 Menu {
                     Button {
+                        onEdit()
+                    } label: {
+                        Label(String(localized: "dreamCard.edit", defaultValue: "Edit"), systemImage: "pencil")
+                    }
+                    Button {
                         // Rename — no-op for now
                     } label: {
-                        Label(String(localized: "dreamCard.rename", defaultValue: "Rename"), systemImage: "pencil")
+                        Label(String(localized: "dreamCard.rename", defaultValue: "Rename"), systemImage: "character.cursor.ibeam")
                     }
                     Button {
                         showFolderPicker = true
@@ -127,6 +135,16 @@ struct DreamCard: View {
                     .frame(width: 16, height: 16)
                 Text(Self.dateFormatter.string(from: dream.createdAt))
                     .font(.system(size: 13))
+
+                if let cachedDuration {
+                    Spacer()
+                        .frame(width: 8)
+                    Image("ClockSmallIcon")
+                        .resizable()
+                        .frame(width: 16, height: 16)
+                    Text(Self.formatDuration(cachedDuration))
+                        .font(.system(size: 13))
+                }
             }
             .foregroundStyle(.black.opacity(0.35))
         }
@@ -157,6 +175,13 @@ struct DreamCard: View {
         .onChange(of: dream.whisperTranscript) { _, _ in updateCachedValues() }
     }
 
+    private static func formatDuration(_ duration: TimeInterval) -> String {
+        let totalSeconds = Int(duration)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
     private func updateCachedValues() {
         if !dream.title.isEmpty {
             cachedDisplayTitle = dream.title
@@ -165,9 +190,16 @@ struct DreamCard: View {
             cachedDisplayTitle = words.joined(separator: " ")
         }
         if let path = dream.audioFilePath {
-            cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(path)
+            let url = Self.recordingsDirectory.appendingPathComponent(path)
+            cachedAudioURL = url
+            if let stored = dream.audioDuration {
+                cachedDuration = stored
+            } else if let player = try? AVAudioPlayer(contentsOf: url) {
+                cachedDuration = player.duration
+            }
         } else {
             cachedAudioURL = nil
+            cachedDuration = nil
         }
     }
 }
