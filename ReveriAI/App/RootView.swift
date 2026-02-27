@@ -18,8 +18,7 @@ struct RootView: View {
     @State private var showEmotionGrid = false
     @State private var showDreamSaved = false
     @State private var pendingEmotions: Set<DreamEmotion> = []
-    @State private var autoDismissTask: Task<Void, Never>?
-    @State private var dismissTask: Task<Void, Never>?
+@State private var dismissTask: Task<Void, Never>?
     @State private var isInDetailDreamTab = false
     @State private var detailDreamHasImage = false
     @State private var detailDreamIsGenerating = false
@@ -64,7 +63,6 @@ struct RootView: View {
                 withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
                     showHowDidItFeel = true
                 }
-                startAutoDismissTimer()
             }
         )
         .zIndex(selectedTab == .record ? 1 : 0)
@@ -101,7 +99,7 @@ struct RootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Dismiss overlay (tap outside grid)
-            if showEmotionGrid {
+            if showEmotionGrid && selectedTab == .record {
                 Color.black.opacity(0.001)
                     .ignoresSafeArea()
                     .onTapGesture {
@@ -112,23 +110,25 @@ struct RootView: View {
             }
 
             // Emotion picker grid (above tab bar)
-            if showEmotionGrid {
+            if showEmotionGrid && selectedTab == .record {
                 EmotionPickerGrid(selectedEmotions: $pendingEmotions)
                     .padding(.bottom, 100)
             }
 
             // How did it feel card (floating above tab bar)
-            if showHowDidItFeel && !showEmotionGrid {
+            if showHowDidItFeel && !showEmotionGrid && selectedTab == .record {
                 HowDidItFeelCard(
                     onTap: {
-                        autoDismissTask?.cancel()
                         withAnimation(.spring(duration: 0.4)) {
                             showEmotionGrid = true
                         }
                     },
                     onDismiss: {
-                        autoDismissTask?.cancel()
-                        dismissWithSaved()
+                        if !pendingEmotions.isEmpty {
+                            saveFeelings()
+                        } else {
+                            dismissWithSaved()
+                        }
                     },
                     showSavedState: showDreamSaved
                 )
@@ -210,7 +210,6 @@ struct RootView: View {
                 showHowDidItFeel = false
                 showDreamSaved = false
                 pendingEmotions = []
-                autoDismissTask?.cancel()
                 dismissTask?.cancel()
             }
         }
@@ -218,14 +217,6 @@ struct RootView: View {
             // Mount JournalView immediately on first switch
             if newTab == .journal && !journalMounted {
                 journalMounted = true
-            }
-            if showHowDidItFeel && !showEmotionGrid {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    showHowDidItFeel = false
-                }
-                showDreamSaved = false
-                autoDismissTask?.cancel()
-                dismissTask?.cancel()
             }
         }
         .task {
@@ -314,19 +305,6 @@ struct RootView: View {
         }
     }
 
-    private func startAutoDismissTimer() {
-        autoDismissTask?.cancel()
-        autoDismissTask = Task {
-            try? await Task.sleep(for: .seconds(30))
-            guard !Task.isCancelled else { return }
-            if showHowDidItFeel && !showEmotionGrid {
-                withAnimation(.easeOut(duration: 0.35)) {
-                    showHowDidItFeel = false
-                }
-            }
-        }
-    }
-
     private func saveFeelings() {
         guard let dream = savedDreamForEmotion,
               !dream.isDeleted else {
@@ -351,10 +329,10 @@ struct RootView: View {
         dismissTask = Task {
             try? await Task.sleep(for: .seconds(1.5))
             guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.35)) {
+            withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
                 showHowDidItFeel = false
             }
-            try? await Task.sleep(for: .seconds(0.4))
+            try? await Task.sleep(for: .seconds(0.5))
             guard !Task.isCancelled else { return }
             showDreamSaved = false
         }
