@@ -18,15 +18,7 @@ struct SearchOverlayView: View {
         ZStack(alignment: .top) {
             // Backdrop — matches header gradient style
             ZStack {
-                VStack(spacing: 0) {
-                    Color.black
-                    LinearGradient(
-                        colors: [.black, Color(.systemGroupedBackground)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 120)
-                }
+                Color.black
                 (theme.isDayTime ? Color(red: 1, green: 0.67, blue: 0) : Color(red: 0, green: 0.67, blue: 1))
                     .frame(width: 300, height: 300)
                     .blur(radius: 120)

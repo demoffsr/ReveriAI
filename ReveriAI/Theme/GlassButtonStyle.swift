@@ -16,13 +16,13 @@ struct ReveriGlassModifier: ViewModifier {
     func body(content: Content) -> some View {
         switch (shape, interactive) {
         case (.circle, true):
-            content.glassEffect(.regular.tint(.white.opacity(0.15)).interactive(), in: .circle)
+            content.glassEffect(.regular.interactive(), in: .circle)
         case (.circle, false):
-            content.glassEffect(.regular.tint(.white.opacity(0.15)), in: .circle)
+            content.glassEffect(.regular, in: .circle)
         case (.capsule, true):
-            content.glassEffect(.regular.tint(.white.opacity(0.15)).interactive(), in: .capsule)
+            content.glassEffect(.regular.interactive(), in: .capsule)
         case (.capsule, false):
-            content.glassEffect(.regular.tint(.white.opacity(0.15)), in: .capsule)
+            content.glassEffect(.regular, in: .capsule)
         }
     }
 }
