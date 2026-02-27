@@ -55,11 +55,11 @@ struct EmotionPickerGrid: View {
             }
         } label: {
             VStack(spacing: 6) {
-                emotionCircle(emotion, isSelected: isSelected, isDimmed: hasSelection && !isSelected)
+                emotionCircle(emotion, isSelected: isSelected)
                 Text(emotion.displayName)
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(.black.opacity(isSelected ? 0.7 : 0.3))
             }
             .frame(width: 56)
         }
@@ -67,29 +67,24 @@ struct EmotionPickerGrid: View {
         .animation(.spring(duration: 0.3), value: isSelected)
     }
 
-    private func emotionCircle(_ emotion: DreamEmotion, isSelected: Bool, isDimmed: Bool) -> some View {
-        ZStack {
-            // Glass circle with emotion image inside
-            Image(emotion.iconName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: circleSize - 12, height: circleSize - 12)
-                .frame(width: circleSize, height: circleSize)
-                .reveriGlass(.circle, interactive: false)
-
-            // Selection tint
-            if isSelected {
-                Circle()
-                    .fill(emotion.color.opacity(0.25))
-                    .frame(width: circleSize, height: circleSize)
+    private func emotionCircle(_ emotion: DreamEmotion, isSelected: Bool) -> some View {
+        Image(emotion.iconName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: circleSize - 12, height: circleSize - 12)
+            .frame(width: circleSize, height: circleSize)
+            .overlay(
+                Circle().stroke(
+                    isSelected ? emotion.color : .white.opacity(0.7),
+                    lineWidth: isSelected ? 1.5 : 1
+                )
+            )
+            .background {
+                if isSelected {
+                    Circle().fill(emotion.color.opacity(0.25))
+                }
             }
-
-            // Dimming overlay
-            Circle()
-                .fill(.black.opacity(isDimmed ? 0.55 : 0))
-                .frame(width: circleSize, height: circleSize)
-                .allowsHitTesting(false)
-        }
-        .frame(width: circleSize, height: circleSize)
+            .reveriGlass(.circle, interactive: false)
+            .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
     }
 }
