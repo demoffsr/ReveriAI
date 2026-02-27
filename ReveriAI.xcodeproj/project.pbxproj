@@ -209,6 +209,7 @@
 			packageProductDependencies = (
 				F5957BCD1AF2452D80A2EF02 /* Functions */,
 				B9C80B2D210B4F7F88088751 /* Supabase */,
+				A1B2C3D4E5F6789000000002 /* SwiftOGG */,
 			);
 			productName = ReveriAI;
 			productReference = D832218B2F3BC14C009A1692 /* ReveriAI.app */;
@@ -269,6 +270,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				A1B2C3D4E5F6789000000001 /* XCRemoteSwiftPackageReference "swift-ogg" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D832218C2F3BC14C009A1692 /* Products */;
@@ -713,6 +715,14 @@
 				minimumVersion = 2.41.0;
 			};
 		};
+		A1B2C3D4E5F6789000000001 /* XCRemoteSwiftPackageReference "swift-ogg" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/element-hq/swift-ogg";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.0.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -725,6 +735,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B6087AB374184718A306C4CF /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Functions;
+		};
+		A1B2C3D4E5F6789000000002 /* SwiftOGG */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D4E5F6789000000001 /* XCRemoteSwiftPackageReference "swift-ogg" */;
+			productName = SwiftOGG;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

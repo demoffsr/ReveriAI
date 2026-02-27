@@ -4,6 +4,7 @@ import SwiftData
 struct DreamDetailView: View {
     let dream: Dream
     var folderName: String? = nil
+    var openEditSheetOnAppear: Bool = false
     @Binding var isInDetailDreamTab: Bool
     @Binding var detailDreamHasImage: Bool
     @Binding var detailDreamIsGenerating: Bool
@@ -27,6 +28,21 @@ struct DreamDetailView: View {
     @State private var showingOriginal = false
     @State private var cachedAudioURL: URL?
     @State private var isEmotionScrolled = false
+    @State private var shareAudioURL: URL?
+    @State private var isConvertingAudio = false
+
+    // Menu action state
+    @State private var showDeleteAlert = false
+    @State private var showFolderPicker = false
+
+    // Edit mode state
+    @State private var showEditSheet = false
+    @State private var isEditingText = false
+    @State private var editableText = ""
+    @State private var isReRecording = false
+    @State private var editAudioRecorder = AudioRecorder()
+    @State private var editWaveformState = WaveformState()
+    @State private var editRecordingStartTime: Date?
 
     private static let recordingsDirectory: URL = {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -50,6 +66,121 @@ struct DreamDetailView: View {
             // Custom nav bar
             navBar
 
+            if isReRecording {
+                reRecordingContent
+            } else {
+                normalContent
+            }
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .toolbar(.hidden, for: .navigationBar)
+        .enableSwipeBack()
+        .onAppear {
+            isInDetailDreamTab = true
+            detailDreamHasImage = resolvedImageURL != nil
+            detailDreamIsGenerating = isGenerating
+            detailState.isActive = true
+            detailState.hasInterpretation = dream.interpretation != nil
+            if let path = dream.audioFilePath {
+                cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(path)
+            }
+            if let text = dream.interpretation {
+                cachedParsedSections = parseAndStyleSections(text)
+            }
+            updateTabBarMode()
+            if openEditSheetOnAppear {
+                showEditSheet = true
+            }
+        }
+        .onDisappear {
+            sheetDismissTask?.cancel()
+            if isReRecording { cancelReRecording() }
+            isInDetailDreamTab = false
+            detailState.isActive = false
+            detailState.tabBarMode = .none
+        }
+        .onChange(of: isGenerating) { _, newValue in
+            detailDreamIsGenerating = newValue
+        }
+        .onChange(of: detailDreamGenerateTrigger) {
+            loadQuestions()
+        }
+        .onChange(of: selectedTab) {
+            updateTabBarMode()
+        }
+        .onChange(of: detailState.interpretTrigger) {
+            generateInterpretation()
+        }
+        .onChange(of: detailState.hasInterpretation) {
+            if let text = dream.interpretation {
+                cachedParsedSections = parseAndStyleSections(text)
+            }
+            updateTabBarMode()
+        }
+        .onChange(of: dream.interpretation) { _, newInterpretation in
+            if let text = newInterpretation {
+                cachedParsedSections = parseAndStyleSections(text)
+            }
+            detailState.hasInterpretation = newInterpretation != nil
+            updateTabBarMode()
+        }
+        .fullScreenCover(isPresented: $showFullscreenImage) {
+            fullscreenImageView
+        }
+        .toast(isPresented: $showImageError, message: String(localized: "detail.failedToGenerateImage", defaultValue: "Failed to generate image"), icon: "xmark.circle.fill", style: .error, duration: 3.0)
+        .toast(isPresented: Binding(get: { detailState.showRateLimitToast }, set: { detailState.showRateLimitToast = $0 }), message: String(localized: "error.rateLimited"), icon: "clock.badge.exclamationmark", style: .error, duration: 3.0)
+        .sheet(isPresented: $showQuestionsSheet) {
+            questionsSheet
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditDreamSheet(
+                dream: dream,
+                onEditText: {
+                    sheetDismissTask?.cancel()
+                    sheetDismissTask = Task {
+                        try? await Task.sleep(for: .seconds(0.3))
+                        guard !Task.isCancelled else { return }
+                        enterTextEditMode()
+                    }
+                },
+                onReRecord: {
+                    sheetDismissTask?.cancel()
+                    sheetDismissTask = Task {
+                        try? await Task.sleep(for: .seconds(0.3))
+                        guard !Task.isCancelled else { return }
+                        enterReRecordMode()
+                    }
+                }
+            )
+        }
+        .sheet(isPresented: $showFolderPicker) {
+            FolderPickerSheet(dream: dream)
+        }
+        .sheet(isPresented: Binding(
+            get: { shareAudioURL != nil },
+            set: { if !$0 { shareAudioURL = nil } }
+        )) {
+            if let url = shareAudioURL {
+                ActivityViewController(activityItems: [url])
+                    .presentationDetents([.medium, .large])
+            }
+        }
+        .alert(String(localized: "detail.deleteDream", defaultValue: "Delete dream?"), isPresented: $showDeleteAlert) {
+            Button(String(localized: "detail.deleteAction", defaultValue: "Delete"), role: .destructive) {
+                HapticService.notification(.warning)
+                DreamCleanupService.deleteDream(dream, context: modelContext)
+                dismiss()
+            }
+            Button(String(localized: "detail.cancel", defaultValue: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "detail.deleteMessage", defaultValue: "This action cannot be undone"))
+        }
+    }
+
+    // MARK: - Normal Content
+
+    private var normalContent: some View {
+        VStack(spacing: 0) {
             // Header info (fixed)
             VStack(alignment: .leading, spacing: 0) {
                 // Title + thumbnail row
@@ -110,19 +241,23 @@ struct DreamDetailView: View {
                 .padding(.top, dream.emotions.isEmpty ? 8 : 12)
 
                 // Segmented control
-                Picker("", selection: $selectedTab) {
-                    ForEach(DetailTab.allCases, id: \.self) { tab in
-                        Text(tab.displayName).tag(tab)
+                if !isEditingText {
+                    Picker("", selection: $selectedTab) {
+                        ForEach(DetailTab.allCases, id: \.self) { tab in
+                            Text(tab.displayName).tag(tab)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .padding(.top, 20)
                 }
-                .pickerStyle(.segmented)
-                .padding(.top, 20)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
 
             // Content area
-            if selectedTab == .meaning && meaningNeedsCenter {
+            if isEditingText {
+                textEditContent
+            } else if selectedTab == .meaning && meaningNeedsCenter {
                 meaningContent
                     .padding(.horizontal, 16)
                     .padding(.bottom, 100)
@@ -142,62 +277,6 @@ struct DreamDetailView: View {
                     .padding(.bottom, 100)
                 }
             }
-        }
-        .background(Color(uiColor: .systemGroupedBackground))
-        .toolbar(.hidden, for: .navigationBar)
-        .enableSwipeBack()
-        .onAppear {
-            isInDetailDreamTab = true
-            detailDreamHasImage = resolvedImageURL != nil
-            detailDreamIsGenerating = isGenerating
-            detailState.isActive = true
-            detailState.hasInterpretation = dream.interpretation != nil
-            if let path = dream.audioFilePath {
-                cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(path)
-            }
-            if let text = dream.interpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
-            updateTabBarMode()
-        }
-        .onDisappear {
-            sheetDismissTask?.cancel()
-            isInDetailDreamTab = false
-            detailState.isActive = false
-            detailState.tabBarMode = .none
-        }
-        .onChange(of: isGenerating) { _, newValue in
-            detailDreamIsGenerating = newValue
-        }
-        .onChange(of: detailDreamGenerateTrigger) {
-            loadQuestions()
-        }
-        .onChange(of: selectedTab) {
-            updateTabBarMode()
-        }
-        .onChange(of: detailState.interpretTrigger) {
-            generateInterpretation()
-        }
-        .onChange(of: detailState.hasInterpretation) {
-            if let text = dream.interpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
-            updateTabBarMode()
-        }
-        .onChange(of: dream.interpretation) { _, newInterpretation in
-            if let text = newInterpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
-            detailState.hasInterpretation = newInterpretation != nil
-            updateTabBarMode()
-        }
-        .fullScreenCover(isPresented: $showFullscreenImage) {
-            fullscreenImageView
-        }
-        .toast(isPresented: $showImageError, message: String(localized: "detail.failedToGenerateImage", defaultValue: "Failed to generate image"), icon: "xmark.circle.fill", style: .error, duration: 3.0)
-        .toast(isPresented: Binding(get: { detailState.showRateLimitToast }, set: { detailState.showRateLimitToast = $0 }), message: String(localized: "error.rateLimited"), icon: "clock.badge.exclamationmark", style: .error, duration: 3.0)
-        .sheet(isPresented: $showQuestionsSheet) {
-            questionsSheet
         }
     }
 
@@ -345,9 +424,19 @@ struct DreamDetailView: View {
         }
     }
 
+    @ViewBuilder
     private var navBar: some View {
+        if isEditingText {
+            editingNavBar
+        } else if isReRecording {
+            reRecordingNavBar
+        } else {
+            defaultNavBar
+        }
+    }
+
+    private var defaultNavBar: some View {
         HStack {
-            // Back button
             Button {
                 dismiss()
             } label: {
@@ -360,7 +449,6 @@ struct DreamDetailView: View {
 
             Spacer()
 
-            // Center title
             VStack(spacing: 2) {
                 Text(String(localized: "detail.navTitle", defaultValue: "Dream"))
                     .font(.system(size: 17, weight: .medium))
@@ -375,9 +463,42 @@ struct DreamDetailView: View {
 
             Spacer()
 
-            // Right button (options)
-            Button {
-                // No action yet
+            Menu {
+                Section {
+                    Button {
+                        showEditSheet = true
+                    } label: {
+                        Label(String(localized: "detail.editContent", defaultValue: "Edit Content"), image: "EditContentIcon")
+                    }
+                    Button {
+                        regenerateTitle()
+                    } label: {
+                        Label(String(localized: "detail.generateName", defaultValue: "Generate Name"), image: "GenerateNameIcon")
+                    }
+                }
+                Section {
+                    ShareLink(item: dream.text) {
+                        Label(String(localized: "detail.shareDream", defaultValue: "Share Dream"), image: "ShareDreamIcon")
+                    }
+                    if cachedAudioURL != nil {
+                        Button {
+                            convertAndShareAudio()
+                        } label: {
+                            Label(String(localized: "detail.shareAudio", defaultValue: "Share Audio"), systemImage: "waveform")
+                        }
+                        .disabled(isConvertingAudio)
+                    }
+                    Button {
+                        showFolderPicker = true
+                    } label: {
+                        Label(String(localized: "detail.addToFolder", defaultValue: "Add to Folder"), image: "FolderOpenIcon")
+                    }
+                    Button(role: .destructive) {
+                        showDeleteAlert = true
+                    } label: {
+                        Label(String(localized: "detail.delete", defaultValue: "Delete"), image: "TrashIcon")
+                    }
+                }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .medium))
@@ -385,6 +506,58 @@ struct DreamDetailView: View {
                     .frame(width: 44, height: 44)
             }
             .reveriGlass(.circle)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var editingNavBar: some View {
+        HStack {
+            Button { cancelTextEdit() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.black.opacity(0.7))
+                    .frame(width: 44, height: 44)
+            }
+            .reveriGlass(.circle)
+
+            Spacer()
+
+            Text(String(localized: "detail.editing", defaultValue: "Editing"))
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.black)
+
+            Spacer()
+
+            Button { saveTextEdit() } label: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.green)
+                    .frame(width: 44, height: 44)
+            }
+            .reveriGlass(.circle)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var reRecordingNavBar: some View {
+        HStack {
+            Button { cancelReRecording() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.black.opacity(0.7))
+                    .frame(width: 44, height: 44)
+            }
+            .reveriGlass(.circle)
+
+            Spacer()
+
+            Text(String(localized: "detail.reRecording", defaultValue: "Re-recording"))
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.black)
+
+            Spacer()
+
+            Color.clear.frame(width: 44, height: 44)
         }
         .padding(.horizontal, 16)
     }
@@ -604,6 +777,180 @@ struct DreamDetailView: View {
         return sections
     }
 
+    // MARK: - Text Edit Mode
+
+    private var textEditContent: some View {
+        VStack(spacing: 0) {
+            TextEditor(text: $editableText)
+                .font(.system(size: 15))
+                .lineSpacing(4)
+                .tracking(-0.23)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 12)
+                .padding(.top, 16)
+        }
+    }
+
+    private func enterTextEditMode() {
+        editableText = dream.text
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isEditingText = true
+        }
+    }
+
+    private func cancelTextEdit() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isEditingText = false
+        }
+    }
+
+    private func saveTextEdit() {
+        let newText = editableText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newText.isEmpty, newText != dream.text else {
+            cancelTextEdit()
+            return
+        }
+
+        // Cleanup old image files
+        if let imagePath = dream.imagePath {
+            DreamAIService.deleteLocalImage(imagePath: imagePath)
+            DreamAIService.deleteImageFromStorage(imagePath: imagePath)
+        }
+
+        dream.resetAIContent()
+        dream.text = newText
+        dream.whisperTranscript = nil
+        dream.originalTranscript = nil
+        try? modelContext.save()
+
+        // Regenerate title
+        DreamAIService.generateTitleInBackground(
+            dreamID: dream.persistentModelID,
+            dreamText: newText,
+            locale: speechLocale,
+            modelContainer: modelContext.container
+        )
+
+        detailDreamHasImage = false
+        cachedParsedSections = []
+        updateTabBarMode()
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isEditingText = false
+        }
+    }
+
+    // MARK: - Re-Record Mode
+
+    private var reRecordingContent: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            // Waveform
+            LiveEditWaveformView(
+                audioRecorder: editAudioRecorder,
+                waveformState: editWaveformState
+            )
+            .frame(height: 100)
+            .padding(.horizontal, 16)
+
+            // Timer
+            if let start = editRecordingStartTime {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let elapsed = Int(context.date.timeIntervalSince(start))
+                    let m = elapsed / 60
+                    let s = elapsed % 60
+                    Text(String(format: "%d:%02d", m, s))
+                        .font(.system(size: 48, weight: .light).monospacedDigit())
+                        .foregroundStyle(.black.opacity(0.6))
+                }
+                .padding(.top, 24)
+            }
+
+            // Stop button
+            Button {
+                stopReRecording()
+            } label: {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.white)
+                    .frame(width: 64, height: 64)
+                    .background(theme.accent, in: Circle())
+            }
+            .padding(.top, 32)
+
+            Spacer()
+        }
+    }
+
+    private func enterReRecordMode() {
+        editWaveformState.reset()
+        editAudioRecorder.startRecording()
+        editRecordingStartTime = .now
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isReRecording = true
+        }
+    }
+
+    private func cancelReRecording() {
+        let url = editAudioRecorder.stopRecording()
+        editRecordingStartTime = nil
+        // Delete the new recording
+        if let url {
+            try? FileManager.default.removeItem(at: url)
+        }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isReRecording = false
+        }
+    }
+
+    private func stopReRecording() {
+        guard let newURL = editAudioRecorder.stopRecording() else {
+            cancelReRecording()
+            return
+        }
+        editRecordingStartTime = nil
+
+        let newFilename = newURL.lastPathComponent
+
+        // Archive old audio
+        if let oldPath = dream.audioFilePath {
+            AudioArchiveService.archiveAudio(filename: oldPath)
+        }
+
+        // Cleanup old image files
+        if let imagePath = dream.imagePath {
+            DreamAIService.deleteLocalImage(imagePath: imagePath)
+            DreamAIService.deleteImageFromStorage(imagePath: imagePath)
+        }
+
+        dream.resetAIContent()
+        dream.audioFilePath = newFilename
+        dream.text = ""
+        dream.whisperTranscript = nil
+        dream.originalTranscript = nil
+        try? modelContext.save()
+
+        // Update cached audio URL
+        cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(newFilename)
+        detailDreamHasImage = false
+        cachedParsedSections = []
+
+        // Transcribe new audio (includes title generation)
+        DreamAIService.transcribeAudioInBackground(
+            dreamID: dream.persistentModelID,
+            audioFileName: newFilename,
+            locale: speechLocale,
+            modelContainer: modelContext.container
+        )
+
+        updateTabBarMode()
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isReRecording = false
+        }
+    }
+
     private func updateTabBarMode() {
         guard detailState.isActive else { return }
         switch selectedTab {
@@ -622,6 +969,31 @@ struct DreamDetailView: View {
                 detailState.tabBarMode = .none
             }
         }
+    }
+
+    private func convertAndShareAudio() {
+        guard let audioURL = cachedAudioURL else { return }
+        isConvertingAudio = true
+        Task {
+            do {
+                let oggURL = try await AudioConversionService.convertToOpus(source: audioURL)
+                shareAudioURL = oggURL
+            } catch {
+                shareAudioURL = audioURL
+            }
+            isConvertingAudio = false
+        }
+    }
+
+    private func regenerateTitle() {
+        dream.title = ""
+        try? modelContext.save()
+        DreamAIService.generateTitleInBackground(
+            dreamID: dream.persistentModelID,
+            dreamText: dream.text,
+            locale: speechLocale,
+            modelContainer: modelContext.container
+        )
     }
 
     private func generateInterpretation() {
@@ -769,4 +1141,31 @@ struct DreamDetailView: View {
         }
         .presentationDetents([.medium, .large])
     }
+}
+
+/// Isolates high-frequency `audioRecorder.currentLevel` observation (~43Hz)
+/// to prevent re-rendering the entire DreamDetailView body.
+private struct LiveEditWaveformView: View {
+    var audioRecorder: AudioRecorder
+    var waveformState: WaveformState
+
+    var body: some View {
+        AudioWaveformView(
+            isAnimating: audioRecorder.isRecording,
+            level: audioRecorder.isRecording ? audioRecorder.currentLevel : 0,
+            waveformState: waveformState
+        )
+    }
+}
+
+// MARK: - Activity View Controller
+
+private struct ActivityViewController: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
