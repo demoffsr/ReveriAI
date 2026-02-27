@@ -530,6 +530,7 @@ struct DreamDetailView: View {
                     } label: {
                         Label(String(localized: "detail.delete", defaultValue: "Delete"), image: "TrashIcon")
                     }
+                    .tint(.red)
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -537,6 +538,7 @@ struct DreamDetailView: View {
                     .foregroundStyle(.black.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
+            .tint(theme.accent)
             .reveriGlass(.circle)
         }
         .padding(.horizontal, 16)

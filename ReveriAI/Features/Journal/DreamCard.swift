@@ -94,6 +94,7 @@ struct DreamCard: View {
                         } label: {
                             Label(String(localized: "dreamCard.delete", defaultValue: "Delete"), image: "TrashIcon")
                         }
+                        .tint(.red)
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -102,6 +103,7 @@ struct DreamCard: View {
                         .frame(width: 32, height: 32)
                         .reveriGlass(.circle)
                 }
+                .tint(theme.accent)
             }
 
             // Emotion pins
