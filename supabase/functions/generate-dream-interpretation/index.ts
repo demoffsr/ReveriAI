@@ -8,32 +8,35 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
-  }
+  const requestId = crypto.randomUUID().slice(0, 8)
 
-  const auth = await validateAuth(req, corsHeaders)
-  if (isAuthError(auth)) return auth
+  try {
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed', requestId }), { status: 405, headers: corsHeaders })
+    }
 
-  const rateLimitErr = await checkRateLimit(auth.userId, 'generate-dream-interpretation', req, corsHeaders)
-  if (rateLimitErr) return rateLimitErr
+    const auth = await validateAuth(req, corsHeaders)
+    if (isAuthError(auth)) return auth
 
-  const { dreamText, locale, emotions } = await req.json()
-  if (!dreamText || dreamText.trim().length < 10) {
-    return new Response(JSON.stringify({ error: 'Dream text too short (min 10 characters)' }), { status: 400, headers: corsHeaders })
-  }
+    const rateLimitErr = await checkRateLimit(auth.userId, 'generate-dream-interpretation', req, corsHeaders)
+    if (rateLimitErr) return rateLimitErr
 
-  const textSizeErr = validateTextSize(dreamText, corsHeaders)
-  if (textSizeErr) return textSizeErr
+    const { dreamText, locale, emotions } = await req.json()
+    if (!dreamText || dreamText.trim().length < 10) {
+      return new Response(JSON.stringify({ error: 'Dream text too short (min 10 characters)', requestId }), { status: 400, headers: corsHeaders })
+    }
 
-  const emotionsErr = validateEmotions(emotions, corsHeaders)
-  if (emotionsErr) return emotionsErr
+    const textSizeErr = validateTextSize(dreamText, corsHeaders)
+    if (textSizeErr) return textSizeErr
 
-  const isRussian = (locale || '').startsWith('ru')
-  const emotionList = (emotions || []).join(', ')
+    const emotionsErr = validateEmotions(emotions, corsHeaders)
+    if (emotionsErr) return emotionsErr
 
-  const systemPrompt = isRussian
-    ? `Ты — юнгианский аналитик снов. Интерпретируй сон глубоко и проницательно.
+    const isRussian = (locale || '').startsWith('ru')
+    const emotionList = (emotions || []).join(', ')
+
+    const systemPrompt = isRussian
+      ? `Ты — юнгианский аналитик снов. Интерпретируй сон глубоко и проницательно.
 
 Структура ответа:
 1. Краткий обзор (2-3 предложения): основная тема и послание сна
@@ -46,7 +49,7 @@ Deno.serve(async (req) => {
 Стиль: тёплый, но профессиональный. Без банальностей. Конкретные инсайты, а не общие фразы.
 Не используй слова: "интересно", "любопытно", "возможно это значит".
 Пиши на русском.`
-    : `You are a Jungian dream analyst. Interpret the dream with depth and insight.
+      : `You are a Jungian dream analyst. Interpret the dream with depth and insight.
 
 Response structure:
 1. Brief overview (2-3 sentences): core theme and message of the dream
@@ -60,35 +63,41 @@ Style: warm but professional. No platitudes. Specific insights, not generic stat
 Avoid words: "interesting", "curious", "this might mean".
 Write in English.`
 
-  const openaiKey = Deno.env.get('OPENAI_API_KEY')
-  if (!openaiKey) {
-    return new Response(JSON.stringify({ error: 'OpenAI key not configured' }), { status: 500, headers: corsHeaders })
+    const openaiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!openaiKey) {
+      console.error(`[generate-dream-interpretation][${requestId}] Missing required configuration`)
+      return new Response(JSON.stringify({ error: 'Service configuration error', requestId }), { status: 500, headers: corsHeaders })
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: dreamText },
+        ],
+        max_tokens: 1500,
+        temperature: 0.7,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[generate-dream-interpretation][${requestId}] AI service error (${response.status}): ${errorText}`)
+      return new Response(JSON.stringify({ error: 'AI service temporarily unavailable', requestId }), { status: 502, headers: corsHeaders })
+    }
+
+    const data = await response.json()
+    const interpretation = data.choices?.[0]?.message?.content || ''
+
+    return new Response(JSON.stringify({ interpretation }), { headers: corsHeaders })
+  } catch (err) {
+    console.error(`[generate-dream-interpretation][${requestId}] Unhandled error:`, err)
+    return new Response(JSON.stringify({ error: 'Internal error', requestId }), { status: 500, headers: corsHeaders })
   }
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: dreamText },
-      ],
-      max_tokens: 1500,
-      temperature: 0.7,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    return new Response(JSON.stringify({ error: `OpenAI error: ${error}` }), { status: 502, headers: corsHeaders })
-  }
-
-  const data = await response.json()
-  const interpretation = data.choices?.[0]?.message?.content || ''
-
-  return new Response(JSON.stringify({ interpretation }), { headers: corsHeaders })
 })
