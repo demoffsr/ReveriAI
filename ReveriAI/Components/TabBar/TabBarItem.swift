@@ -17,7 +17,7 @@ struct TabBarItem: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 26, height: 26)
-                    .foregroundStyle(isSelected ? accentColor : Color.black.opacity(0.3))
+                    .foregroundStyle(isSelected ? accentColor : Color.black.opacity(0.5))
 
                 Text(label)
                     .font(.system(size: 15, weight: .medium))
