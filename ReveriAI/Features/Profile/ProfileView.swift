@@ -49,7 +49,7 @@ struct ProfileView: View {
             navBar
             scrollContent
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
         .onAppear { syncDateFromStorage() }

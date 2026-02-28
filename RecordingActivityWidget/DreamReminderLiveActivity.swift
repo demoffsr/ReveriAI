@@ -40,29 +40,19 @@ private struct WatchDreamReminderView: View {
     var body: some View {
         let palette = WidgetPalette.current
 
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 6) {
             Text(String(localized: "widget.didYouSleepWell", defaultValue: "Did you sleep well?"))
                 .font(.system(size: 14))
                 .foregroundStyle(.white.opacity(0.6))
 
-            HStack(spacing: 10) {
-                // Moon icon in accent circle
-                Image("MoonWatch")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .frame(width: 36, height: 36)
-                    .background(palette.accent.opacity(0.3), in: Circle())
-
-                // Record button — Link opens Watch app with deep link
-                Link(destination: URL(string: "reveri://record")!) {
-                    Text(String(localized: "widget.record", defaultValue: "Record"))
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(palette.accent, in: Capsule())
-                }
+            // Record button — Link opens Watch app with deep link
+            Link(destination: URL(string: "reveri://record")!) {
+                Text(String(localized: "widget.record", defaultValue: "Record"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(palette.accent, in: Capsule())
             }
         }
         .padding(.horizontal, 12)

@@ -14,7 +14,7 @@ struct TermsOfUseView: View {
                     .padding(.bottom, 40)
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
     }

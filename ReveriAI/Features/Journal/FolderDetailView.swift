@@ -45,7 +45,7 @@ struct FolderDetailView: View {
                 dreamsList
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
         .onAppear { updateFilteredDreams() }

@@ -224,7 +224,7 @@ struct DreamDetailView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 4) {
                                     ForEach(dream.emotions) { emotion in
-                                        EmotionTagBadge(emotion: emotion, iconSize: 18, fontSize: 13)
+                                        EmotionTagBadge(emotion: emotion, iconSize: 18, fontSize: 13, style: .detail)
                                     }
                                 }
                             }
