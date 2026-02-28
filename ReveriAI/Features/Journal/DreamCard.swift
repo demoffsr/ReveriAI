@@ -39,7 +39,7 @@ struct DreamCard: View {
                 Text(cachedDisplayTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.black)
-                    .lineLimit(2)
+                    .lineLimit(1...2)
 
                 Spacer()
 
@@ -105,7 +105,8 @@ struct DreamCard: View {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16))
                         .foregroundStyle(.black.opacity(0.4))
-                        .frame(width: 36, height: 36)
+                        .frame(width: 34, height: 34)
+                        .contentShape(Circle().size(width: 44, height: 44))
                         .reveriGlass(.circle)
                 }
                 .tint(theme.accent)
@@ -137,7 +138,7 @@ struct DreamCard: View {
                         Color.black
                     }
                 )
-                .padding(.top, -2)
+                .padding(.top, 0)
             }
 
             // Audio waveform player
@@ -187,8 +188,7 @@ struct DreamCard: View {
             .foregroundStyle(.black.opacity(0.35))
         }
         .padding(14)
-        .background(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .background(.white, in: RoundedRectangle(cornerRadius: 24))
         .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(.black.opacity(0.1), lineWidth: 1)
