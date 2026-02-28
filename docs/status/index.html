@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReveriAI Status</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: #0a0a0f;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #a78bfa, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Loading */
+  .loading {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: #64748b;
+  }
+  .loading .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid #1e1e2e;
+    border-top-color: #a78bfa;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-box {
+    background: #ef444412;
+    border: 1px solid #ef444430;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    color: #fca5a5;
+  }
+
+  /* Status Banner */
+  .status-banner {
+    border-radius: 16px;
+    padding: 1.75rem;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .status-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+  .status-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .status-sub {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px var(--glow); }
+    50% { box-shadow: 0 0 35px var(--glow); }
+  }
+  .status-icon { animation: pulse 3s ease-in-out infinite; }
+
+  /* Windows */
+  .window {
+    background: #12121a;
+    border: 1px solid #1e1e2e;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .window-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #cbd5e1;
+  }
+  .window-total {
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  /* Category Grid */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  @media (max-width: 500px) {
+    .cat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .cat-card {
+    background: #0a0a0f;
+    border: 1px solid #1e1e2e;
+    border-radius: 8px;
+    padding: 0.75rem;
+  }
+  .cat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .cat-icon { font-size: 1.1rem; }
+  .cat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cat-name {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cat-count {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+
+  /* Section Title */
+  .section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin: 1.5rem 0 0.75rem;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #12121a;
+    border: 1px solid #1e1e2e;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    background: #0f0f17;
+    border-bottom: 1px solid #1e1e2e;
+  }
+  td {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(30, 30, 46, 0.06);
+  }
+  tr:last-child td { border-bottom: none; }
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    background: #1e1e2e;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    color: #a78bfa;
+  }
+  .badge {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+  .num {
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Empty state */
+  .empty-state {
+    background: #12121a;
+    border: 1px solid #1e1e2e;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    color: #475569;
+    font-size: 0.85rem;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.7rem;
+    color: #334155;
+  }
+  .footer span { color: #475569; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">ReveriAI</div>
+    <div class="subtitle">System Status</div>
+  </div>
+
+  <div id="content">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>Loading status...</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>ReveriAI Error Monitoring</span> &middot; Auto-refreshes every 60s
+  </div>
+</div>
+
+<script>
+const API = 'https://bvydopjjndfgbhjczyis.supabase.co/functions/v1/app-status?format=json';
+
+const STATUS_CONFIG = {
+  green:  { bg: '#10b981', label: 'All Systems Operational', icon: '\u2713', glow: 'rgba(16,185,129,0.3)' },
+  yellow: { bg: '#f59e0b', label: 'Degraded Performance',    icon: '!',      glow: 'rgba(245,158,11,0.3)' },
+  red:    { bg: '#ef4444', label: 'Major Issues Detected',   icon: '\u2717', glow: 'rgba(239,68,68,0.3)' },
+};
+
+const CAT_LABELS = {
+  aiService:    { label: 'AI Services',          icon: '\u2728' },
+  audio:        { label: 'Audio',                icon: '\uD83C\uDFA4' },
+  speech:       { label: 'Speech Recognition',   icon: '\uD83D\uDDE3' },
+  data:         { label: 'Data Storage',         icon: '\uD83D\uDCBE' },
+  network:      { label: 'Network',              icon: '\uD83C\uDF10' },
+  liveActivity: { label: 'Live Activity',        icon: '\uD83D\uDFE2' },
+};
+
+const ALL_CATS = ['aiService', 'audio', 'speech', 'data', 'network', 'liveActivity'];
+
+function dotColor(count) {
+  if (count === 0) return '#10b981';
+  if (count <= 3) return '#f59e0b';
+  return '#ef4444';
+}
+
+function categoryCards(w) {
+  return ALL_CATS.map(cat => {
+    const count = (w.by_category && w.by_category[cat]) || 0;
+    const info = CAT_LABELS[cat] || { label: cat, icon: '?' };
+    return `<div class="cat-card">
+      <div class="cat-header">
+        <span class="cat-icon">${info.icon}</span>
+        <span class="cat-dot" style="background:${dotColor(count)}"></span>
+      </div>
+      <div class="cat-name">${info.label}</div>
+      <div class="cat-count">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+function windowSection(label, w) {
+  return `<div class="window">
+    <div class="window-header">
+      <span class="window-label">${label}</span>
+      <span class="window-total">${w.total} errors &middot; ${w.affected_users} users</span>
+    </div>
+    <div class="cat-grid">${categoryCards(w)}</div>
+  </div>`;
+}
+
+function topErrorsTable(errors) {
+  if (!errors || errors.length === 0) {
+    return '<div class="empty-state">No errors in the last 24 hours</div>';
+  }
+  const rows = errors.map(e => {
+    const info = CAT_LABELS[e.category] || { label: e.category, icon: '?' };
+    return `<tr>
+      <td><code>${e.error_code}</code></td>
+      <td><span class="badge">${info.icon} ${info.label}</span></td>
+      <td class="num">${e.count}</td>
+      <td class="num">${e.users}</td>
+    </tr>`;
+  }).join('');
+  return `<table>
+    <thead><tr><th>Error Code</th><th>Category</th><th>Count</th><th>Users</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function formatTime(iso) {
+  return new Date(iso).toLocaleString('en-US', {
+    timeZone: 'Europe/Moscow', year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }) + ' MSK';
+}
+
+async function loadStatus() {
+  try {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    const status = json.status || 'green';
+    const s = STATUS_CONFIG[status] || STATUS_CONFIG.green;
+    const summary = json.summary || {};
+    const w1h  = summary.windows?.['1h']  || { total: 0, affected_users: 0, by_category: {} };
+    const w24h = summary.windows?.['24h'] || { total: 0, affected_users: 0, by_category: {} };
+    const w7d  = summary.windows?.['7d']  || { total: 0, affected_users: 0, by_category: {} };
+    const topErrors = summary.top_errors_24h || [];
+    const checkedAt = json.checked_at || new Date().toISOString();
+
+    document.getElementById('content').innerHTML = `
+      <div class="status-banner" style="background:${s.bg}12;border:1px solid ${s.bg}30;box-shadow:0 0 40px ${s.glow}">
+        <div class="status-icon" style="background:${s.bg};--glow:${s.glow};box-shadow:0 0 20px ${s.glow}">${s.icon}</div>
+        <div class="status-label" style="color:${s.bg}">${s.label}</div>
+        <div class="status-sub">Last checked: ${formatTime(checkedAt)}</div>
+      </div>
+      ${windowSection('Last Hour', w1h)}
+      ${windowSection('Last 24 Hours', w24h)}
+      ${windowSection('Last 7 Days', w7d)}
+      <div class="section-title">Top Errors (24h)</div>
+      ${topErrorsTable(topErrors)}
+    `;
+  } catch (err) {
+    document.getElementById('content').innerHTML = `
+      <div class="error-box">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div>
+        <div>Failed to load status</div>
+        <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.5rem">${err.message}</div>
+      </div>
+    `;
+  }
+}
+
+// Initial load + auto-refresh every 60s
+loadStatus();
+setInterval(loadStatus, 60000);
+</script>
+</body>
+</html>
