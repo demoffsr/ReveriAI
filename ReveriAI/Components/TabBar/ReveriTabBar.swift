@@ -145,8 +145,10 @@ struct ReveriTabBar: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(isPaused ? "PlayIcon" : "PauseIcon")
-                        .renderingMode(.original)
+                        .renderingMode(.template)
+                        .resizable()
                         .frame(width: 22, height: 22)
+                        .foregroundStyle(theme.accent)
                         .rotation3DEffect(
                             .degrees(Double(pauseFlipCount) * 360),
                             axis: (x: 0, y: 1, z: 0),
@@ -197,8 +199,10 @@ struct ReveriTabBar: View {
             } label: {
                 HStack(spacing: 6) {
                     Image("PlayIcon")
-                        .renderingMode(.original)
+                        .renderingMode(.template)
+                        .resizable()
                         .frame(width: 22, height: 22)
+                        .foregroundStyle(theme.accent)
                         .rotation3DEffect(
                             .degrees(Double(previewFlipCount) * 360),
                             axis: (x: 0, y: 1, z: 0),
@@ -240,8 +244,10 @@ struct ReveriTabBar: View {
                 onSkipBack?()
             } label: {
                 Image("SkipBack5Icon")
-                    .renderingMode(.original)
+                    .renderingMode(.template)
+                    .resizable()
                     .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
                     .padding(8)
             }
             .buttonStyle(.plain)
@@ -255,8 +261,10 @@ struct ReveriTabBar: View {
                 }
             } label: {
                 Image(isPlayingPreview ? "PauseIcon" : "PlayIcon")
-                    .renderingMode(.original)
+                    .renderingMode(.template)
+                    .resizable()
                     .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
                     .rotation3DEffect(
                         .degrees(Double(previewFlipCount) * 360),
                         axis: (x: 0, y: 1, z: 0),
@@ -276,8 +284,10 @@ struct ReveriTabBar: View {
                 onSkipForward?()
             } label: {
                 Image("SkipForward5Icon")
-                    .renderingMode(.original)
+                    .renderingMode(.template)
+                    .resizable()
                     .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
                     .padding(8)
             }
             .buttonStyle(.plain)
@@ -397,9 +407,10 @@ private struct DetailDreamControlsView: View {
                                 .scaleEffect(0.9)
                         } else {
                             Image("InterpretIcon")
-                                .renderingMode(.original)
+                                .renderingMode(.template)
                                 .resizable()
                                 .frame(width: 20, height: 20)
+                                .foregroundStyle(theme.accent)
                         }
                         Text(String(localized: "tabBar.interpretDream", defaultValue: "Interpret Dream"))
                             .font(.subheadline.weight(.medium))

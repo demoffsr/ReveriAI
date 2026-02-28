@@ -33,13 +33,13 @@ struct DreamCard: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             // Header
             HStack {
                 Text(cachedDisplayTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.black)
-                    .lineLimit(1)
+                    .lineLimit(2)
 
                 Spacer()
 
@@ -63,6 +63,11 @@ struct DreamCard: View {
                             showEmotionPicker = true
                         } label: {
                             Label(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"), image: "EmotionIcon")
+                        }
+                        Button {
+                            onEditAction?(.renameTitle)
+                        } label: {
+                            Label(String(localized: "detail.renameDream", defaultValue: "Rename Dream"), image: "RenameIcon")
                         }
                         Button {
                             regenerateTitle()
@@ -98,9 +103,9 @@ struct DreamCard: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 14))
+                        .font(.system(size: 16))
                         .foregroundStyle(.black.opacity(0.4))
-                        .frame(width: 32, height: 32)
+                        .frame(width: 36, height: 36)
                         .reveriGlass(.circle)
                 }
                 .tint(theme.accent)
@@ -132,7 +137,7 @@ struct DreamCard: View {
                         Color.black
                     }
                 )
-                .padding(.top, -6)
+                .padding(.top, -2)
             }
 
             // Audio waveform player

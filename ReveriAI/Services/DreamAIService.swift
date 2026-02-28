@@ -12,6 +12,7 @@ enum DreamAIService {
 
     enum Error: Swift.Error {
         case networkError(Swift.Error)
+        case serviceUnavailable(statusCode: Int)
         case emptyText
         case emptyTitle
         case emptyURL
@@ -24,9 +25,36 @@ enum DreamAIService {
             if case .rateLimited = self { return true }
             return false
         }
+
+        var isRetriable: Bool {
+            if case .serviceUnavailable = self { return true }
+            if case .hallucination = self { return true }
+            return false
+        }
     }
 
     private static let maxDreamTextLength = 10_000
+
+    // MARK: - LocalizedError (makes .localizedDescription show real message instead of "error 0")
+}
+
+extension DreamAIService.Error: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .networkError(let inner): return inner.localizedDescription
+        case .serviceUnavailable(let code): return "Service unavailable (HTTP \(code))"
+        case .emptyText: return "Empty text"
+        case .emptyTitle: return "Empty title"
+        case .emptyURL: return "Empty URL"
+        case .hallucination: return "Hallucination detected"
+        case .rateLimited(let s): return "Rate limited (\(s)s)"
+        case .textTooLong(let c, let m): return "Text too long: \(c)/\(m)"
+        case .audioTooLarge(let b, let m): return "Audio too large: \(b)/\(m)"
+        }
+    }
+}
+
+extension DreamAIService {
     private static let maxAudioSizeBytes = 25 * 1024 * 1024
 
     private static let logger = Logger(subsystem: "com.reveri.ai", category: "DreamAI")
@@ -116,12 +144,14 @@ enum DreamAIService {
         do {
             accessToken = try await SupabaseService.client.auth.session.accessToken
         } catch {
+            logger.error("Whisper: auth session failed: \(error)")
             throw Error.networkError(
                 NSError(domain: "Auth", code: 401,
                         userInfo: [NSLocalizedDescriptionKey: "Not authenticated — sign in failed or no network on first launch"])
             )
         }
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         var body = Data()
@@ -154,8 +184,14 @@ enum DreamAIService {
         if httpResponse.statusCode == 413 {
             throw Error.audioTooLarge(bytes: audioData.count, maxBytes: Self.maxAudioSizeBytes)
         }
+        if httpResponse.statusCode == 502 || httpResponse.statusCode == 503 {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            logger.error("Whisper: HTTP \(httpResponse.statusCode): \(errorText)")
+            throw Error.serviceUnavailable(statusCode: httpResponse.statusCode)
+        }
         guard httpResponse.statusCode == 200 else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            logger.error("Whisper: HTTP \(httpResponse.statusCode): \(errorText)")
             throw Error.networkError(NSError(domain: "WhisperAPI", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorText]))
         }
 
@@ -290,7 +326,7 @@ enum DreamAIService {
         }
     }
 
-    private static let maxWhisperRetries = 2
+    private static let maxWhisperRetries = 3
 
     static func transcribeAudioInBackground(
         dreamID: PersistentIdentifier,
@@ -339,17 +375,17 @@ enum DreamAIService {
                         )
                     }
                     return // success — exit
-                } catch Error.hallucination {
-                    logger.warning("🚨 Whisper hallucination on attempt \(attempt)")
-                    lastError = Error.hallucination
+                } catch let error as Error where error.isRetriable {
+                    logger.warning("⚠️ Whisper retriable error on attempt \(attempt): \(error.localizedDescription)")
+                    lastError = error
                     if attempt < maxWhisperRetries {
-                        // Brief delay before retry
-                        try? await Task.sleep(for: .seconds(1))
+                        let delay = attempt // 1s, 2s backoff
+                        try? await Task.sleep(for: .seconds(delay))
                     }
                 } catch {
                     logger.error("Whisper transcription failed: \(error.localizedDescription)")
                     lastError = error
-                    break // non-hallucination errors — don't retry
+                    break // non-retriable errors — don't retry
                 }
             }
 

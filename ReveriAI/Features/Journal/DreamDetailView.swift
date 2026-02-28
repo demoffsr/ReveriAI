@@ -6,6 +6,7 @@ struct DreamDetailView: View {
     enum EditAction {
         case editText
         case reRecord
+        case renameTitle
     }
 
     let dream: Dream
@@ -37,6 +38,11 @@ struct DreamDetailView: View {
     @State private var isEmotionScrolled = false
     @State private var shareAudioURL: URL?
     @State private var isConvertingAudio = false
+
+    // Rename mode state
+    @State private var isRenamingTitle = false
+    @State private var editableTitle = ""
+    @FocusState private var isTitleFieldFocused: Bool
 
     // Menu action state
     @State private var showDeleteAlert = false
@@ -113,6 +119,7 @@ struct DreamDetailView: View {
                 switch action {
                 case .editText: enterTextEditMode()
                 case .reRecord: enterReRecordMode()
+                case .renameTitle: enterRenameMode()
                 }
             }
         }
@@ -193,10 +200,23 @@ struct DreamDetailView: View {
                 HStack(alignment: .top, spacing: 12) {
                     // Left: title + emotions
                     VStack(alignment: .leading, spacing: 0) {
-                        if !dream.title.isEmpty {
+                        if isRenamingTitle {
+                            TextField("", text: $editableTitle)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .focused($isTitleFieldFocused)
+                                .onSubmit { saveRename() }
+                        } else if !dream.title.isEmpty {
                             Text(dream.title)
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundStyle(.primary)
+                        }
+
+                        if let folderName = dream.folder?.name {
+                            Text(folderName)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 2)
                         }
 
                         // Emotion badges
@@ -442,7 +462,9 @@ struct DreamDetailView: View {
 
     @ViewBuilder
     private var navBar: some View {
-        if isEditingText {
+        if isRenamingTitle {
+            renamingNavBar
+        } else if isEditingText {
             editingNavBar
         } else if isReRecording {
             reRecordingNavBar
@@ -470,7 +492,7 @@ struct DreamDetailView: View {
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.black)
 
-                if let folder = folderName {
+                if let folder = dream.folder?.name {
                     Text(folder)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.black.opacity(0.5))
@@ -499,6 +521,11 @@ struct DreamDetailView: View {
                         showEmotionPicker = true
                     } label: {
                         Label(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"), image: "EmotionIcon")
+                    }
+                    Button {
+                        enterRenameMode()
+                    } label: {
+                        Label(String(localized: "detail.renameDream", defaultValue: "Rename Dream"), image: "RenameIcon")
                     }
                     Button {
                         regenerateTitle()
@@ -563,6 +590,35 @@ struct DreamDetailView: View {
             Spacer()
 
             Button { saveTextEdit() } label: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.green)
+                    .frame(width: 44, height: 44)
+            }
+            .reveriGlass(.circle)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var renamingNavBar: some View {
+        HStack {
+            Button { cancelRename() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.black.opacity(0.7))
+                    .frame(width: 44, height: 44)
+            }
+            .reveriGlass(.circle)
+
+            Spacer()
+
+            Text(String(localized: "detail.renaming", defaultValue: "Renaming"))
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.black)
+
+            Spacer()
+
+            Button { saveRename() } label: {
                 Image(systemName: "checkmark")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.green)
@@ -871,6 +927,37 @@ struct DreamDetailView: View {
 
         withAnimation(.easeInOut(duration: 0.2)) {
             isEditingText = false
+        }
+    }
+
+    // MARK: - Rename Mode
+
+    private func enterRenameMode() {
+        editableTitle = dream.title
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isRenamingTitle = true
+        }
+        isTitleFieldFocused = true
+    }
+
+    private func cancelRename() {
+        isTitleFieldFocused = false
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isRenamingTitle = false
+        }
+    }
+
+    private func saveRename() {
+        let newTitle = editableTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newTitle.isEmpty, newTitle != dream.title else {
+            cancelRename()
+            return
+        }
+        dream.title = newTitle
+        try? modelContext.save()
+        isTitleFieldFocused = false
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isRenamingTitle = false
         }
     }
 

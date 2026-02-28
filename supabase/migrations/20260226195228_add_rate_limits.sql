@@ -28,6 +28,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 AS $$
+#variable_conflict use_column
 DECLARE
   w JSONB;
   v_duration INT;

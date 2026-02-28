@@ -63,9 +63,9 @@ struct FolderCard: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 13))
+                        .font(.system(size: 16))
                         .foregroundStyle(.black.opacity(0.4))
-                        .frame(width: 30, height: 30)
+                        .frame(width: 36, height: 36)
                         .reveriGlass(.circle)
                 }
             }

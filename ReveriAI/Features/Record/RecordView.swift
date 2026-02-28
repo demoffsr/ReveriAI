@@ -194,14 +194,15 @@ struct RecordView: View {
             .minimumScaleFactor(0.75)
             .padding(.top, 60)
             .padding(.leading, 20)
+            .allowsHitTesting(false)
 
             Spacer(minLength: 0)
+                .allowsHitTesting(false)
 
             CelestialIcon()
                 .padding(.top, 50)
                 .padding(.trailing, 12)
         }
-        .allowsHitTesting(false)
         .opacity(headerContentVisible ? 1 : 0)
     }
 

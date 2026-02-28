@@ -189,8 +189,21 @@ struct JournalView: View {
     private var foldersContent: some View {
         Group {
             if folders.isEmpty {
-                ContentUnavailableView(String(localized: "journal.noFoldersYet", defaultValue: "No folders yet"), systemImage: "folder", description: Text(String(localized: "journal.tapNewFolder", defaultValue: "Tap \"New Folder\" to create one")))
-                    .frame(maxHeight: .infinity)
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image("EmotionCalm")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 64, height: 64)
+                    Text(String(localized: "journal.noFoldersTitle", defaultValue: "Organize your dreams"))
+                        .font(.title3.weight(.semibold))
+                    Text(String(localized: "journal.noFoldersSubtitle", defaultValue: "Create a folder to group\nyour dreams by theme"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             } else {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
