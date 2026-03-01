@@ -6,6 +6,8 @@
 <title>ReveriAI - System Status</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌙</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12/dist/d3-sankey.min.js"></script>
 <style>
 /* ===== Reset & Base ===== */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -758,6 +760,152 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .screen-time-bar .st-value { min-width: 60px; text-align: right; font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); }
 .funnel-presets { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
 
+/* ===== Visual Flow Diagram ===== */
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 28px 20px 20px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+.flow-diagram:active { cursor: grabbing; }
+.flow-diagram::-webkit-scrollbar { height: 6px; }
+.flow-diagram::-webkit-scrollbar-track { background: var(--card); border-radius: 3px; }
+.flow-diagram::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.flow-diagram::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+.flow-node {
+  min-width: 110px;
+  max-width: 160px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid;
+  text-align: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: var(--card);
+  position: relative;
+}
+.flow-node:hover { transform: scale(1.06); z-index: 2; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.flow-node .fn-icon { font-size: 1.1rem; margin-bottom: 4px; }
+.flow-node .fn-name { font-size: 0.72rem; font-weight: 600; line-height: 1.25; word-break: break-word; }
+.flow-node .fn-time { font-size: 0.65rem; font-family: var(--mono); color: var(--text-muted); margin-top: 5px; }
+.flow-node .fn-index { position: absolute; top: -8px; left: -8px; width: 20px; height: 20px; border-radius: 50%; font-size: 0.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #fff; }
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 50px;
+  position: relative;
+  padding: 0 2px;
+}
+.flow-arrow-line { height: 2px; flex: 1; min-width: 24px; }
+.flow-arrow-tip { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid var(--text-dim); }
+.flow-arrow-gap {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--card);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.flow-arrow-gap.long-gap { color: var(--yellow); font-weight: 600; }
+
+/* ===== Metadata Popup ===== */
+.flow-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.flow-popup {
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  min-width: 320px;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: popIn 0.2s ease;
+}
+@keyframes popIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.flow-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.flow-popup-title { font-size: 0.95rem; font-weight: 700; }
+.flow-popup-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
+.flow-popup-close:hover { background: var(--border); color: var(--text); }
+.flow-popup-row { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.82rem; }
+.flow-popup-label { color: var(--text-muted); }
+.flow-popup-value { color: var(--text); font-family: var(--mono); font-size: 0.78rem; }
+.flow-popup-meta {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--card);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.flow-popup-meta-title { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+
+/* ===== Sankey Flow Map ===== */
+.sankey-container { width: 100%; position: relative; }
+.sankey-container svg { width: 100%; display: block; }
+.sankey-node rect { cursor: pointer; transition: opacity 0.15s; rx: 4; ry: 4; }
+.sankey-node rect:hover { opacity: 0.85; }
+.sankey-node text { font-size: 0.72rem; fill: var(--text-secondary); font-family: var(--mono); }
+.sankey-link { fill: none; stroke-opacity: 0.25; transition: stroke-opacity 0.2s; }
+.sankey-link:hover { stroke-opacity: 0.6; }
+.sankey-tooltip {
+  position: absolute;
+  background: var(--card-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: var(--text);
+}
+.sankey-tooltip.visible { opacity: 1; }
+.sankey-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; padding: 0.75rem 1rem; }
+.sankey-legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--text-muted); }
+.sankey-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+.flowmap-controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
+.flowmap-controls label { font-size: 0.78rem; color: var(--text-muted); }
+.flowmap-controls input[type="range"] { width: 100px; accent-color: var(--accent); }
+.flowmap-controls .fc-value { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); min-width: 30px; }
+.flowmap-link-btn { font-size: 0.78rem; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 6px; padding: 0.3rem 0.75rem; cursor: pointer; transition: background 0.15s; margin-top: 0.5rem; }
+.flowmap-link-btn:hover { background: var(--accent-dim); }
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .top-nav-inner { gap: 0.75rem; }
@@ -773,6 +921,12 @@ tr:hover td { background: rgba(167,139,250,0.03); }
   .bar-label { min-width: 80px; font-size: 0.72rem; }
   .public-status-banner { flex-direction: column; text-align: center; }
   .public-footer { flex-direction: column; gap: 1rem; align-items: center; }
+  .flow-node { min-width: 90px; max-width: 120px; padding: 8px 10px; }
+  .flow-node .fn-name { font-size: 0.65rem; }
+  .flow-arrow { min-width: 36px; }
+  .flowmap-controls { flex-direction: column; align-items: flex-start; }
+  .flow-popup { min-width: 280px; max-width: 95vw; }
+  .flows-tabs { overflow-x: auto; flex-wrap: nowrap; }
 }
 @media (max-width: 480px) {
   .trend-grid, .period-grid { grid-template-columns: 1fr; }
@@ -2221,15 +2375,16 @@ const FUNNEL_PRESETS = {
   journal:   { label: 'Journal Browse', steps: ['tab_switched','dream_viewed','detail_tab_switched'] },
 };
 
+const FLOWS_TABS = {f_sessions:'Sessions',f_funnel:'Funnel',f_screentime:'Screen Time',f_transitions:'Transitions',f_flowmap:'Flow Map'};
+
 async function loadFlows() {
   const el = document.getElementById('view-flows');
   const tab = S.flowsTab || 'f_sessions';
   el.innerHTML = `
     <div class="flows-tabs">
-      ${['f_sessions','f_funnel','f_screentime','f_transitions'].map(t => {
-        const labels = {f_sessions:'Sessions',f_funnel:'Funnel',f_screentime:'Screen Time',f_transitions:'Transitions'};
-        return `<button class="filter-pill${tab===t?' active':''}" onclick="setFlowsTab('${t}')">${labels[t]}</button>`;
-      }).join('')}
+      ${Object.entries(FLOWS_TABS).map(([t, label]) =>
+        `<button class="filter-pill${tab===t?' active':''}" onclick="setFlowsTab('${t}')">${label}</button>`
+      ).join('')}
     </div>
     <div id="flows-content">${skelHtml('overview')}</div>
   `;
@@ -2238,9 +2393,8 @@ async function loadFlows() {
 
 function setFlowsTab(tab) {
   S.flowsTab = tab;
-  const labels = {f_sessions:'Sessions',f_funnel:'Funnel',f_screentime:'Screen Time',f_transitions:'Transitions'};
   document.querySelectorAll('.flows-tabs .filter-pill').forEach(p =>
-    p.classList.toggle('active', p.textContent === labels[tab])
+    p.classList.toggle('active', p.textContent === FLOWS_TABS[tab])
   );
   destroyAllCharts();
   document.getElementById('flows-content').innerHTML = skelHtml('overview');
@@ -2256,6 +2410,7 @@ async function loadFlowsTab(tab) {
       case 'f_funnel':      await loadFunnel(el); break;
       case 'f_screentime':  await loadScreenTime(el); break;
       case 'f_transitions': await loadTransitions(el); break;
+      case 'f_flowmap':     await loadFlowMap(el); break;
     }
   } catch (err) {
     if (err.message === 'Session expired') return;
@@ -2298,6 +2453,73 @@ async function loadSessionBrowser(el) {
   `;
 }
 
+/* ===== Event Group Colors ===== */
+const EVENT_GROUPS = {
+  record:  { color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '\uD83C\uDFA4', label: 'Recording' },
+  review:  { color: '#c084fc', bg: 'rgba(192,132,252,0.12)', icon: '\uD83D\uDD0D', label: 'Review' },
+  tab:     { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: '\uD83D\uDCF1', label: 'Navigation' },
+  screen:  { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: '\uD83D\uDCF1', label: 'Navigation' },
+  deep_link: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',icon: '\uD83D\uDD17', label: 'Navigation' },
+  dream:   { color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '\uD83D\uDCAD', label: 'Dream' },
+  journal: { color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '\uD83D\uDCD6', label: 'Journal' },
+  card:    { color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: '\uD83C\uDFF7', label: 'Journal' },
+  detail:  { color: '#2dd4bf', bg: 'rgba(45,212,191,0.12)',  icon: '\uD83D\uDD0E', label: 'Detail' },
+  emotion: { color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  icon: '\uD83C\uDFA8', label: 'Emotions' },
+  feeling: { color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  icon: '\u2764\uFE0F', label: 'Feelings' },
+  ai:      { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  icon: '\u2728', label: 'AI' },
+  profile: { color: '#f472b6', bg: 'rgba(244,114,182,0.12)', icon: '\u2699\uFE0F', label: 'Profile' },
+  session: { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '\uD83D\uDD04', label: 'Session' },
+  mode:    { color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', icon: '\uD83D\uDD00', label: 'Mode' },
+};
+const DEFAULT_GROUP = { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: '\u26AA', label: 'Other' };
+
+function getEventGroup(eventType) {
+  const prefix = eventType.split('_')[0];
+  return EVENT_GROUPS[prefix] || DEFAULT_GROUP;
+}
+
+function formatGap(sec) {
+  const s = parseFloat(sec);
+  if (s < 60) return `${s.toFixed(1)}s`;
+  if (s < 3600) return `${(s/60).toFixed(1)}m`;
+  return `${(s/3600).toFixed(1)}h`;
+}
+
+function showFlowPopup(event) {
+  // Remove existing popup
+  const existing = document.querySelector('.flow-popup-overlay');
+  if (existing) existing.remove();
+
+  const ts = new Date(event.created_at);
+  const metaJson = event.metadata ? JSON.stringify(event.metadata, null, 2) : null;
+  const group = getEventGroup(event.event_type);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'flow-popup-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="flow-popup">
+      <div class="flow-popup-header">
+        <div class="flow-popup-title">${group.icon} ${escHtml(event.event_type)}</div>
+        <button class="flow-popup-close" onclick="this.closest('.flow-popup-overlay').remove()">&times;</button>
+      </div>
+      <div class="flow-popup-row"><span class="flow-popup-label">Time</span><span class="flow-popup-value">${ts.toLocaleString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit', day:'2-digit', month:'short' })}</span></div>
+      <div class="flow-popup-row"><span class="flow-popup-label">Gap from prev</span><span class="flow-popup-value">${event.gap_sec != null && event.gap_sec > 0 ? formatGap(event.gap_sec) : '\u2014'}</span></div>
+      <div class="flow-popup-row"><span class="flow-popup-label">Group</span><span class="flow-popup-value" style="color:${group.color}">${group.label}</span></div>
+      ${metaJson ? `
+        <div style="margin-top:0.75rem;">
+          <div class="flow-popup-meta-title">Metadata</div>
+          <div class="flow-popup-meta">${escHtml(metaJson)}</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// Store events data for popup clicks
+let _sessionFlowEvents = [];
+
 async function loadSessionTimeline(sessionId, rowEl) {
   // Highlight selected row
   document.querySelectorAll('.session-table tr').forEach(r => r.classList.remove('session-row-active'));
@@ -2310,30 +2532,79 @@ async function loadSessionTimeline(sessionId, rowEl) {
   try {
     const data = await api({ view: 'analytics_user_flow', session_id: sessionId });
     const events = Array.isArray(data) ? data : [];
+    _sessionFlowEvents = events;
 
     if (events.length === 0) {
       wrap.innerHTML = emptyHtml('No events in this session');
       return;
     }
 
-    const eventsHtml = events.map(e => {
+    // Build visual flow diagram
+    const nodesHtml = events.map((e, i) => {
+      const group = getEventGroup(e.event_type);
       const ts = new Date(e.created_at);
       const timeStr = ts.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-      const gapStr = e.gap_sec != null && e.gap_sec > 0 ? `+${parseFloat(e.gap_sec).toFixed(1)}s` : '';
-      const metaStr = e.metadata ? `<div class="te-meta">${escHtml(JSON.stringify(e.metadata))}</div>` : '';
-      return `<div class="timeline-event">
-        <div class="te-time">${timeStr}</div>
-        <div style="flex:1"><div class="te-name">${escHtml(e.event_type)}</div>${metaStr}</div>
-        <div class="te-gap">${gapStr}</div>
+      const displayName = e.event_type.replace(/_/g, ' ');
+
+      // Arrow before node (except first)
+      let arrowHtml = '';
+      if (i > 0) {
+        const gap = parseFloat(e.gap_sec) || 0;
+        const gapStr = gap > 0 ? formatGap(gap) : '';
+        const longGap = gap > 30 ? ' long-gap' : '';
+        const lineColor = gap > 60 ? 'var(--yellow)' : gap > 30 ? 'var(--text-dim)' : 'var(--border)';
+        arrowHtml = `<div class="flow-arrow">
+          ${gapStr ? `<div class="flow-arrow-gap${longGap}">${gapStr}</div>` : ''}
+          <div class="flow-arrow-line" style="background:${lineColor};"></div>
+          <div class="flow-arrow-tip" style="border-left-color:${lineColor};"></div>
+        </div>`;
+      }
+
+      const nodeHtml = `<div class="flow-node" style="border-color:${group.color}; background:${group.bg};" onclick="showFlowPopup(_sessionFlowEvents[${i}])" title="${escHtml(e.event_type)}">
+        <div class="fn-index" style="background:${group.color};">${i + 1}</div>
+        <div class="fn-icon">${group.icon}</div>
+        <div class="fn-name" style="color:${group.color};">${escHtml(displayName)}</div>
+        <div class="fn-time">${timeStr}</div>
       </div>`;
+
+      return arrowHtml + nodeHtml;
     }).join('');
 
+    // Duration
+    const firstTs = new Date(events[0].created_at);
+    const lastTs = new Date(events[events.length - 1].created_at);
+    const durSec = (lastTs - firstTs) / 1000;
+    const durStr = durSec < 60 ? `${durSec.toFixed(0)}s` : `${(durSec/60).toFixed(1)}m`;
+
     wrap.innerHTML = `
-      <div class="section-title" style="margin-top:1.5rem;">Session Timeline &middot; ${events.length} events</div>
-      <div class="card timeline-wrap" style="padding:1rem 1.25rem; max-height:500px; overflow-y:auto;">
-        ${eventsHtml}
+      <div class="section-title" style="margin-top:1.5rem;">
+        Session Flow &middot; ${events.length} events &middot; ${durStr}
+        <span style="font-size:0.72rem; color:var(--text-dim); margin-left:0.5rem;">(click node for details)</span>
+      </div>
+      <div class="card" style="padding:0.75rem; overflow:hidden;">
+        <div class="flow-diagram" id="flow-diagram-scroll">
+          ${nodesHtml}
+        </div>
       </div>
     `;
+
+    // Enable drag-to-scroll
+    const diagram = document.getElementById('flow-diagram-scroll');
+    if (diagram) {
+      let isDown = false, startX, scrollLeft;
+      diagram.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.flow-node')) return; // Don't hijack node clicks
+        isDown = true; startX = e.pageX - diagram.offsetLeft; scrollLeft = diagram.scrollLeft;
+      });
+      diagram.addEventListener('mouseleave', () => isDown = false);
+      diagram.addEventListener('mouseup', () => isDown = false);
+      diagram.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - diagram.offsetLeft;
+        diagram.scrollLeft = scrollLeft - (x - startX);
+      });
+    }
   } catch (err) {
     wrap.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
   }
@@ -2458,7 +2729,211 @@ async function loadTransitions(el) {
         <tbody>${rows}</tbody>
       </table>
     </div>
+    <button class="flowmap-link-btn" onclick="setFlowsTab('f_flowmap')">\u{1F5FA} View as Flow Map</button>
   `;
+}
+
+/* ================================================================
+   Sankey Flow Map
+   ================================================================ */
+
+async function loadFlowMap(el) {
+  el.innerHTML = `
+    <div class="section-title">Flow Map (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="flowmap-controls">
+      <label>Min transitions:</label>
+      <input type="range" id="sankey-threshold" min="1" max="20" value="3" oninput="document.getElementById('sankey-thresh-val').textContent=this.value">
+      <span class="fc-value" id="sankey-thresh-val">3</span>
+      <button class="filter-pill" onclick="reloadFlowMap()" style="margin-left:0.5rem;">Apply</button>
+    </div>
+    <div id="sankey-wrap">${skelHtml('overview')}</div>
+  `;
+
+  await renderFlowMapData(el);
+}
+
+async function reloadFlowMap() {
+  const el = document.getElementById('flows-content');
+  if (!el) return;
+  const wrap = document.getElementById('sankey-wrap');
+  if (wrap) wrap.innerHTML = skelHtml('overview');
+  await renderFlowMapData(el);
+}
+
+async function renderFlowMapData(el) {
+  const wrap = document.getElementById('sankey-wrap');
+  if (!wrap) return;
+
+  try {
+    const data = await api({ view: 'analytics_transitions', hours: S.hours, limit: 100 });
+    const transitions = Array.isArray(data) ? data : [];
+
+    if (transitions.length === 0) {
+      wrap.innerHTML = emptyHtml('No transition data for flow map');
+      return;
+    }
+
+    const thresholdEl = document.getElementById('sankey-threshold');
+    const threshold = thresholdEl ? parseInt(thresholdEl.value) : 3;
+    const filtered = transitions.filter(t => (t.count || t.cnt || 0) >= threshold);
+
+    if (filtered.length === 0) {
+      wrap.innerHTML = emptyHtml('No transitions above threshold. Try lowering the minimum.');
+      return;
+    }
+
+    renderSankey(filtered, wrap);
+  } catch (err) {
+    wrap.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+function renderSankey(transitions, container) {
+  // 1. Collect unique nodes
+  const nodeSet = new Set();
+  transitions.forEach(t => {
+    nodeSet.add(t.from_event);
+    nodeSet.add(t.to_event);
+  });
+  const nodeNames = Array.from(nodeSet);
+  const nodeMap = {};
+  nodeNames.forEach((n, i) => nodeMap[n] = i);
+
+  const nodes = nodeNames.map(n => ({ name: n }));
+  const links = transitions.map(t => ({
+    source: nodeMap[t.from_event],
+    target: nodeMap[t.to_event],
+    value: t.count || t.cnt || 1,
+  })).filter(l => l.source !== l.target); // Remove self-loops
+
+  if (links.length === 0 || nodes.length === 0) {
+    container.innerHTML = emptyHtml('Not enough data for flow map');
+    return;
+  }
+
+  // 2. Dimensions
+  const width = container.clientWidth || 900;
+  const nodeCount = nodes.length;
+  const height = Math.max(500, nodeCount * 32);
+
+  // 3. Build Sankey layout
+  const sankey = d3.sankey()
+    .nodeId(d => d.index)
+    .nodeWidth(18)
+    .nodePadding(14)
+    .nodeAlign(d3.sankeyLeft)
+    .extent([[1, 5], [width - 1, height - 5]]);
+
+  const graph = sankey({
+    nodes: nodes.map(d => Object.assign({}, d)),
+    links: links.map(d => Object.assign({}, d)),
+  });
+
+  // 4. Render
+  container.innerHTML = '<div class="sankey-container"></div>';
+  const sankeyContainer = container.querySelector('.sankey-container');
+
+  // Tooltip
+  const tooltip = document.createElement('div');
+  tooltip.className = 'sankey-tooltip';
+  sankeyContainer.appendChild(tooltip);
+
+  const svg = d3.select(sankeyContainer)
+    .append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  // Links
+  const link = svg.append('g')
+    .attr('fill', 'none')
+    .selectAll('path')
+    .data(graph.links)
+    .join('path')
+    .attr('class', 'sankey-link')
+    .attr('d', d3.sankeyLinkHorizontal())
+    .attr('stroke', d => {
+      const group = getEventGroup(d.source.name);
+      return group.color;
+    })
+    .attr('stroke-width', d => Math.max(1, d.width))
+    .on('mouseenter', function(event, d) {
+      d3.select(this).attr('stroke-opacity', 0.6);
+      tooltip.className = 'sankey-tooltip visible';
+      tooltip.innerHTML = `<strong>${escHtml(d.source.name)}</strong> \u2192 <strong>${escHtml(d.target.name)}</strong><br><span style="color:var(--accent)">${d.value} transitions</span>`;
+    })
+    .on('mousemove', function(event) {
+      const rect = sankeyContainer.getBoundingClientRect();
+      tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+      tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
+    })
+    .on('mouseleave', function() {
+      d3.select(this).attr('stroke-opacity', 0.25);
+      tooltip.className = 'sankey-tooltip';
+    });
+
+  // Nodes
+  const node = svg.append('g')
+    .selectAll('g')
+    .data(graph.nodes)
+    .join('g')
+    .attr('class', 'sankey-node');
+
+  node.append('rect')
+    .attr('x', d => d.x0)
+    .attr('y', d => d.y0)
+    .attr('height', d => Math.max(d.y1 - d.y0, 2))
+    .attr('width', d => d.x1 - d.x0)
+    .attr('fill', d => {
+      const group = getEventGroup(d.name);
+      return group.color;
+    })
+    .on('mouseenter', function(event, d) {
+      // Highlight connected links
+      link.attr('stroke-opacity', l =>
+        l.source === d || l.target === d ? 0.6 : 0.08
+      );
+      tooltip.className = 'sankey-tooltip visible';
+      const incoming = graph.links.filter(l => l.target === d).reduce((s, l) => s + l.value, 0);
+      const outgoing = graph.links.filter(l => l.source === d).reduce((s, l) => s + l.value, 0);
+      tooltip.innerHTML = `<strong>${escHtml(d.name)}</strong><br>In: ${incoming} &middot; Out: ${outgoing}`;
+    })
+    .on('mousemove', function(event) {
+      const rect = sankeyContainer.getBoundingClientRect();
+      tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+      tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
+    })
+    .on('mouseleave', function() {
+      link.attr('stroke-opacity', 0.25);
+      tooltip.className = 'sankey-tooltip';
+    });
+
+  // Node labels
+  node.append('text')
+    .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+    .attr('y', d => (d.y1 + d.y0) / 2)
+    .attr('dy', '0.35em')
+    .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+    .text(d => d.name.replace(/_/g, ' '))
+    .style('font-size', '0.7rem')
+    .style('fill', d => {
+      const group = getEventGroup(d.name);
+      return group.color;
+    });
+
+  // Legend
+  const usedGroups = {};
+  nodeNames.forEach(n => {
+    const g = getEventGroup(n);
+    if (!usedGroups[g.label]) usedGroups[g.label] = g;
+  });
+  const legendHtml = Object.entries(usedGroups).map(([label, g]) =>
+    `<div class="sankey-legend-item"><div class="sankey-legend-dot" style="background:${g.color}"></div>${g.icon} ${label}</div>`
+  ).join('');
+
+  const legendDiv = document.createElement('div');
+  legendDiv.className = 'sankey-legend';
+  legendDiv.innerHTML = legendHtml;
+  sankeyContainer.appendChild(legendDiv);
 }
 
 /* ================================================================
