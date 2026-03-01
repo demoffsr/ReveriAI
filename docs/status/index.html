@@ -1103,6 +1103,7 @@ const S = {
   analyticsTab: 'a_overview',
   flowsTab: 'f_sessions',
   funnelPreset: 'recording',
+  flowmapPreset: 'all',
 };
 
 /* ================================================================
@@ -2743,18 +2744,68 @@ async function loadTransitions(el) {
    Flow Graph (dagre layout + D3 render)
    ================================================================ */
 
+const FLOWMAP_PRESETS = {
+  all: {
+    label: 'All Events',
+    icon: '\uD83C\uDF10',
+    events: null, // null = no filter
+  },
+  recording: {
+    label: 'Recording',
+    icon: '\uD83C\uDFA4',
+    events: ['session_start', 'tab_switched', 'record_started', 'record_paused', 'record_resumed', 'record_stopped', 'record_discarded_short', 'mode_switched', 'review_started', 'review_play_toggled', 'review_saved_audio', 'review_skipped', 'review_discarded', 'dream_recorded'],
+  },
+  journal: {
+    label: 'Journal',
+    icon: '\uD83D\uDCD6',
+    events: ['tab_switched', 'journal_opened', 'screen_view', 'dream_viewed', 'journal_tab_switched', 'journal_search_opened', 'journal_search_closed', 'journal_time_range_changed', 'emotion_filter_selected', 'emotion_filter_cleared', 'detail_tab_switched', 'detail_text_edited', 'detail_title_renamed', 'detail_emotions_changed', 'detail_re_recorded', 'detail_folder_picker_opened', 'detail_fullscreen_image', 'detail_share_audio', 'detail_deleted'],
+  },
+  card_actions: {
+    label: 'Card Menu',
+    icon: '\uD83C\uDFF7\uFE0F',
+    events: ['dream_viewed', 'card_action_edit_text', 'card_action_re_record', 'card_action_change_emotions', 'card_action_rename', 'card_action_generate_name', 'card_action_share_audio', 'card_action_add_to_folder', 'card_action_delete'],
+  },
+  ai: {
+    label: 'AI Services',
+    icon: '\u2728',
+    events: ['dream_recorded', 'ai_title_requested', 'ai_title_completed', 'ai_title_failed', 'ai_image_requested', 'ai_image_completed', 'ai_image_failed', 'ai_interpretation_requested', 'ai_interpretation_completed'],
+  },
+  feelings: {
+    label: 'Feelings',
+    icon: '\u2764\uFE0F',
+    events: ['feelings_prompt_shown', 'feelings_grid_opened', 'feelings_saved', 'feelings_dismissed_empty', 'dream_recorded', 'review_saved_audio'],
+  },
+  profile: {
+    label: 'Profile',
+    icon: '\u2699\uFE0F',
+    events: ['tab_switched', 'profile_avatar_changed', 'profile_name_edited', 'profile_theme_changed', 'profile_background_changed', 'profile_rate_app', 'profile_cache_cleared', 'profile_privacy_policy', 'profile_terms_of_use', 'profile_reminder_time_changed', 'profile_reminder_day_toggled'],
+  },
+};
+
 async function loadFlowMap(el) {
+  const preset = S.flowmapPreset || 'all';
+  const presetButtons = Object.entries(FLOWMAP_PRESETS).map(([k, v]) =>
+    `<button class="filter-pill${k === preset ? ' active' : ''}" onclick="setFlowmapPreset('${k}')">${v.icon} ${v.label}</button>`
+  ).join('');
+
   el.innerHTML = `
     <div class="section-title">User Flow Map (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="funnel-presets">${presetButtons}</div>
     <div class="flowmap-controls">
       <label>Min transitions:</label>
-      <input type="range" id="fg-threshold" min="1" max="20" value="2" oninput="document.getElementById('fg-thresh-val').textContent=this.value">
-      <span class="fc-value" id="fg-thresh-val">2</span>
+      <input type="range" id="fg-threshold" min="1" max="20" value="${preset === 'all' ? 2 : 1}" oninput="document.getElementById('fg-thresh-val').textContent=this.value">
+      <span class="fc-value" id="fg-thresh-val">${preset === 'all' ? 2 : 1}</span>
       <button class="filter-pill" onclick="reloadFlowMap()" style="margin-left:0.5rem;">Apply</button>
     </div>
     <div id="flowgraph-wrap">${skelHtml('overview')}</div>
   `;
-  await renderFlowMapData(el);
+  await renderFlowMapData();
+}
+
+function setFlowmapPreset(key) {
+  S.flowmapPreset = key;
+  const el = document.getElementById('flows-content');
+  if (el) loadFlowMap(el);
 }
 
 async function reloadFlowMap() {
@@ -2776,12 +2827,24 @@ async function renderFlowMapData() {
       return;
     }
 
+    // Apply preset filter
+    const preset = FLOWMAP_PRESETS[S.flowmapPreset || 'all'];
+    let filtered = transitions;
+    if (preset && preset.events) {
+      const allowedSet = new Set(preset.events);
+      filtered = transitions.filter(t =>
+        allowedSet.has(t.from_event) && allowedSet.has(t.to_event)
+      );
+    }
+
+    // Apply threshold filter
     const thresholdEl = document.getElementById('fg-threshold');
-    const threshold = thresholdEl ? parseInt(thresholdEl.value) : 2;
-    const filtered = transitions.filter(t => (t.count || t.cnt || 0) >= threshold);
+    const threshold = thresholdEl ? parseInt(thresholdEl.value) : 1;
+    filtered = filtered.filter(t => (t.count || t.cnt || 0) >= threshold);
 
     if (filtered.length === 0) {
-      wrap.innerHTML = emptyHtml('No transitions above threshold. Try lowering the minimum.');
+      const presetLabel = preset ? preset.label : 'selected';
+      wrap.innerHTML = emptyHtml(`No flow data for "${presetLabel}". Try a different preset or lower the threshold.`);
       return;
     }
 
