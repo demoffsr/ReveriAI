@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ReveriAI - Error Monitoring Dashboard</title>
+<title>ReveriAI - System Status</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌙</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
@@ -42,10 +42,300 @@ body {
   background-size: 24px 24px;
 }
 
-/* ===== Layout ===== */
+/* ================================================================
+   PUBLIC STATUS PAGE
+   ================================================================ */
+
+#publicView { display: none; }
+#publicView.active { display: block; }
+#adminView { display: none; }
+#adminView.active { display: block; }
+#loginModal { display: none; }
+#loginModal.active { display: flex; }
+
+/* -- Public Header -- */
+.public-header {
+  text-align: center;
+  padding: 3rem 1rem 1rem;
+}
+.public-logo {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.25rem;
+}
+.public-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* -- Public Status Banner -- */
+.public-status-banner {
+  max-width: 720px;
+  margin: 2rem auto 2.5rem;
+  padding: 1.5rem 2rem;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.public-status-banner::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, var(--status-glow) 0%, transparent 70%);
+  opacity: 0.12;
+  pointer-events: none;
+}
+.public-status-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; color: white; flex-shrink: 0;
+  animation: publicPulse 3s ease-in-out infinite;
+  position: relative; z-index: 1;
+}
+@keyframes publicPulse {
+  0%, 100% { box-shadow: 0 0 12px var(--status-glow); }
+  50% { box-shadow: 0 0 28px var(--status-glow); }
+}
+.public-status-text {
+  position: relative; z-index: 1;
+}
+.public-status-label {
+  font-size: 1.15rem; font-weight: 600;
+}
+.public-status-sub {
+  font-size: 0.78rem; color: var(--text-muted); margin-top: 0.1rem;
+}
+
+/* -- Public Category List -- */
+.public-categories {
+  max-width: 720px;
+  margin: 0 auto 3rem;
+  padding: 0 1rem;
+}
+.public-cat-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  padding: 0 0.25rem;
+}
+.public-cat-list {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.public-cat-row {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.public-cat-row:last-child { border-bottom: none; }
+.public-cat-row:hover { background: rgba(167, 139, 250, 0.02); }
+.public-cat-icon {
+  font-size: 1.1rem;
+  width: 36px;
+  flex-shrink: 0;
+}
+.public-cat-name {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.public-cat-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+}
+.public-cat-dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+.public-cat-dot.warn { background: var(--yellow); box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+.public-cat-dot.error { background: var(--red); box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+.public-cat-status-label {
+  font-size: 0.75rem;
+  margin-right: 0.75rem;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+}
+.public-cat-status-label.ok { color: var(--green); }
+.public-cat-status-label.warn { color: var(--yellow); }
+.public-cat-status-label.error { color: var(--red); }
+
+/* -- Public Footer -- */
+.public-footer {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.public-footer-time {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.admin-login-btn {
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--sans);
+}
+.admin-login-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+/* -- Public Loading -- */
+.public-loading {
+  max-width: 720px;
+  margin: 2rem auto;
+  text-align: center;
+}
+.public-skel-banner {
+  height: 80px;
+  border-radius: 16px;
+  margin-bottom: 2.5rem;
+}
+.public-skel-list {
+  border-radius: var(--radius);
+  height: 340px;
+}
+
+/* ================================================================
+   LOGIN MODAL
+   ================================================================ */
+
+#loginModal {
+  position: fixed; inset: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.login-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 380px;
+  margin: 1rem;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+.login-close {
+  position: absolute;
+  top: 0.75rem; right: 0.75rem;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.login-close:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+.login-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.login-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+.login-field {
+  margin-bottom: 1rem;
+}
+.login-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+.login-input {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.login-input:focus {
+  border-color: var(--accent);
+}
+.login-input::placeholder {
+  color: var(--text-dim);
+}
+.login-error {
+  font-size: 0.78rem;
+  color: var(--red);
+  margin-bottom: 1rem;
+  display: none;
+}
+.login-error.visible { display: block; }
+.login-submit {
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: var(--radius-xs);
+  background: var(--accent);
+  border: none;
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all var(--transition);
+}
+.login-submit:hover {
+  background: #9575f0;
+}
+.login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   ADMIN DASHBOARD (existing styles)
+   ================================================================ */
+
+/* -- Layout -- */
 .app { max-width: 1200px; margin: 0 auto; padding: 0 1rem 3rem; }
 
-/* ===== Top Navigation ===== */
+/* -- Top Navigation -- */
 .top-nav {
   position: sticky; top: 0; z-index: 100;
   background: rgba(10, 10, 15, 0.85);
@@ -84,6 +374,20 @@ body {
 .nav-tab:hover { color: var(--text-secondary); }
 .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .nav-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.admin-badge {
+  display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.admin-badge svg {
+  width: 10px; height: 10px;
+  fill: currentColor;
+}
 .auto-refresh-btn {
   display: flex; align-items: center; gap: 0.4rem;
   padding: 0.35rem 0.75rem; border-radius: 20px;
@@ -99,8 +403,16 @@ body {
 }
 .refresh-dot.on { background: var(--green); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
 .refresh-dot.off { background: var(--text-dim); }
+.logout-btn {
+  padding: 0.35rem 0.75rem; border-radius: 20px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 0.75rem;
+  cursor: pointer; transition: all var(--transition);
+  font-family: var(--sans);
+}
+.logout-btn:hover { border-color: var(--red); color: var(--red); }
 
-/* ===== Filter Bar ===== */
+/* -- Filter Bar -- */
 .filter-bar {
   display: flex; align-items: center; gap: 0.75rem;
   padding: 0.75rem 0; flex-wrap: wrap;
@@ -132,7 +444,7 @@ body {
 }
 .filter-select:focus { outline: none; border-color: var(--accent); }
 
-/* ===== View Containers ===== */
+/* -- View Containers -- */
 .view { display: none; animation: fadeIn 0.15s ease; }
 .view.active { display: block; }
 @keyframes fadeIn {
@@ -140,7 +452,7 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== Cards ===== */
+/* -- Cards -- */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -154,7 +466,7 @@ body {
   padding: 1.25rem;
 }
 
-/* ===== Status Banner ===== */
+/* -- Status Banner (admin) -- */
 .status-banner {
   border-radius: 16px;
   padding: 1.75rem 2rem;
@@ -192,7 +504,7 @@ body {
 }
 .copy-status-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
 
-/* ===== Trend Cards ===== */
+/* -- Trend Cards -- */
 .trend-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
 .trend-card { padding: 1.25rem; }
 .trend-card .trend-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -204,13 +516,13 @@ body {
 .trend-down { color: var(--green); }
 .trend-neutral { color: var(--text-muted); }
 
-/* ===== Timeline Chart ===== */
+/* -- Timeline Chart -- */
 .chart-wrapper { margin-bottom: 1.5rem; }
 .chart-card { padding: 1rem 1.25rem; }
 .chart-card canvas { max-height: 240px; }
 .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem; }
 
-/* ===== Category Grid ===== */
+/* -- Category Grid -- */
 .section-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem; }
 .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
 .cat-card {
@@ -231,7 +543,7 @@ body {
 }
 .cat-card:hover::after { opacity: 1; }
 
-/* ===== Top Errors Table ===== */
+/* -- Top Errors Table -- */
 .table-wrap { overflow-x: auto; margin-bottom: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border); }
 table { width: 100%; border-collapse: collapse; background: var(--card); }
 th {
@@ -268,7 +580,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 }
 .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ===== Errors View ===== */
+/* -- Errors View -- */
 .error-row { cursor: pointer; transition: background var(--transition); }
 .error-row:hover td { background: rgba(167,139,250,0.05); }
 .error-row.expanded td { background: rgba(167,139,250,0.04); border-bottom-color: transparent; }
@@ -323,7 +635,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
 .load-more-btn:disabled { opacity: 0.4; cursor: default; }
 
-/* ===== Trends View ===== */
+/* -- Trends View -- */
 .trends-toggle { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
 .doughnut-wrap { max-width: 320px; margin: 0 auto; }
 .doughnut-wrap canvas { max-height: 300px; }
@@ -335,7 +647,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .period-prev { font-size: 0.8rem; color: var(--text-dim); }
 .period-change { font-size: 0.78rem; font-weight: 600; margin-top: 0.3rem; }
 
-/* ===== Devices View ===== */
+/* -- Devices View -- */
 .device-section { margin-bottom: 2rem; }
 .device-section-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem; }
 .bar-chart { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -359,7 +671,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .bar-fill-text { font-size: 0.72rem; font-weight: 600; color: white; white-space: nowrap; }
 .bar-stats { min-width: 90px; font-size: 0.75rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
-/* ===== Skeleton Loading ===== */
+/* -- Skeleton Loading -- */
 .skeleton { background: linear-gradient(90deg, var(--card) 25%, var(--card-elevated) 50%, var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-xs); }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .skel-banner { height: 90px; border-radius: 16px; margin-bottom: 1.5rem; }
@@ -369,7 +681,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .skel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
 .skel-grid .skeleton { height: 100px; }
 
-/* ===== Toast ===== */
+/* -- Toast -- */
 .toast {
   position: fixed; bottom: 1.5rem; right: 1.5rem;
   padding: 0.6rem 1.2rem; border-radius: var(--radius-xs);
@@ -382,7 +694,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
 
-/* ===== Empty State ===== */
+/* -- Empty State -- */
 .empty-state {
   padding: 3rem 1.5rem; text-align: center;
   color: var(--text-dim); font-size: 0.85rem;
@@ -390,7 +702,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 }
 .empty-state .empty-icon { font-size: 2rem; margin-bottom: 0.75rem; opacity: 0.5; }
 
-/* ===== Error Box ===== */
+/* -- Error Box -- */
 .error-box {
   background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
   border-radius: var(--radius); padding: 1.5rem; text-align: center; color: #fca5a5;
@@ -407,58 +719,112 @@ tr:hover td { background: rgba(167,139,250,0.03); }
   .status-banner { flex-direction: column; text-align: center; gap: 0.75rem; }
   .status-right { margin-left: 0; }
   .bar-label { min-width: 80px; font-size: 0.72rem; }
+  .public-status-banner { flex-direction: column; text-align: center; }
+  .public-footer { flex-direction: column; gap: 1rem; align-items: center; }
 }
 @media (max-width: 480px) {
   .trend-grid, .period-grid { grid-template-columns: 1fr; }
   .cat-grid { grid-template-columns: repeat(2, 1fr); }
   .nav-subtitle { display: none; }
   .msg-cell { max-width: 160px; }
+  .public-logo { font-size: 1.5rem; }
 }
 </style>
 </head>
 <body>
 
-<!-- Top Navigation -->
-<nav class="top-nav">
-  <div class="top-nav-inner">
-    <div class="nav-brand">
-      <div class="nav-logo">ReveriAI</div>
-      <div class="nav-subtitle">Error Monitoring</div>
-    </div>
-    <div class="nav-tabs">
-      <a class="nav-tab active" data-view="overview" onclick="navigate('overview')">Overview</a>
-      <a class="nav-tab" data-view="errors" onclick="navigate('errors')">Errors</a>
-      <a class="nav-tab" data-view="trends" onclick="navigate('trends')">Trends</a>
-      <a class="nav-tab" data-view="devices" onclick="navigate('devices')">Devices</a>
-    </div>
-    <div class="nav-right">
-      <button class="auto-refresh-btn" onclick="toggleAutoRefresh()" title="Toggle auto-refresh (60s)">
-        <span class="refresh-dot on" id="refreshDot"></span>
-        <span id="refreshLabel">Auto</span>
-      </button>
-    </div>
-  </div>
-</nav>
-
-<!-- Main App -->
-<div class="app">
-
-  <!-- Filter Bar -->
-  <div class="filter-bar">
-    <div class="filter-pills" id="timePills"></div>
-    <select class="filter-select" id="catFilter" onchange="onCategoryChange()">
-      <option value="">All Categories</option>
-    </select>
-    <select class="filter-select" id="codeFilter" onchange="onCodeChange()">
-      <option value="">All Codes</option>
-    </select>
+<!-- ================================================================
+     PUBLIC STATUS VIEW
+     ================================================================ -->
+<div id="publicView">
+  <div class="public-header">
+    <div class="public-logo">ReveriAI</div>
+    <div class="public-subtitle">System Status</div>
   </div>
 
-  <!-- Views -->
-  <div class="view active" id="view-overview"></div>
-  <div class="view" id="view-errors"></div>
-  <div class="view" id="view-trends"></div>
-  <div class="view" id="view-devices"></div>
+  <div id="publicContent">
+    <div class="public-loading">
+      <div class="skeleton public-skel-banner"></div>
+      <div class="public-categories" style="padding:0 1rem;">
+        <div class="skeleton public-skel-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     LOGIN MODAL
+     ================================================================ -->
+<div id="loginModal">
+  <div class="login-card">
+    <button class="login-close" onclick="closeLogin()" aria-label="Close">&times;</button>
+    <div class="login-title">Admin Login</div>
+    <div class="login-subtitle">Sign in to access the monitoring dashboard</div>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="login-field">
+        <label class="login-label" for="loginUser">Username</label>
+        <input class="login-input" type="text" id="loginUser" placeholder="Enter username" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label class="login-label" for="loginPass">Password</label>
+        <input class="login-input" type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password" required>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button class="login-submit" type="submit" id="loginBtn">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<!-- ================================================================
+     ADMIN DASHBOARD VIEW
+     ================================================================ -->
+<div id="adminView">
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="top-nav-inner">
+      <div class="nav-brand">
+        <div class="nav-logo">ReveriAI</div>
+        <div class="nav-subtitle">Error Monitoring</div>
+      </div>
+      <div class="nav-tabs">
+        <a class="nav-tab active" data-view="overview" onclick="navigate('overview')">Overview</a>
+        <a class="nav-tab" data-view="errors" onclick="navigate('errors')">Errors</a>
+        <a class="nav-tab" data-view="trends" onclick="navigate('trends')">Trends</a>
+        <a class="nav-tab" data-view="devices" onclick="navigate('devices')">Devices</a>
+      </div>
+      <div class="nav-right">
+        <div class="admin-badge">
+          <svg viewBox="0 0 16 16"><path d="M8 1a3.5 3.5 0 0 0-3.5 3.5c0 1.11.52 2.1 1.33 2.73A5.502 5.502 0 0 0 2.5 12.5v.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-.5a5.502 5.502 0 0 0-3.33-5.27A3.49 3.49 0 0 0 11.5 4.5 3.5 3.5 0 0 0 8 1z"/></svg>
+          Admin
+        </div>
+        <button class="auto-refresh-btn" onclick="toggleAutoRefresh()" title="Toggle auto-refresh (60s)">
+          <span class="refresh-dot on" id="refreshDot"></span>
+          <span id="refreshLabel">Auto</span>
+        </button>
+        <button class="logout-btn" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main App -->
+  <div class="app">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-pills" id="timePills"></div>
+      <select class="filter-select" id="catFilter" onchange="onCategoryChange()">
+        <option value="">All Categories</option>
+      </select>
+      <select class="filter-select" id="codeFilter" onchange="onCodeChange()">
+        <option value="">All Codes</option>
+      </select>
+    </div>
+
+    <!-- Views -->
+    <div class="view active" id="view-overview"></div>
+    <div class="view" id="view-errors"></div>
+    <div class="view" id="view-trends"></div>
+    <div class="view" id="view-devices"></div>
+  </div>
 </div>
 
 <!-- Toast container -->
@@ -466,7 +832,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 
 <script>
 /* ================================================================
-   ReveriAI Error Monitoring Dashboard
+   ReveriAI Status Dashboard — Public + Admin
    ================================================================ */
 
 const BASE = 'https://bvydopjjndfgbhjczyis.supabase.co/functions/v1/app-status';
@@ -487,6 +853,12 @@ const STATUS_CONFIG = {
   red:    { bg: '#ef4444', label: 'Major Issues Detected',   icon: '\u2717', glow: 'rgba(239,68,68,0.35)' },
 };
 
+const STATUS_LABEL_MAP = {
+  ok: 'Operational',
+  warn: 'Degraded',
+  error: 'Outage',
+};
+
 const TIME_OPTIONS = [
   { label: '1h',  hours: 1  },
   { label: '6h',  hours: 6  },
@@ -496,6 +868,7 @@ const TIME_OPTIONS = [
 
 /* ---- Global State ---- */
 const S = {
+  mode: 'public',  // 'public' or 'admin'
   view: 'overview',
   hours: 24,
   category: null,
@@ -508,10 +881,223 @@ const S = {
   refreshTimer: null,
   cachedOverview: null,
   charts: {},
+  publicRefreshTimer: null,
 };
 
 /* ================================================================
-   Utilities
+   Session & Auth Management
+   ================================================================ */
+
+function getToken() {
+  return sessionStorage.getItem('admin_token');
+}
+
+function setToken(token) {
+  sessionStorage.setItem('admin_token', token);
+}
+
+function clearToken() {
+  sessionStorage.removeItem('admin_token');
+}
+
+function isLoggedIn() {
+  return !!getToken();
+}
+
+/* ================================================================
+   View Mode Switching
+   ================================================================ */
+
+function showPublicView() {
+  S.mode = 'public';
+  document.getElementById('publicView').classList.add('active');
+  document.getElementById('adminView').classList.remove('active');
+  document.getElementById('loginModal').classList.remove('active');
+  document.title = 'ReveriAI - System Status';
+  stopAdminRefresh();
+  loadPublicStatus();
+  startPublicRefresh();
+}
+
+function showAdminView() {
+  S.mode = 'admin';
+  document.getElementById('publicView').classList.remove('active');
+  document.getElementById('adminView').classList.add('active');
+  document.getElementById('loginModal').classList.remove('active');
+  document.title = 'ReveriAI - Error Monitoring Dashboard';
+  stopPublicRefresh();
+  initAdmin();
+}
+
+function startPublicRefresh() {
+  stopPublicRefresh();
+  S.publicRefreshTimer = setInterval(() => loadPublicStatus(), 60000);
+}
+
+function stopPublicRefresh() {
+  if (S.publicRefreshTimer) {
+    clearInterval(S.publicRefreshTimer);
+    S.publicRefreshTimer = null;
+  }
+}
+
+function stopAdminRefresh() {
+  if (S.refreshTimer) {
+    clearInterval(S.refreshTimer);
+    S.refreshTimer = null;
+  }
+}
+
+/* ================================================================
+   Login / Logout
+   ================================================================ */
+
+function openLogin() {
+  document.getElementById('loginModal').classList.add('active');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').classList.remove('visible');
+  document.getElementById('loginError').textContent = '';
+  setTimeout(() => document.getElementById('loginUser').focus(), 100);
+}
+
+function closeLogin() {
+  document.getElementById('loginModal').classList.remove('active');
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+
+  if (!user || !pass) {
+    errEl.textContent = 'Please fill in all fields';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  errEl.classList.remove('visible');
+
+  try {
+    const res = await fetch(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user, password: pass }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Authentication failed (${res.status})`);
+    }
+
+    const data = await res.json();
+    if (!data.token) throw new Error('No token received');
+
+    setToken(data.token);
+    showAdminView();
+  } catch (err) {
+    errEl.textContent = err.message || 'Login failed';
+    errEl.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+function handleLogout() {
+  clearToken();
+  destroyAllCharts();
+  showPublicView();
+}
+
+// Close modal on backdrop click
+document.getElementById('loginModal').addEventListener('click', function(e) {
+  if (e.target === this) closeLogin();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('loginModal');
+    if (modal.classList.contains('active')) closeLogin();
+  }
+});
+
+/* ================================================================
+   PUBLIC STATUS PAGE
+   ================================================================ */
+
+async function loadPublicStatus() {
+  const container = document.getElementById('publicContent');
+  try {
+    const res = await fetch(BASE);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    const status = data.status || 'green';
+    const sc = STATUS_CONFIG[status] || STATUS_CONFIG.green;
+    const statusLabel = data.label || sc.label;
+    const categories = data.categories || {};
+    const checkedAt = data.checked_at || new Date().toISOString();
+
+    // Build category rows
+    const catRows = Object.entries(categories).map(([key, cat]) => {
+      const s = cat.status || 'ok';
+      const sLabel = STATUS_LABEL_MAP[s] || 'Operational';
+      return `<div class="public-cat-row">
+        <div class="public-cat-icon">${cat.icon || catInfo(key).icon}</div>
+        <div class="public-cat-name">${escHtml(cat.label || key)}</div>
+        <div class="public-cat-status-label ${s}">${sLabel}</div>
+        <div class="public-cat-dot ${s}"></div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="public-status-banner" style="background: ${sc.bg}0D; border: 1px solid ${sc.bg}30; --status-glow: ${sc.glow}; max-width: 720px; margin: 2rem auto 2.5rem; padding: 0 1rem;">
+        <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 1rem;width:100%;">
+          <div class="public-status-icon" style="background: ${sc.bg}; --status-glow: ${sc.glow};">${sc.icon}</div>
+          <div class="public-status-text">
+            <div class="public-status-label" style="color: ${sc.bg};">${escHtml(statusLabel)}</div>
+            <div class="public-status-sub">Updated ${relativeTime(checkedAt)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="public-categories">
+        <div class="public-cat-header">Current Status by Component</div>
+        <div class="public-cat-list">
+          ${catRows}
+        </div>
+      </div>
+
+      <div class="public-footer">
+        <div class="public-footer-time">Last checked: ${formatMSK(checkedAt)}</div>
+        <button class="admin-login-btn" onclick="openLogin()">Admin Login</button>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `
+      <div style="max-width:720px;margin:2rem auto;padding:0 1rem;">
+        <div class="error-box">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div>
+          <div>Unable to load status</div>
+          <div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div>
+        </div>
+      </div>
+      <div class="public-footer">
+        <div class="public-footer-time">Failed to connect</div>
+        <button class="admin-login-btn" onclick="openLogin()">Admin Login</button>
+      </div>
+    `;
+  }
+}
+
+/* ================================================================
+   ADMIN API (with auth header + 401 handling)
    ================================================================ */
 
 async function api(params) {
@@ -519,10 +1105,25 @@ async function api(params) {
   for (const [k, v] of Object.entries(params)) {
     if (v != null && v !== '') url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString());
+  const headers = {};
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  const res = await fetch(url.toString(), { headers });
+  if (res.status === 401) {
+    clearToken();
+    destroyAllCharts();
+    showPublicView();
+    throw new Error('Session expired');
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+/* ================================================================
+   Utilities
+   ================================================================ */
 
 function relativeTime(iso) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -624,7 +1225,7 @@ function emptyHtml(msg) {
 }
 
 /* ================================================================
-   Navigation & Filters
+   Admin Navigation & Filters
    ================================================================ */
 
 function navigate(view) {
@@ -638,6 +1239,7 @@ function navigate(view) {
 
 function buildTimePills() {
   const wrap = document.getElementById('timePills');
+  if (!wrap) return;
   wrap.innerHTML = TIME_OPTIONS.map(t =>
     `<button class="filter-pill${t.hours === S.hours ? ' active' : ''}" onclick="setTime(${t.hours})">${t.label}</button>`
   ).join('');
@@ -645,12 +1247,14 @@ function buildTimePills() {
 
 function buildCatDropdown() {
   const sel = document.getElementById('catFilter');
+  if (!sel) return;
   sel.innerHTML = '<option value="">All Categories</option>' +
     ALL_CATS.map(c => `<option value="${c}" ${S.category === c ? 'selected' : ''}>${catInfo(c).icon} ${catInfo(c).label}</option>`).join('');
 }
 
 function buildCodeDropdown(codes) {
   const sel = document.getElementById('codeFilter');
+  if (!sel) return;
   sel.innerHTML = '<option value="">All Codes</option>' +
     (codes || []).map(c => `<option value="${c}" ${S.code === c ? 'selected' : ''}>${c}</option>`).join('');
 }
@@ -779,6 +1383,7 @@ async function loadOverview() {
 
     renderOverviewChart(timeline);
   } catch (err) {
+    if (err.message === 'Session expired') return;
     el.innerHTML = `<div class="error-box"><div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div><div>Failed to load overview</div><div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div></div>`;
   }
 }
@@ -916,6 +1521,7 @@ async function loadErrors(append) {
 
     renderErrorsTable();
   } catch (err) {
+    if (err.message === 'Session expired') return;
     el.innerHTML = `<div class="error-box"><div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div><div>Failed to load errors</div><div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div></div>`;
   }
 }
@@ -1062,6 +1668,7 @@ async function loadTrends() {
     renderTrendsLineChart(timeline, catTimelines);
     renderTrendsDoughnut(timeline, catTimelines);
   } catch (err) {
+    if (err.message === 'Session expired') return;
     el.innerHTML = `<div class="error-box"><div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div><div>Failed to load trends</div><div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div></div>`;
   }
 }
@@ -1215,6 +1822,7 @@ async function loadDevices() {
       ${deviceSection('Locale', data.by_locale || [], 'locale', '#fb923c')}
     `;
   } catch (err) {
+    if (err.message === 'Session expired') return;
     el.innerHTML = `<div class="error-box"><div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div><div>Failed to load device data</div><div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div></div>`;
   }
 }
@@ -1253,7 +1861,6 @@ function deviceSection(title, items, type, color) {
 }
 
 function deviceDrilldown(type, value) {
-  // For now, navigate to errors view (device-level filtering would require API support)
   navigate('errors');
 }
 
@@ -1298,10 +1905,10 @@ function chartOptions(yLabel) {
 }
 
 /* ================================================================
-   Init
+   Admin Init
    ================================================================ */
 
-function init() {
+function initAdmin() {
   buildTimePills();
   buildCatDropdown();
   buildCodeDropdown([]);
@@ -1321,7 +1928,20 @@ function init() {
   setupAutoRefresh();
 }
 
+/* ================================================================
+   Global Init
+   ================================================================ */
+
+function init() {
+  if (isLoggedIn()) {
+    showAdminView();
+  } else {
+    showPublicView();
+  }
+}
+
 window.addEventListener('hashchange', () => {
+  if (S.mode !== 'admin') return;
   const hash = location.hash.replace('#', '') || 'overview';
   const validViews = ['overview', 'errors', 'trends', 'devices'];
   if (validViews.includes(hash) && hash !== S.view) {
