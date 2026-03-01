@@ -708,6 +708,24 @@ tr:hover td { background: rgba(167,139,250,0.03); }
   border-radius: var(--radius); padding: 1.5rem; text-align: center; color: #fca5a5;
 }
 
+/* ===== Analytics ===== */
+.analytics-tabs { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; }
+.analytics-metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.analytics-metric-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.analytics-metric-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.analytics-metric { padding: 1.25rem; }
+.analytics-metric .metric-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.analytics-metric .metric-value { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.analytics-metric .metric-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
+.pct-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 0.5rem 0; }
+.pct-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.pct-legend { display: flex; gap: 1.5rem; font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.5rem; }
+.pct-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.35rem; vertical-align: middle; }
+.retention-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 0.75rem; }
+.retention-item { text-align: center; }
+.retention-item .ret-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem; }
+.retention-item .ret-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .top-nav-inner { gap: 0.75rem; }
@@ -715,6 +733,8 @@ tr:hover td { background: rgba(167,139,250,0.03); }
   .nav-tab { padding: 0 0.6rem; font-size: 0.78rem; }
   .trend-grid, .period-grid { grid-template-columns: repeat(2, 1fr); }
   .cat-grid { grid-template-columns: repeat(2, 1fr); }
+  .analytics-metric-grid, .analytics-metric-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+  .retention-grid { grid-template-columns: repeat(3, 1fr); }
   .filter-bar { gap: 0.5rem; }
   .status-banner { flex-direction: column; text-align: center; gap: 0.75rem; }
   .status-right { margin-left: 0; }
@@ -725,6 +745,8 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 @media (max-width: 480px) {
   .trend-grid, .period-grid { grid-template-columns: 1fr; }
   .cat-grid { grid-template-columns: repeat(2, 1fr); }
+  .analytics-metric-grid, .analytics-metric-grid.cols-4 { grid-template-columns: 1fr; }
+  .retention-grid { grid-template-columns: 1fr; }
   .nav-subtitle { display: none; }
   .msg-cell { max-width: 160px; }
   .public-logo { font-size: 1.5rem; }
@@ -791,6 +813,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
         <a class="nav-tab" data-view="errors" onclick="navigate('errors')">Errors</a>
         <a class="nav-tab" data-view="trends" onclick="navigate('trends')">Trends</a>
         <a class="nav-tab" data-view="devices" onclick="navigate('devices')">Devices</a>
+        <a class="nav-tab" data-view="analytics" onclick="navigate('analytics')">Analytics</a>
       </div>
       <div class="nav-right">
         <div class="admin-badge">
@@ -824,6 +847,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
     <div class="view" id="view-errors"></div>
     <div class="view" id="view-trends"></div>
     <div class="view" id="view-devices"></div>
+    <div class="view" id="view-analytics"></div>
   </div>
 </div>
 
@@ -882,6 +906,7 @@ const S = {
   cachedOverview: null,
   charts: {},
   publicRefreshTimer: null,
+  analyticsTab: 'a_overview',
 };
 
 /* ================================================================
@@ -1303,7 +1328,8 @@ function loadView() {
     case 'overview': loadOverview(); break;
     case 'errors':   loadErrors(); break;
     case 'trends':   loadTrends(); break;
-    case 'devices':  loadDevices(); break;
+    case 'devices':    loadDevices(); break;
+    case 'analytics':  loadAnalytics(); break;
   }
 }
 
@@ -1865,6 +1891,287 @@ function deviceDrilldown(type, value) {
 }
 
 /* ================================================================
+   ANALYTICS
+   ================================================================ */
+
+async function loadAnalytics() {
+  const el = document.getElementById('view-analytics');
+  const tab = S.analyticsTab || 'a_overview';
+  el.innerHTML = `
+    <div class="analytics-tabs">
+      ${['a_overview','a_users','a_features','a_content'].map(t => {
+        const labels = {a_overview:'Overview',a_users:'Users',a_features:'Features',a_content:'Content'};
+        return `<button class="filter-pill${tab===t?' active':''}" onclick="setAnalyticsTab('${t}')">${labels[t]}</button>`;
+      }).join('')}
+    </div>
+    <div id="analytics-content">${skelHtml('overview')}</div>
+  `;
+  loadAnalyticsTab(tab);
+}
+
+function setAnalyticsTab(tab) {
+  S.analyticsTab = tab;
+  const labels = {a_overview:'Overview',a_users:'Users',a_features:'Features',a_content:'Content'};
+  document.querySelectorAll('.analytics-tabs .filter-pill').forEach(p =>
+    p.classList.toggle('active', p.textContent === labels[tab])
+  );
+  destroyAllCharts();
+  document.getElementById('analytics-content').innerHTML = skelHtml('overview');
+  loadAnalyticsTab(tab);
+}
+
+async function loadAnalyticsTab(tab) {
+  const el = document.getElementById('analytics-content');
+  if (!el) return;
+  try {
+    switch (tab) {
+      case 'a_overview': await loadAnalyticsOverview(el); break;
+      case 'a_users':    await loadAnalyticsUsers(el); break;
+      case 'a_features': await loadAnalyticsFeatures(el); break;
+      case 'a_content':  await loadAnalyticsContent(el); break;
+    }
+  } catch (err) {
+    if (err.message === 'Session expired') return;
+    el.innerHTML = `<div class="error-box"><div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div><div>Failed to load analytics</div><div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div></div>`;
+  }
+}
+
+async function loadAnalyticsOverview(el) {
+  const data = await api({ view: 'analytics_summary' });
+  const topEvents = data.top_events || [];
+  const topRows = topEvents.map(e =>
+    `<tr><td class="code-cell">${escHtml(e.event_type)}</td><td class="num-cell">${e.cnt}</td></tr>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="analytics-metric-grid cols-4">
+      <div class="card analytics-metric">
+        <div class="metric-label">DAU</div>
+        <div class="metric-value">${data.dau || 0}</div>
+        <div class="metric-sub">Daily active users</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">WAU</div>
+        <div class="metric-value">${data.wau || 0}</div>
+        <div class="metric-sub">Weekly active users</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">MAU</div>
+        <div class="metric-value">${data.mau || 0}</div>
+        <div class="metric-sub">Monthly active users</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">Dreams Today</div>
+        <div class="metric-value">${data.dreams_today || 0}</div>
+      </div>
+    </div>
+    <div class="analytics-metric-grid cols-2">
+      <div class="card analytics-metric">
+        <div class="metric-label">Events Today</div>
+        <div class="metric-value">${data.events_today || 0}</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">Sessions Today</div>
+        <div class="metric-value">${data.sessions_today || 0}</div>
+      </div>
+    </div>
+    ${topEvents.length > 0 ? `
+      <div class="section-title">Top Events</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Event</th><th>Count</th></tr></thead>
+        <tbody>${topRows}</tbody>
+      </table></div>
+    ` : emptyHtml('No events recorded yet')}
+  `;
+}
+
+async function loadAnalyticsUsers(el) {
+  const [dau, retention, sessions] = await Promise.all([
+    api({ view: 'analytics_dau', days: 30 }),
+    api({ view: 'analytics_retention', days: 30 }),
+    api({ view: 'analytics_sessions', hours: S.hours }),
+  ]);
+
+  const daily = dau.daily || [];
+  const sessionsByHour = sessions.sessions_by_hour || [];
+
+  const retPct1 = retention.retention_pct_1 != null ? retention.retention_pct_1 : '-';
+  const retPct7 = retention.retention_pct_7 != null ? retention.retention_pct_7 : '-';
+  const retPct30 = retention.retention_pct_30 != null ? retention.retention_pct_30 : '-';
+
+  el.innerHTML = `
+    <div class="analytics-metric-grid cols-2">
+      <div class="card analytics-metric">
+        <div class="metric-label">WAU</div>
+        <div class="metric-value">${dau.wau || 0}</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">MAU</div>
+        <div class="metric-value">${dau.mau || 0}</div>
+      </div>
+    </div>
+    <div class="chart-wrapper">
+      <div class="card chart-card">
+        <div class="chart-title">Daily Active Users (30d)</div>
+        <canvas id="dauChart"></canvas>
+      </div>
+    </div>
+    <div class="section-title">Retention</div>
+    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+      <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
+        Cohort: ${retention.total_users || 0} users since ${retention.cohort_start || 'N/A'}
+      </div>
+      <div class="retention-grid">
+        <div class="retention-item">
+          <div class="ret-label">Day 1</div>
+          <div class="ret-value">${retPct1}%</div>
+        </div>
+        <div class="retention-item">
+          <div class="ret-label">Day 7</div>
+          <div class="ret-value">${retPct7}%</div>
+        </div>
+        <div class="retention-item">
+          <div class="ret-label">Day 30</div>
+          <div class="ret-value">${retPct30}%</div>
+        </div>
+      </div>
+    </div>
+    <div class="analytics-metric-grid cols-2" style="margin-bottom:1rem;">
+      <div class="card analytics-metric">
+        <div class="metric-label">Total Sessions</div>
+        <div class="metric-value">${sessions.total_sessions || 0}</div>
+        <div class="metric-sub">Avg ${sessions.avg_events_per_session || 0} events/session &middot; ${sessions.avg_duration_minutes || 0} min</div>
+      </div>
+    </div>
+    ${sessionsByHour.length > 0 ? `
+      <div class="chart-wrapper">
+        <div class="card chart-card">
+          <div class="chart-title">Sessions by Hour</div>
+          <canvas id="sessionsByHourChart"></canvas>
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  // Render DAU chart
+  if (daily.length > 0) {
+    renderAnalyticsChart('dauChart', 'dau',
+      daily.map(d => { const dt = new Date(d.date); return dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short'}); }),
+      daily.map(d => d.dau),
+      'DAU'
+    );
+  }
+
+  // Render sessions-by-hour chart
+  if (sessionsByHour.length > 0) {
+    renderAnalyticsChart('sessionsByHourChart', 'sessionsByHour',
+      sessionsByHour.map(s => String(s.hour).padStart(2, '0') + ':00'),
+      sessionsByHour.map(s => s.cnt),
+      'Sessions'
+    );
+  }
+}
+
+async function loadAnalyticsFeatures(el) {
+  const features = await api({ view: 'analytics_features', hours: S.hours });
+  const items = Array.isArray(features) ? features : [];
+
+  if (items.length === 0) {
+    el.innerHTML = emptyHtml('No feature usage data');
+    return;
+  }
+
+  const rows = items.map(f =>
+    `<tr>
+      <td class="code-cell">${escHtml(f.event_type)}</td>
+      <td class="num-cell">${f.cnt}</td>
+      <td class="num-cell">${f.unique_users}</td>
+    </tr>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="section-title">Feature Usage (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Event</th><th>Count</th><th>Users</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  `;
+}
+
+async function loadAnalyticsContent(el) {
+  const data = await api({ view: 'analytics_content', hours: S.hours });
+  const voicePct = data.voice_pct || 0;
+  const textPct = data.text_pct || 0;
+
+  el.innerHTML = `
+    <div class="section-title">Dream Recording (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="card" style="padding:1.25rem; margin-bottom:1.5rem;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem;">
+        <span style="font-size:0.82rem; font-weight:600;">Voice vs Text</span>
+        <span style="font-size:0.78rem; color:var(--text-muted);">${data.total_dreams || 0} total dreams</span>
+      </div>
+      <div class="pct-bar">
+        <div class="pct-fill" style="width:${voicePct}%; background:var(--accent);"></div>
+      </div>
+      <div class="pct-legend">
+        <span><span class="pct-legend-dot" style="background:var(--accent);"></span>Voice ${voicePct}% (${data.voice_dreams || 0})</span>
+        <span><span class="pct-legend-dot" style="background:var(--border);"></span>Text ${textPct}% (${data.text_dreams || 0})</span>
+      </div>
+    </div>
+    <div class="section-title">AI Usage</div>
+    <div class="analytics-metric-grid">
+      <div class="card analytics-metric">
+        <div class="metric-label">AI Titles</div>
+        <div class="metric-value">${data.ai_titles || 0}</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">AI Interpretations</div>
+        <div class="metric-value">${data.ai_interpretations || 0}</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">AI Images</div>
+        <div class="metric-value">${data.ai_images || 0}</div>
+      </div>
+    </div>
+    <div class="section-title">Content Stats</div>
+    <div class="analytics-metric-grid cols-2">
+      <div class="card analytics-metric">
+        <div class="metric-label">Avg Text Length</div>
+        <div class="metric-value">${data.avg_text_length || 0}</div>
+        <div class="metric-sub">characters per dream</div>
+      </div>
+      <div class="card analytics-metric">
+        <div class="metric-label">Avg Emotions</div>
+        <div class="metric-value">${data.avg_emotions || 0}</div>
+        <div class="metric-sub">emotions per dream</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAnalyticsChart(canvasId, chartKey, labels, data, label) {
+  destroyChart(chartKey);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  S.charts[chartKey] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label,
+        data,
+        backgroundColor: 'rgba(167,139,250,0.5)',
+        borderColor: '#a78bfa',
+        borderWidth: 1,
+        borderRadius: 4,
+        maxBarThickness: 32,
+      }],
+    },
+    options: chartOptions(label),
+  });
+}
+
+/* ================================================================
    Chart.js shared options
    ================================================================ */
 
@@ -1915,7 +2222,7 @@ function initAdmin() {
 
   // Hash routing
   const hash = location.hash.replace('#', '') || 'overview';
-  const validViews = ['overview', 'errors', 'trends', 'devices'];
+  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics'];
   S.view = validViews.includes(hash) ? hash : 'overview';
 
   // Parse URL params for initial filters
@@ -1943,7 +2250,7 @@ function init() {
 window.addEventListener('hashchange', () => {
   if (S.mode !== 'admin') return;
   const hash = location.hash.replace('#', '') || 'overview';
-  const validViews = ['overview', 'errors', 'trends', 'devices'];
+  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics'];
   if (validViews.includes(hash) && hash !== S.view) {
     navigate(hash);
   }
