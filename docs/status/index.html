@@ -726,11 +726,43 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .retention-item .ret-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem; }
 .retention-item .ret-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
 
+/* ===== Flows ===== */
+.flows-tabs { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; }
+.session-table { width: 100%; border-collapse: collapse; }
+.session-table th, .session-table td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.session-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.72rem; }
+.session-table tr { cursor: pointer; transition: background var(--transition); }
+.session-table tr:hover { background: var(--card-elevated); }
+.session-row-active { background: var(--accent-dim) !important; }
+.timeline-wrap { margin-top: 1rem; }
+.timeline-event { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem 0; border-left: 2px solid var(--border); margin-left: 0.5rem; padding-left: 1rem; position: relative; }
+.timeline-event::before { content: ''; position: absolute; left: -5px; top: 0.65rem; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.timeline-event .te-time { font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted); min-width: 70px; flex-shrink: 0; }
+.timeline-event .te-name { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+.timeline-event .te-gap { font-size: 0.72rem; color: var(--text-dim); margin-left: auto; }
+.timeline-event .te-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+.funnel-step { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+.funnel-bar-wrap { flex: 1; }
+.funnel-bar { height: 32px; border-radius: 6px; display: flex; align-items: center; padding: 0 0.75rem; font-size: 0.78rem; font-weight: 500; color: #fff; transition: width 0.4s ease; min-width: 60px; }
+.funnel-label { min-width: 140px; font-size: 0.82rem; color: var(--text-secondary); }
+.funnel-stats { min-width: 100px; text-align: right; font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); }
+.funnel-dropoff { font-size: 0.72rem; color: var(--red); margin-left: 0.5rem; }
+.transition-table { width: 100%; border-collapse: collapse; }
+.transition-table th, .transition-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+.transition-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.72rem; }
+.transition-arrow { color: var(--text-dim); font-size: 0.85rem; }
+.screen-time-bar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.screen-time-bar .st-label { min-width: 140px; font-size: 0.82rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.screen-time-bar .st-bar { flex: 1; height: 24px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.screen-time-bar .st-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.4s ease; }
+.screen-time-bar .st-value { min-width: 60px; text-align: right; font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); }
+.funnel-presets { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .top-nav-inner { gap: 0.75rem; }
-  .nav-tabs { gap: 0; margin-left: 0; }
-  .nav-tab { padding: 0 0.6rem; font-size: 0.78rem; }
+  .nav-tabs { gap: 0; margin-left: 0; overflow-x: auto; }
+  .nav-tab { padding: 0 0.6rem; font-size: 0.78rem; white-space: nowrap; }
   .trend-grid, .period-grid { grid-template-columns: repeat(2, 1fr); }
   .cat-grid { grid-template-columns: repeat(2, 1fr); }
   .analytics-metric-grid, .analytics-metric-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
@@ -814,6 +846,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
         <a class="nav-tab" data-view="trends" onclick="navigate('trends')">Trends</a>
         <a class="nav-tab" data-view="devices" onclick="navigate('devices')">Devices</a>
         <a class="nav-tab" data-view="analytics" onclick="navigate('analytics')">Analytics</a>
+        <a class="nav-tab" data-view="flows" onclick="navigate('flows')">Flows</a>
       </div>
       <div class="nav-right">
         <div class="admin-badge">
@@ -848,6 +881,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
     <div class="view" id="view-trends"></div>
     <div class="view" id="view-devices"></div>
     <div class="view" id="view-analytics"></div>
+    <div class="view" id="view-flows"></div>
   </div>
 </div>
 
@@ -907,6 +941,8 @@ const S = {
   charts: {},
   publicRefreshTimer: null,
   analyticsTab: 'a_overview',
+  flowsTab: 'f_sessions',
+  funnelPreset: 'recording',
 };
 
 /* ================================================================
@@ -1330,6 +1366,7 @@ function loadView() {
     case 'trends':   loadTrends(); break;
     case 'devices':    loadDevices(); break;
     case 'analytics':  loadAnalytics(); break;
+    case 'flows':      loadFlows(); break;
   }
 }
 
@@ -2172,6 +2209,256 @@ function renderAnalyticsChart(canvasId, chartKey, labels, data, label) {
 }
 
 /* ================================================================
+   FLOWS
+   ================================================================ */
+
+const FUNNEL_PRESETS = {
+  recording: { label: 'Recording Flow', steps: ['record_started','record_stopped','review_started','dream_recorded'] },
+  review:    { label: 'Review → Save', steps: ['review_started','review_saved_audio','dream_recorded'] },
+  ai_title:  { label: 'AI Title',      steps: ['dream_recorded','ai_title_requested','ai_title_completed'] },
+  ai_image:  { label: 'AI Image',      steps: ['dream_recorded','ai_image_requested','ai_image_completed'] },
+  feelings:  { label: 'Feelings',      steps: ['feelings_prompt_shown','feelings_grid_opened','feelings_saved'] },
+  journal:   { label: 'Journal Browse', steps: ['tab_switched','dream_viewed','detail_tab_switched'] },
+};
+
+async function loadFlows() {
+  const el = document.getElementById('view-flows');
+  const tab = S.flowsTab || 'f_sessions';
+  el.innerHTML = `
+    <div class="flows-tabs">
+      ${['f_sessions','f_funnel','f_screentime','f_transitions'].map(t => {
+        const labels = {f_sessions:'Sessions',f_funnel:'Funnel',f_screentime:'Screen Time',f_transitions:'Transitions'};
+        return `<button class="filter-pill${tab===t?' active':''}" onclick="setFlowsTab('${t}')">${labels[t]}</button>`;
+      }).join('')}
+    </div>
+    <div id="flows-content">${skelHtml('overview')}</div>
+  `;
+  loadFlowsTab(tab);
+}
+
+function setFlowsTab(tab) {
+  S.flowsTab = tab;
+  const labels = {f_sessions:'Sessions',f_funnel:'Funnel',f_screentime:'Screen Time',f_transitions:'Transitions'};
+  document.querySelectorAll('.flows-tabs .filter-pill').forEach(p =>
+    p.classList.toggle('active', p.textContent === labels[tab])
+  );
+  destroyAllCharts();
+  document.getElementById('flows-content').innerHTML = skelHtml('overview');
+  loadFlowsTab(tab);
+}
+
+async function loadFlowsTab(tab) {
+  const el = document.getElementById('flows-content');
+  if (!el) return;
+  try {
+    switch (tab) {
+      case 'f_sessions':    await loadSessionBrowser(el); break;
+      case 'f_funnel':      await loadFunnel(el); break;
+      case 'f_screentime':  await loadScreenTime(el); break;
+      case 'f_transitions': await loadTransitions(el); break;
+    }
+  } catch (err) {
+    if (err.message === 'Session expired') return;
+    el.innerHTML = `<div class="error-box"><div style="font-size:1.5rem;margin-bottom:0.5rem">\u26A0</div><div>Failed to load flows</div><div style="font-size:0.75rem;margin-top:0.5rem;color:#94a3b8">${escHtml(err.message)}</div></div>`;
+  }
+}
+
+async function loadSessionBrowser(el) {
+  const data = await api({ view: 'analytics_session_list', hours: S.hours, limit: 30, offset: 0 });
+  const sessions = Array.isArray(data) ? data : [];
+
+  if (sessions.length === 0) {
+    el.innerHTML = emptyHtml('No sessions found');
+    return;
+  }
+
+  const rows = sessions.map((s, i) => {
+    const ts = new Date(s.started_at);
+    const timeStr = ts.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    const durMin = s.duration_sec ? (s.duration_sec / 60).toFixed(1) : '0';
+    const topEv = (s.top_events || []).slice(0, 3).join(', ');
+    return `<tr onclick="loadSessionTimeline('${escHtml(s.session_id)}', this)" data-sid="${escHtml(s.session_id)}">
+      <td style="font-family:var(--mono);font-size:0.75rem;color:var(--text-dim);">${escHtml(s.session_id.slice(0, 8))}...</td>
+      <td>${timeStr}</td>
+      <td class="num-cell">${s.event_count}</td>
+      <td class="num-cell">${durMin}m</td>
+      <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(topEv)}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="section-title">Sessions (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="table-wrap">
+      <table class="session-table">
+        <thead><tr><th>Session</th><th>Started</th><th>Events</th><th>Duration</th><th>Top Events</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div id="session-timeline-wrap"></div>
+  `;
+}
+
+async function loadSessionTimeline(sessionId, rowEl) {
+  // Highlight selected row
+  document.querySelectorAll('.session-table tr').forEach(r => r.classList.remove('session-row-active'));
+  if (rowEl) rowEl.classList.add('session-row-active');
+
+  const wrap = document.getElementById('session-timeline-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = skelHtml('overview');
+
+  try {
+    const data = await api({ view: 'analytics_user_flow', session_id: sessionId });
+    const events = Array.isArray(data) ? data : [];
+
+    if (events.length === 0) {
+      wrap.innerHTML = emptyHtml('No events in this session');
+      return;
+    }
+
+    const eventsHtml = events.map(e => {
+      const ts = new Date(e.created_at);
+      const timeStr = ts.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      const gapStr = e.gap_sec != null && e.gap_sec > 0 ? `+${e.gap_sec.toFixed(1)}s` : '';
+      const metaStr = e.metadata ? `<div class="te-meta">${escHtml(JSON.stringify(e.metadata))}</div>` : '';
+      return `<div class="timeline-event">
+        <div class="te-time">${timeStr}</div>
+        <div style="flex:1"><div class="te-name">${escHtml(e.event_type)}</div>${metaStr}</div>
+        <div class="te-gap">${gapStr}</div>
+      </div>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      <div class="section-title" style="margin-top:1.5rem;">Session Timeline &middot; ${events.length} events</div>
+      <div class="card timeline-wrap" style="padding:1rem 1.25rem; max-height:500px; overflow-y:auto;">
+        ${eventsHtml}
+      </div>
+    `;
+  } catch (err) {
+    wrap.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function loadFunnel(el) {
+  const presetKey = S.funnelPreset || 'recording';
+  const preset = FUNNEL_PRESETS[presetKey];
+
+  const presetButtons = Object.entries(FUNNEL_PRESETS).map(([k, v]) =>
+    `<button class="filter-pill${k === presetKey ? ' active' : ''}" onclick="setFunnelPreset('${k}')">${v.label}</button>`
+  ).join('');
+
+  // Show preset buttons immediately, then load data
+  el.innerHTML = `
+    <div class="section-title">Funnel Analysis (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="funnel-presets">${presetButtons}</div>
+    <div id="funnel-data">${skelHtml('overview')}</div>
+  `;
+
+  try {
+    const stepsParam = preset.steps.join(',');
+    const data = await api({ view: 'analytics_funnel', steps: stepsParam, hours: S.hours });
+    const steps = Array.isArray(data) ? data : [];
+    const funnelEl = document.getElementById('funnel-data');
+    if (!funnelEl) return;
+
+    if (steps.length === 0) {
+      funnelEl.innerHTML = emptyHtml('No funnel data');
+      return;
+    }
+
+    const maxSessions = steps[0]?.sessions || 1;
+    const stepsHtml = steps.map((s, i) => {
+      const pct = maxSessions > 0 ? ((s.sessions / maxSessions) * 100).toFixed(1) : 0;
+      const dropoff = i > 0 ? `<span class="funnel-dropoff">\u2193${(100 - parseFloat(s.conversion_rate || 0)).toFixed(0)}% drop</span>` : '';
+      const hue = 263 - (i * 15); // purple gradient
+      return `<div class="funnel-step">
+        <div class="funnel-label">${escHtml(s.step_name)}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${Math.max(pct, 5)}%; background:hsl(${hue}, 70%, 60%);">
+            ${s.sessions}
+          </div>
+        </div>
+        <div class="funnel-stats">${s.conversion_rate || 100}%${dropoff}</div>
+      </div>`;
+    }).join('');
+
+    funnelEl.innerHTML = `
+      <div class="card" style="padding:1.25rem;">
+        ${stepsHtml}
+      </div>
+    `;
+  } catch (err) {
+    const funnelEl = document.getElementById('funnel-data');
+    if (funnelEl) funnelEl.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+function setFunnelPreset(key) {
+  S.funnelPreset = key;
+  const el = document.getElementById('flows-content');
+  if (el) loadFunnel(el);
+}
+
+async function loadScreenTime(el) {
+  const data = await api({ view: 'analytics_screen_time', hours: S.hours });
+  const screens = Array.isArray(data) ? data : [];
+
+  if (screens.length === 0) {
+    el.innerHTML = emptyHtml('No screen time data');
+    return;
+  }
+
+  const maxAvg = Math.max(...screens.map(s => s.avg_dwell_sec || 0), 1);
+
+  const barsHtml = screens.map(s => {
+    const pct = ((s.avg_dwell_sec || 0) / maxAvg * 100).toFixed(1);
+    const avgStr = (s.avg_dwell_sec || 0).toFixed(1);
+    const medStr = (s.median_dwell_sec || 0).toFixed(1);
+    return `<div class="screen-time-bar">
+      <div class="st-label" title="${escHtml(s.screen)}">${escHtml(s.screen)}</div>
+      <div class="st-bar"><div class="st-fill" style="width:${pct}%;"></div></div>
+      <div class="st-value">${avgStr}s <span style="color:var(--text-dim);font-size:0.7rem;">med ${medStr}s</span></div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="section-title">Screen Time (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="card" style="padding:1.25rem;">
+      ${barsHtml}
+    </div>
+  `;
+}
+
+async function loadTransitions(el) {
+  const data = await api({ view: 'analytics_transitions', hours: S.hours, limit: 30 });
+  const transitions = Array.isArray(data) ? data : [];
+
+  if (transitions.length === 0) {
+    el.innerHTML = emptyHtml('No transition data');
+    return;
+  }
+
+  const rows = transitions.map(t =>
+    `<tr>
+      <td class="code-cell">${escHtml(t.from_event)}</td>
+      <td class="transition-arrow">\u2192</td>
+      <td class="code-cell">${escHtml(t.to_event)}</td>
+      <td class="num-cell">${t.cnt}</td>
+    </tr>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="section-title">Event Transitions (${S.hours >= 168 ? '7d' : S.hours + 'h'}) — Top 30</div>
+    <div class="table-wrap">
+      <table class="transition-table">
+        <thead><tr><th>From</th><th></th><th>To</th><th>Count</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ================================================================
    Chart.js shared options
    ================================================================ */
 
@@ -2222,7 +2509,7 @@ function initAdmin() {
 
   // Hash routing
   const hash = location.hash.replace('#', '') || 'overview';
-  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics'];
+  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics', 'flows'];
   S.view = validViews.includes(hash) ? hash : 'overview';
 
   // Parse URL params for initial filters
@@ -2250,7 +2537,7 @@ function init() {
 window.addEventListener('hashchange', () => {
   if (S.mode !== 'admin') return;
   const hash = location.hash.replace('#', '') || 'overview';
-  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics'];
+  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics', 'flows'];
   if (validViews.includes(hash) && hash !== S.view) {
     navigate(hash);
   }
