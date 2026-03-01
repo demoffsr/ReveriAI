@@ -2265,7 +2265,7 @@ async function loadFlowsTab(tab) {
 
 async function loadSessionBrowser(el) {
   const data = await api({ view: 'analytics_session_list', hours: S.hours, limit: 30, offset: 0 });
-  const sessions = Array.isArray(data) ? data : [];
+  const sessions = Array.isArray(data?.sessions) ? data.sessions : (Array.isArray(data) ? data : []);
 
   if (sessions.length === 0) {
     el.innerHTML = emptyHtml('No sessions found');
@@ -2319,7 +2319,7 @@ async function loadSessionTimeline(sessionId, rowEl) {
     const eventsHtml = events.map(e => {
       const ts = new Date(e.created_at);
       const timeStr = ts.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-      const gapStr = e.gap_sec != null && e.gap_sec > 0 ? `+${e.gap_sec.toFixed(1)}s` : '';
+      const gapStr = e.gap_sec != null && e.gap_sec > 0 ? `+${parseFloat(e.gap_sec).toFixed(1)}s` : '';
       const metaStr = e.metadata ? `<div class="te-meta">${escHtml(JSON.stringify(e.metadata))}</div>` : '';
       return `<div class="timeline-event">
         <div class="te-time">${timeStr}</div>
@@ -2357,7 +2357,7 @@ async function loadFunnel(el) {
   try {
     const stepsParam = preset.steps.join(',');
     const data = await api({ view: 'analytics_funnel', steps: stepsParam, hours: S.hours });
-    const steps = Array.isArray(data) ? data : [];
+    const steps = Array.isArray(data?.steps) ? data.steps : (Array.isArray(data) ? data : []);
     const funnelEl = document.getElementById('funnel-data');
     if (!funnelEl) return;
 
@@ -2369,16 +2369,19 @@ async function loadFunnel(el) {
     const maxSessions = steps[0]?.sessions || 1;
     const stepsHtml = steps.map((s, i) => {
       const pct = maxSessions > 0 ? ((s.sessions / maxSessions) * 100).toFixed(1) : 0;
-      const dropoff = i > 0 ? `<span class="funnel-dropoff">\u2193${(100 - parseFloat(s.conversion_rate || 0)).toFixed(0)}% drop</span>` : '';
+      const ratePct = s.rate_pct ?? s.conversion_rate ?? 100;
+      const dropPct = s.drop_off_pct ?? (i > 0 ? (100 - ratePct) : 0);
+      const dropoff = i > 0 ? `<span class="funnel-dropoff">\u2193${parseFloat(dropPct).toFixed(0)}% drop</span>` : '';
       const hue = 263 - (i * 15); // purple gradient
+      const label = s.event || s.step_name || `Step ${s.step}`;
       return `<div class="funnel-step">
-        <div class="funnel-label">${escHtml(s.step_name)}</div>
+        <div class="funnel-label">${escHtml(label)}</div>
         <div class="funnel-bar-wrap">
           <div class="funnel-bar" style="width:${Math.max(pct, 5)}%; background:hsl(${hue}, 70%, 60%);">
             ${s.sessions}
           </div>
         </div>
-        <div class="funnel-stats">${s.conversion_rate || 100}%${dropoff}</div>
+        <div class="funnel-stats">${ratePct}%${dropoff}</div>
       </div>`;
     }).join('');
 
@@ -2415,7 +2418,7 @@ async function loadScreenTime(el) {
     const avgStr = (s.avg_dwell_sec || 0).toFixed(1);
     const medStr = (s.median_dwell_sec || 0).toFixed(1);
     return `<div class="screen-time-bar">
-      <div class="st-label" title="${escHtml(s.screen)}">${escHtml(s.screen)}</div>
+      <div class="st-label" title="${escHtml(s.screen_name || s.screen || '')}">${escHtml(s.screen_name || s.screen || 'unknown')}</div>
       <div class="st-bar"><div class="st-fill" style="width:${pct}%;"></div></div>
       <div class="st-value">${avgStr}s <span style="color:var(--text-dim);font-size:0.7rem;">med ${medStr}s</span></div>
     </div>`;
@@ -2443,7 +2446,7 @@ async function loadTransitions(el) {
       <td class="code-cell">${escHtml(t.from_event)}</td>
       <td class="transition-arrow">\u2192</td>
       <td class="code-cell">${escHtml(t.to_event)}</td>
-      <td class="num-cell">${t.cnt}</td>
+      <td class="num-cell">${t.count || t.cnt}</td>
     </tr>`
   ).join('');
 
