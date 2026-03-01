@@ -966,6 +966,67 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .emotion-bar { height: 20px; background: var(--border); border-radius: 4px; overflow: hidden; }
 .emotion-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
 
+/* ===== Users Tab ===== */
+.user-search {
+  width: 100%; padding: 0.55rem 0.85rem; border-radius: var(--radius-xs);
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  font-size: 0.85rem; font-family: var(--sans); outline: none;
+  transition: border-color var(--transition); margin-bottom: 1rem;
+}
+.user-search:focus { border-color: var(--accent); }
+.user-search::placeholder { color: var(--text-dim); }
+.user-table { width: 100%; border-collapse: collapse; }
+.user-table th, .user-table td {
+  padding: 0.55rem 0.65rem; text-align: left;
+  border-bottom: 1px solid var(--border); font-size: 0.82rem;
+}
+.user-table th {
+  color: var(--text-muted); font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; font-size: 0.7rem; position: sticky; top: 0; background: var(--card);
+}
+.user-table tbody tr { cursor: pointer; transition: background var(--transition); }
+.user-table tbody tr:hover { background: var(--card-elevated); }
+.user-profile-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;
+}
+.user-stat-card {
+  padding: 0.85rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card);
+}
+.user-stat-card .usc-label {
+  font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.04em; margin-bottom: 0.3rem;
+}
+.user-stat-card .usc-value { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.user-stat-card .usc-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+.user-back-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.82rem; color: var(--accent); background: none;
+  border: none; cursor: pointer; padding: 0.35rem 0; margin-bottom: 1rem;
+  font-family: var(--sans); transition: opacity var(--transition);
+}
+.user-back-btn:hover { opacity: 0.7; }
+.user-pagination {
+  display: flex; justify-content: center; align-items: center;
+  gap: 1rem; margin-top: 1rem; font-size: 0.82rem;
+}
+.user-pagination button {
+  padding: 0.3rem 0.75rem; border-radius: var(--radius-xs);
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--text-secondary); font-size: 0.78rem; cursor: pointer;
+  font-family: var(--sans); transition: all var(--transition);
+}
+.user-pagination button:hover { border-color: var(--accent); color: var(--accent); }
+.user-pagination button:disabled { opacity: 0.3; cursor: default; }
+.user-uid { font-family: var(--mono); color: var(--accent); font-size: 0.82rem; }
+.user-copy-btn {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.72rem; color: var(--text-muted); background: var(--card-elevated);
+  border: 1px solid var(--border); border-radius: var(--radius-xs);
+  padding: 0.2rem 0.5rem; cursor: pointer; font-family: var(--mono);
+  transition: all var(--transition); margin-left: 0.5rem;
+}
+.user-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .top-nav-inner { gap: 0.75rem; }
@@ -987,6 +1048,8 @@ tr:hover td { background: rgba(167,139,250,0.03); }
   .flowmap-controls { flex-direction: column; align-items: flex-start; }
   .flow-popup { min-width: 280px; max-width: 95vw; }
   .flows-tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .user-profile-grid { grid-template-columns: repeat(2, 1fr); }
+  .user-table th:nth-child(n+5), .user-table td:nth-child(n+5) { display: none; }
 }
 @media (max-width: 480px) {
   .trend-grid, .period-grid { grid-template-columns: 1fr; }
@@ -1061,6 +1124,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
         <a class="nav-tab" data-view="devices" onclick="navigate('devices')">Devices</a>
         <a class="nav-tab" data-view="analytics" onclick="navigate('analytics')">Analytics</a>
         <a class="nav-tab" data-view="flows" onclick="navigate('flows')">Flows</a>
+        <a class="nav-tab" data-view="users" onclick="navigate('users')">👤 Users</a>
       </div>
       <div class="nav-right">
         <div class="admin-badge">
@@ -1096,6 +1160,7 @@ tr:hover td { background: rgba(167,139,250,0.03); }
     <div class="view" id="view-devices"></div>
     <div class="view" id="view-analytics"></div>
     <div class="view" id="view-flows"></div>
+    <div class="view" id="view-users"></div>
   </div>
 </div>
 
@@ -1159,6 +1224,10 @@ const S = {
   funnelPreset: 'recording',
   flowmapPreset: 'all',
   liveInterval: null,
+  usersTab: 'u_list',
+  usersSelectedId: null,
+  usersOffset: 0,
+  usersCache: [],
 };
 
 /* ================================================================
@@ -1584,6 +1653,7 @@ function loadView() {
     case 'devices':    loadDevices(); break;
     case 'analytics':  loadAnalytics(); break;
     case 'flows':      loadFlows(); break;
+    case 'users':      loadUsers(); break;
   }
 }
 
@@ -3569,6 +3639,295 @@ function chartOptions(yLabel) {
 }
 
 /* ================================================================
+   USERS TAB
+   ================================================================ */
+
+async function loadUsers() {
+  const el = document.getElementById('view-users');
+  if (S.usersTab === 'u_detail' && S.usersSelectedId) {
+    await loadUserDetail(el);
+  } else {
+    await loadUserList(el);
+  }
+}
+
+async function loadUserList(el) {
+  el.innerHTML = skelHtml('table');
+  try {
+    const data = await api({ view: 'analytics_user_list', days: 30, limit: 50, offset: S.usersOffset });
+    const users = Array.isArray(data?.users) ? data.users : [];
+    const total = data?.total || 0;
+    S.usersCache = users;
+
+    if (users.length === 0) {
+      el.innerHTML = emptyHtml('No users found');
+      return;
+    }
+
+    const totalPages = Math.ceil(total / 50);
+    const currentPage = Math.floor(S.usersOffset / 50) + 1;
+
+    const rows = users.map(u => {
+      const group = getEventGroup(u.last_event_type || '');
+      return `<tr data-uid="${escHtml(u.user_id || '')}" onclick="selectUser('${escHtml(u.user_id)}')">
+        <td><span class="user-uid">${escHtml(u.user_id_short || '?')}</span></td>
+        <td title="${formatMSK(u.first_seen)}">${u.first_seen ? new Date(u.first_seen).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '-'}</td>
+        <td title="${formatMSK(u.last_seen)}">${relativeTime(u.last_seen)}</td>
+        <td>${u.total_events || 0}</td>
+        <td>${u.total_sessions || 0}</td>
+        <td>${u.total_dreams || 0}</td>
+        <td><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${group.color};margin-right:4px;vertical-align:middle;"></span><span class="code-cell" style="font-size:0.75rem;">${escHtml(u.last_event_type || '-')}</span></td>
+        <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(u.device || '-')}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="section-title" style="margin-bottom:1rem;">All Users <span style="color:var(--text-muted);font-weight:400;font-size:0.82rem;">(${total})</span></div>
+      <input class="user-search" type="text" placeholder="Search by user ID..." oninput="onUserSearch(this.value)">
+      <div class="table-wrap"><table class="user-table">
+        <thead><tr><th>User ID</th><th>First Seen</th><th>Last Seen</th><th>Events</th><th>Sessions</th><th>Dreams</th><th>Last Event</th><th>Device</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      ${totalPages > 1 ? `
+        <div class="user-pagination">
+          <button ${currentPage <= 1 ? 'disabled' : ''} onclick="usersPage(${S.usersOffset - 50})">← Prev</button>
+          <span style="color:var(--text-muted);font-size:0.78rem;">Page ${currentPage} of ${totalPages}</span>
+          <button ${currentPage >= totalPages ? 'disabled' : ''} onclick="usersPage(${S.usersOffset + 50})">Next →</button>
+        </div>
+      ` : ''}
+    `;
+  } catch (err) {
+    el.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+function usersPage(offset) {
+  S.usersOffset = Math.max(0, offset);
+  loadUsers();
+}
+
+let _userSearchTimeout = null;
+function onUserSearch(query) {
+  clearTimeout(_userSearchTimeout);
+  _userSearchTimeout = setTimeout(() => {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('.user-table tbody tr').forEach(row => {
+      const uid = (row.dataset.uid || '').toLowerCase();
+      row.style.display = (!q || uid.includes(q)) ? '' : 'none';
+    });
+  }, 150);
+}
+
+function selectUser(userId) {
+  S.usersTab = 'u_detail';
+  S.usersSelectedId = userId;
+  loadUsers();
+}
+
+function backToUserList() {
+  S.usersTab = 'u_list';
+  S.usersSelectedId = null;
+  loadUsers();
+}
+
+function copyUserId(fullId) {
+  navigator.clipboard.writeText(fullId).then(() => {
+    const btn = document.getElementById('copy-uid-btn');
+    if (btn) { btn.textContent = '✓ Copied'; setTimeout(() => { btn.textContent = '📋 Copy full ID'; }, 1500); }
+  });
+}
+
+async function loadUserDetail(el) {
+  el.innerHTML = skelHtml('overview');
+  const userId = S.usersSelectedId;
+  try {
+    const [profile, events] = await Promise.all([
+      api({ view: 'analytics_user_profile', user_id: userId }),
+      api({ view: 'analytics_user_events', user_id: userId, hours: 168, limit: 50, offset: 0 }),
+    ]);
+
+    if (profile.error) {
+      el.innerHTML = `<button class="user-back-btn" onclick="backToUserList()">← Back to Users</button><div class="error-box">${escHtml(profile.error)}</div>`;
+      return;
+    }
+
+    const evList = Array.isArray(events?.events) ? events.events : [];
+    const evTotal = events?.total || 0;
+    const ai = profile.ai_usage || {};
+    const emotions = Array.isArray(profile.top_emotions) ? profile.top_emotions : [];
+    const dailyData = Array.isArray(profile.events_by_day) ? profile.events_by_day : [];
+    const breakdown = Array.isArray(profile.event_type_breakdown) ? profile.event_type_breakdown : [];
+    const devices = Array.isArray(profile.devices) ? profile.devices : [];
+
+    const EMOTION_COLORS = {joyful:'#fbbf24',calm:'#34d399',anxious:'#f97316',scared:'#ef4444',confused:'#a78bfa',angry:'#dc2626',in_love:'#ec4899',sad:'#60a5fa'};
+    const maxEmotion = emotions.length > 0 ? Math.max(...emotions.map(e => e.count)) : 1;
+
+    const emotionBars = emotions.length > 0 ? emotions.map(e => {
+      const pct = Math.round(e.count / maxEmotion * 100);
+      const color = EMOTION_COLORS[e.emotion] || '#a78bfa';
+      return `<div class="emotion-bar-wrap">
+        <div class="emotion-bar-label"><span class="emotion-bar-name">${escHtml(e.emotion)}</span><span class="emotion-bar-count">${e.count}</span></div>
+        <div class="emotion-bar"><div class="emotion-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+      </div>`;
+    }).join('') : '<div style="color:var(--text-dim);font-size:0.82rem;">No emotion data</div>';
+
+    const eventRows = evList.map(ev => {
+      const group = getEventGroup(ev.event_type || '');
+      const meta = ev.metadata ? JSON.stringify(ev.metadata).slice(0, 60) : '';
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:0.75rem;white-space:nowrap;">${formatMSK(ev.created_at)}</td>
+        <td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${group.color};margin-right:5px;vertical-align:middle;"></span>${escHtml(ev.event_type)}</td>
+        <td><span class="user-uid" style="cursor:pointer;font-size:0.75rem;" title="View session flow" onclick="event.stopPropagation();goToSessionFlow('${ev.session_id}')">${escHtml(ev.session_id_short || '-')}</span></td>
+        <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(ev.device || '-')}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;color:var(--text-dim);" title="${escHtml(meta)}">${escHtml(meta)}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <button class="user-back-btn" onclick="backToUserList()">← Back to Users</button>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;"><span class="user-uid">${escHtml(profile.user_id_short || '?')}</span></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">
+            Active ${relativeTime(profile.last_seen)}
+            <button id="copy-uid-btn" class="user-copy-btn" onclick="copyUserId('${escHtml(profile.user_id || '')}')">📋 Copy full ID</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="user-profile-grid">
+        <div class="user-stat-card">
+          <div class="usc-label">First Seen</div>
+          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(profile.first_seen)}</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="usc-label">Last Seen</div>
+          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(profile.last_seen)}</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="usc-label">Total Events</div>
+          <div class="usc-value">${profile.total_events || 0}</div>
+          <div class="usc-sub">${profile.total_sessions || 0} sessions</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="usc-label">Dreams</div>
+          <div class="usc-value">${profile.total_dreams || 0}</div>
+          <div class="usc-sub">🎤 ${profile.voice_dreams || 0} voice · ✏️ ${profile.text_dreams || 0} text</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="usc-label">AI Usage</div>
+          <div class="usc-value">${(ai.titles||0) + (ai.images||0) + (ai.interpretations||0)}</div>
+          <div class="usc-sub">✨ ${ai.titles||0} titles · 🎨 ${ai.images||0} images · 💭 ${ai.interpretations||0} interp</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="usc-label">Most Active Hour</div>
+          <div class="usc-value">${profile.active_hour != null ? String(profile.active_hour).padStart(2,'0') + ':00' : '-'}</div>
+          <div class="usc-sub">${devices.length > 0 ? escHtml(devices[0].device || '') : '-'}</div>
+        </div>
+      </div>
+
+      ${dailyData.length > 0 ? `
+        <div class="chart-wrapper">
+          <div class="card chart-card">
+            <div class="chart-title">Activity (Last 30 Days)</div>
+            <canvas id="userActivityChart"></canvas>
+          </div>
+        </div>
+      ` : ''}
+
+      ${breakdown.length > 0 ? `
+        <div class="chart-wrapper">
+          <div class="card chart-card">
+            <div class="chart-title">Event Type Breakdown</div>
+            <canvas id="userBreakdownChart"></canvas>
+          </div>
+        </div>
+      ` : ''}
+
+      ${emotions.length > 0 ? `
+        <div class="section-title" style="margin-top:1.5rem;">Top Emotions</div>
+        <div class="card" style="padding:1rem;margin-bottom:1.5rem;">${emotionBars}</div>
+      ` : ''}
+
+      <div class="section-title" style="margin-top:1.5rem;">Recent Events <span style="color:var(--text-muted);font-weight:400;font-size:0.82rem;">(${evTotal} total)</span></div>
+      <div class="table-wrap"><table class="live-table">
+        <thead><tr><th>Time</th><th>Event</th><th>Session</th><th>Device</th><th>Metadata</th></tr></thead>
+        <tbody>${eventRows.length > 0 ? eventRows : '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);">No events</td></tr>'}</tbody>
+      </table></div>
+      ${evTotal > 50 ? `
+        <div id="user-events-pagination" class="user-pagination">
+          <button disabled>← Prev</button>
+          <span style="color:var(--text-muted);font-size:0.78rem;">Page 1 of ${Math.ceil(evTotal / 50)}</span>
+          <button onclick="loadUserEventsPage(50)">Next →</button>
+        </div>
+      ` : ''}
+    `;
+
+    // Render charts
+    if (dailyData.length > 0) {
+      renderAnalyticsChart('userActivityChart', 'userActivity',
+        dailyData.map(d => { const dt = new Date(d.day); return dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short'}); }),
+        dailyData.map(d => d.count),
+        'Events'
+      );
+    }
+    if (breakdown.length > 0) {
+      renderAnalyticsChart('userBreakdownChart', 'userBreakdown',
+        breakdown.map(b => b.event_type),
+        breakdown.map(b => b.count),
+        'Count'
+      );
+    }
+  } catch (err) {
+    el.innerHTML = `<button class="user-back-btn" onclick="backToUserList()">← Back to Users</button><div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+function goToSessionFlow(sessionId) {
+  if (!sessionId) return;
+  S.flowsTab = 'f_sessions';
+  navigate('flows');
+  setTimeout(() => {
+    const el = document.getElementById('view-flows');
+    if (el) loadSessionTimeline(sessionId, null);
+  }, 300);
+}
+
+async function loadUserEventsPage(offset) {
+  const wrap = document.getElementById('user-events-pagination');
+  if (!wrap) return;
+  try {
+    const data = await api({ view: 'analytics_user_events', user_id: S.usersSelectedId, hours: 168, limit: 50, offset });
+    const evList = Array.isArray(data?.events) ? data.events : [];
+    const evTotal = data?.total || 0;
+    const totalPages = Math.ceil(evTotal / 50);
+    const currentPage = Math.floor(offset / 50) + 1;
+
+    const tbody = document.querySelector('#view-users .live-table tbody');
+    if (tbody) {
+      tbody.innerHTML = evList.map(ev => {
+        const group = getEventGroup(ev.event_type || '');
+        const meta = ev.metadata ? JSON.stringify(ev.metadata).slice(0, 60) : '';
+        return `<tr>
+          <td style="font-family:var(--mono);font-size:0.75rem;white-space:nowrap;">${formatMSK(ev.created_at)}</td>
+          <td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${group.color};margin-right:5px;vertical-align:middle;"></span>${escHtml(ev.event_type)}</td>
+          <td><span class="user-uid" style="cursor:pointer;font-size:0.75rem;" onclick="event.stopPropagation();goToSessionFlow('${ev.session_id}')">${escHtml(ev.session_id_short || '-')}</span></td>
+          <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(ev.device || '-')}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;color:var(--text-dim);" title="${escHtml(meta)}">${escHtml(meta)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    wrap.innerHTML = `
+      <button ${currentPage <= 1 ? 'disabled' : ''} onclick="loadUserEventsPage(${offset - 50})">← Prev</button>
+      <span style="color:var(--text-muted);font-size:0.78rem;">Page ${currentPage} of ${totalPages}</span>
+      <button ${currentPage >= totalPages ? 'disabled' : ''} onclick="loadUserEventsPage(${offset + 50})">Next →</button>
+    `;
+  } catch (err) { /* silent */ }
+}
+
+/* ================================================================
    Admin Init
    ================================================================ */
 
@@ -3579,7 +3938,7 @@ function initAdmin() {
 
   // Hash routing
   const hash = location.hash.replace('#', '') || 'overview';
-  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics', 'flows'];
+  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics', 'flows', 'users'];
   S.view = validViews.includes(hash) ? hash : 'overview';
 
   // Parse URL params for initial filters
@@ -3607,7 +3966,7 @@ function init() {
 window.addEventListener('hashchange', () => {
   if (S.mode !== 'admin') return;
   const hash = location.hash.replace('#', '') || 'overview';
-  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics', 'flows'];
+  const validViews = ['overview', 'errors', 'trends', 'devices', 'analytics', 'flows', 'users'];
   if (validViews.includes(hash) && hash !== S.view) {
     navigate(hash);
   }
