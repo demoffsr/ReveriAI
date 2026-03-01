@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌙</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12/dist/d3-sankey.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
 <style>
 /* ===== Reset & Base ===== */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -872,36 +872,42 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 }
 .flow-popup-meta-title { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
 
-/* ===== Sankey Flow Map ===== */
-.sankey-container { width: 100%; position: relative; }
-.sankey-container svg { width: 100%; display: block; }
-.sankey-node rect { cursor: pointer; transition: opacity 0.15s; rx: 4; ry: 4; }
-.sankey-node rect:hover { opacity: 0.85; }
-.sankey-node text { font-size: 0.72rem; fill: var(--text-secondary); font-family: var(--mono); }
-.sankey-link { fill: none; stroke-opacity: 0.25; transition: stroke-opacity 0.2s; }
-.sankey-link:hover { stroke-opacity: 0.6; }
-.sankey-tooltip {
+/* ===== Flow Graph ===== */
+.flowgraph-wrap { width: 100%; position: relative; overflow: auto; -webkit-overflow-scrolling: touch; }
+.flowgraph-wrap svg { display: block; cursor: grab; }
+.flowgraph-wrap svg:active { cursor: grabbing; }
+.flowgraph-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.flowgraph-wrap::-webkit-scrollbar-track { background: var(--card); border-radius: 3px; }
+.flowgraph-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.fg-edge { fill: none; stroke-opacity: 0.35; transition: stroke-opacity 0.2s; }
+.fg-edge:hover { stroke-opacity: 0.8; }
+.fg-edge-label { font-size: 0.62rem; fill: var(--text-dim); font-family: var(--mono); pointer-events: none; }
+.fg-arrowhead { transition: fill-opacity 0.2s; }
+.fg-node-box { cursor: pointer; transition: filter 0.15s; }
+.fg-node-box:hover { filter: brightness(1.2) drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+.fg-tooltip {
   position: absolute;
   background: var(--card-elevated);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   font-size: 0.78rem;
   pointer-events: none;
   z-index: 100;
   white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   opacity: 0;
   transition: opacity 0.15s;
   color: var(--text);
+  max-width: 300px;
 }
-.sankey-tooltip.visible { opacity: 1; }
-.sankey-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; padding: 0.75rem 1rem; }
-.sankey-legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--text-muted); }
-.sankey-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+.fg-tooltip.visible { opacity: 1; }
+.fg-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; padding: 0.75rem 1rem; }
+.fg-legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--text-muted); }
+.fg-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
 .flowmap-controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
 .flowmap-controls label { font-size: 0.78rem; color: var(--text-muted); }
-.flowmap-controls input[type="range"] { width: 100px; accent-color: var(--accent); }
+.flowmap-controls input[type="range"] { width: 120px; accent-color: var(--accent); }
 .flowmap-controls .fc-value { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); min-width: 30px; }
 .flowmap-link-btn { font-size: 0.78rem; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 6px; padding: 0.3rem 0.75rem; cursor: pointer; transition: background 0.15s; margin-top: 0.5rem; }
 .flowmap-link-btn:hover { background: var(--accent-dim); }
@@ -2734,34 +2740,31 @@ async function loadTransitions(el) {
 }
 
 /* ================================================================
-   Sankey Flow Map
+   Flow Graph (dagre layout + D3 render)
    ================================================================ */
 
 async function loadFlowMap(el) {
   el.innerHTML = `
-    <div class="section-title">Flow Map (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+    <div class="section-title">User Flow Map (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
     <div class="flowmap-controls">
       <label>Min transitions:</label>
-      <input type="range" id="sankey-threshold" min="1" max="20" value="3" oninput="document.getElementById('sankey-thresh-val').textContent=this.value">
-      <span class="fc-value" id="sankey-thresh-val">3</span>
+      <input type="range" id="fg-threshold" min="1" max="20" value="2" oninput="document.getElementById('fg-thresh-val').textContent=this.value">
+      <span class="fc-value" id="fg-thresh-val">2</span>
       <button class="filter-pill" onclick="reloadFlowMap()" style="margin-left:0.5rem;">Apply</button>
     </div>
-    <div id="sankey-wrap">${skelHtml('overview')}</div>
+    <div id="flowgraph-wrap">${skelHtml('overview')}</div>
   `;
-
   await renderFlowMapData(el);
 }
 
 async function reloadFlowMap() {
-  const el = document.getElementById('flows-content');
-  if (!el) return;
-  const wrap = document.getElementById('sankey-wrap');
+  const wrap = document.getElementById('flowgraph-wrap');
   if (wrap) wrap.innerHTML = skelHtml('overview');
-  await renderFlowMapData(el);
+  await renderFlowMapData();
 }
 
-async function renderFlowMapData(el) {
-  const wrap = document.getElementById('sankey-wrap');
+async function renderFlowMapData() {
+  const wrap = document.getElementById('flowgraph-wrap');
   if (!wrap) return;
 
   try {
@@ -2773,8 +2776,8 @@ async function renderFlowMapData(el) {
       return;
     }
 
-    const thresholdEl = document.getElementById('sankey-threshold');
-    const threshold = thresholdEl ? parseInt(thresholdEl.value) : 3;
+    const thresholdEl = document.getElementById('fg-threshold');
+    const threshold = thresholdEl ? parseInt(thresholdEl.value) : 2;
     const filtered = transitions.filter(t => (t.count || t.cnt || 0) >= threshold);
 
     if (filtered.length === 0) {
@@ -2782,158 +2785,270 @@ async function renderFlowMapData(el) {
       return;
     }
 
-    renderSankey(filtered, wrap);
+    renderFlowGraph(filtered, wrap);
   } catch (err) {
     wrap.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
   }
 }
 
-function renderSankey(transitions, container) {
-  // 1. Collect unique nodes
+function renderFlowGraph(transitions, container) {
+  // 1. Build dagre graph
+  const g = new dagre.graphlib.Graph({ multigraph: true });
+  g.setGraph({
+    rankdir: 'TB',    // top-to-bottom
+    nodesep: 40,
+    ranksep: 70,
+    edgesep: 20,
+    marginx: 30,
+    marginy: 30,
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  // Collect nodes & edges
   const nodeSet = new Set();
+  const maxCount = Math.max(...transitions.map(t => t.count || t.cnt || 1));
   transitions.forEach(t => {
     nodeSet.add(t.from_event);
     nodeSet.add(t.to_event);
   });
-  const nodeNames = Array.from(nodeSet);
-  const nodeMap = {};
-  nodeNames.forEach((n, i) => nodeMap[n] = i);
 
-  const nodes = nodeNames.map(n => ({ name: n }));
-  const links = transitions.map(t => ({
-    source: nodeMap[t.from_event],
-    target: nodeMap[t.to_event],
-    value: t.count || t.cnt || 1,
-  })).filter(l => l.source !== l.target); // Remove self-loops
-
-  if (links.length === 0 || nodes.length === 0) {
-    container.innerHTML = emptyHtml('Not enough data for flow map');
-    return;
-  }
-
-  // 2. Dimensions
-  const width = container.clientWidth || 900;
-  const nodeCount = nodes.length;
-  const height = Math.max(500, nodeCount * 32);
-
-  // 3. Build Sankey layout
-  const sankey = d3.sankey()
-    .nodeId(d => d.index)
-    .nodeWidth(18)
-    .nodePadding(14)
-    .nodeAlign(d3.sankeyLeft)
-    .extent([[1, 5], [width - 1, height - 5]]);
-
-  const graph = sankey({
-    nodes: nodes.map(d => Object.assign({}, d)),
-    links: links.map(d => Object.assign({}, d)),
+  // Compute node stats (total in + out)
+  const nodeStats = {};
+  nodeSet.forEach(n => { nodeStats[n] = { in: 0, out: 0 }; });
+  transitions.forEach(t => {
+    const c = t.count || t.cnt || 1;
+    nodeStats[t.from_event].out += c;
+    nodeStats[t.to_event].in += c;
   });
 
-  // 4. Render
-  container.innerHTML = '<div class="sankey-container"></div>';
-  const sankeyContainer = container.querySelector('.sankey-container');
+  // Add nodes with sizing based on traffic
+  nodeSet.forEach(name => {
+    const group = getEventGroup(name);
+    const traffic = nodeStats[name].in + nodeStats[name].out;
+    const displayName = name.replace(/_/g, ' ');
+    // Wider for longer names
+    const w = Math.max(130, displayName.length * 7.5 + 40);
+    g.setNode(name, {
+      label: displayName,
+      width: w,
+      height: 52,
+      group: group,
+      traffic: traffic,
+      inCount: nodeStats[name].in,
+      outCount: nodeStats[name].out,
+    });
+  });
+
+  // Add edges
+  transitions.forEach((t, i) => {
+    if (t.from_event === t.to_event) return; // skip self-loops
+    const c = t.count || t.cnt || 1;
+    g.setEdge(t.from_event, t.to_event, {
+      weight: c,
+      count: c,
+      // Line thickness: 1.5-6px based on relative count
+      thickness: 1.5 + (c / maxCount) * 4.5,
+    }, `e${i}`);
+  });
+
+  // Run layout
+  dagre.layout(g);
+
+  // 2. Compute SVG dimensions
+  const graphInfo = g.graph();
+  const svgW = (graphInfo.width || 600) + 60;
+  const svgH = (graphInfo.height || 400) + 60;
+
+  // 3. Render SVG
+  container.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'flowgraph-wrap';
+  wrapper.style.maxHeight = '700px';
+  container.appendChild(wrapper);
 
   // Tooltip
   const tooltip = document.createElement('div');
-  tooltip.className = 'sankey-tooltip';
-  sankeyContainer.appendChild(tooltip);
+  tooltip.className = 'fg-tooltip';
+  wrapper.appendChild(tooltip);
 
-  const svg = d3.select(sankeyContainer)
+  const svg = d3.select(wrapper)
     .append('svg')
-    .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet');
+    .attr('width', svgW)
+    .attr('height', svgH);
 
-  // Links
-  const link = svg.append('g')
-    .attr('fill', 'none')
-    .selectAll('path')
-    .data(graph.links)
-    .join('path')
-    .attr('class', 'sankey-link')
-    .attr('d', d3.sankeyLinkHorizontal())
-    .attr('stroke', d => {
-      const group = getEventGroup(d.source.name);
-      return group.color;
-    })
-    .attr('stroke-width', d => Math.max(1, d.width))
-    .on('mouseenter', function(event, d) {
-      d3.select(this).attr('stroke-opacity', 0.6);
-      tooltip.className = 'sankey-tooltip visible';
-      tooltip.innerHTML = `<strong>${escHtml(d.source.name)}</strong> \u2192 <strong>${escHtml(d.target.name)}</strong><br><span style="color:var(--accent)">${d.value} transitions</span>`;
-    })
-    .on('mousemove', function(event) {
-      const rect = sankeyContainer.getBoundingClientRect();
-      tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
-      tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
-    })
-    .on('mouseleave', function() {
-      d3.select(this).attr('stroke-opacity', 0.25);
-      tooltip.className = 'sankey-tooltip';
-    });
+  // Defs: arrowheads
+  const defs = svg.append('defs');
+  // Create arrowheads for each event group color
+  const usedColors = new Set();
+  g.edges().forEach(e => {
+    const srcGroup = getEventGroup(e.v);
+    usedColors.add(srcGroup.color);
+  });
+  usedColors.forEach(color => {
+    const id = 'arrow-' + color.replace('#', '');
+    defs.append('marker')
+      .attr('id', id)
+      .attr('viewBox', '0 0 10 10')
+      .attr('refX', 9)
+      .attr('refY', 5)
+      .attr('markerWidth', 8)
+      .attr('markerHeight', 8)
+      .attr('orient', 'auto-start-reverse')
+      .append('path')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 Z')
+      .attr('fill', color)
+      .attr('class', 'fg-arrowhead')
+      .attr('fill-opacity', 0.6);
+  });
 
-  // Nodes
-  const node = svg.append('g')
-    .selectAll('g')
-    .data(graph.nodes)
-    .join('g')
-    .attr('class', 'sankey-node');
+  // Draw edges
+  const edgeGroup = svg.append('g');
+  g.edges().forEach(e => {
+    const edge = g.edge(e);
+    const srcGroup = getEventGroup(e.v);
+    const points = edge.points;
+    const arrowId = 'arrow-' + srcGroup.color.replace('#', '');
 
-  node.append('rect')
-    .attr('x', d => d.x0)
-    .attr('y', d => d.y0)
-    .attr('height', d => Math.max(d.y1 - d.y0, 2))
-    .attr('width', d => d.x1 - d.x0)
-    .attr('fill', d => {
-      const group = getEventGroup(d.name);
-      return group.color;
-    })
-    .on('mouseenter', function(event, d) {
-      // Highlight connected links
-      link.attr('stroke-opacity', l =>
-        l.source === d || l.target === d ? 0.6 : 0.08
-      );
-      tooltip.className = 'sankey-tooltip visible';
-      const incoming = graph.links.filter(l => l.target === d).reduce((s, l) => s + l.value, 0);
-      const outgoing = graph.links.filter(l => l.source === d).reduce((s, l) => s + l.value, 0);
-      tooltip.innerHTML = `<strong>${escHtml(d.name)}</strong><br>In: ${incoming} &middot; Out: ${outgoing}`;
-    })
-    .on('mousemove', function(event) {
-      const rect = sankeyContainer.getBoundingClientRect();
-      tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
-      tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
-    })
-    .on('mouseleave', function() {
-      link.attr('stroke-opacity', 0.25);
-      tooltip.className = 'sankey-tooltip';
-    });
+    // Build curved path through points
+    const line = d3.line()
+      .x(d => d.x)
+      .y(d => d.y)
+      .curve(d3.curveBasis);
 
-  // Node labels
-  node.append('text')
-    .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-    .attr('y', d => (d.y1 + d.y0) / 2)
-    .attr('dy', '0.35em')
-    .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
-    .text(d => d.name.replace(/_/g, ' '))
-    .style('font-size', '0.7rem')
-    .style('fill', d => {
-      const group = getEventGroup(d.name);
-      return group.color;
-    });
+    edgeGroup.append('path')
+      .attr('class', 'fg-edge')
+      .attr('d', line(points))
+      .attr('stroke', srcGroup.color)
+      .attr('stroke-width', edge.thickness)
+      .attr('marker-end', `url(#${arrowId})`)
+      .on('mouseenter', function(event) {
+        d3.select(this).attr('stroke-opacity', 0.8);
+        tooltip.className = 'fg-tooltip visible';
+        tooltip.innerHTML = `<strong style="color:${srcGroup.color}">${escHtml(e.v.replace(/_/g,' '))}</strong>
+          <span style="color:var(--text-dim);margin:0 6px;">\u2192</span>
+          <strong>${escHtml(e.w.replace(/_/g,' '))}</strong>
+          <br><span style="color:var(--accent);font-family:var(--mono);">${edge.count}\u00d7</span>`;
+      })
+      .on('mousemove', function(event) {
+        const rect = wrapper.getBoundingClientRect();
+        tooltip.style.left = (event.clientX - rect.left + 14) + 'px';
+        tooltip.style.top = (event.clientY - rect.top - 14) + 'px';
+      })
+      .on('mouseleave', function() {
+        d3.select(this).attr('stroke-opacity', 0.35);
+        tooltip.className = 'fg-tooltip';
+      });
+
+    // Edge count label at midpoint
+    const mid = points[Math.floor(points.length / 2)];
+    edgeGroup.append('text')
+      .attr('class', 'fg-edge-label')
+      .attr('x', mid.x + 8)
+      .attr('y', mid.y - 4)
+      .text(edge.count);
+  });
+
+  // Draw nodes
+  const nodeGroup = svg.append('g');
+  g.nodes().forEach(name => {
+    const node = g.node(name);
+    const group = node.group;
+    const ng = nodeGroup.append('g')
+      .attr('class', 'fg-node-box')
+      .attr('transform', `translate(${node.x - node.width/2}, ${node.y - node.height/2})`)
+      .on('mouseenter', function(event) {
+        // Highlight connected edges
+        edgeGroup.selectAll('.fg-edge').attr('stroke-opacity', function() {
+          const path = d3.select(this);
+          return 0.08;
+        });
+        g.edges().forEach(e => {
+          if (e.v === name || e.w === name) {
+            // Can't easily select by data, re-highlight in a simpler way
+          }
+        });
+        tooltip.className = 'fg-tooltip visible';
+        tooltip.innerHTML = `<strong style="color:${group.color}">${group.icon} ${escHtml(node.label)}</strong>
+          <br><span style="color:var(--text-muted)">In:</span> <span style="font-family:var(--mono)">${node.inCount}</span>
+          <span style="color:var(--text-muted); margin-left:8px">Out:</span> <span style="font-family:var(--mono)">${node.outCount}</span>`;
+      })
+      .on('mousemove', function(event) {
+        const rect = wrapper.getBoundingClientRect();
+        tooltip.style.left = (event.clientX - rect.left + 14) + 'px';
+        tooltip.style.top = (event.clientY - rect.top - 14) + 'px';
+      })
+      .on('mouseleave', function() {
+        edgeGroup.selectAll('.fg-edge').attr('stroke-opacity', 0.35);
+        tooltip.className = 'fg-tooltip';
+      });
+
+    // Background rect
+    ng.append('rect')
+      .attr('width', node.width)
+      .attr('height', node.height)
+      .attr('rx', 10)
+      .attr('ry', 10)
+      .attr('fill', group.bg)
+      .attr('stroke', group.color)
+      .attr('stroke-width', 2);
+
+    // Icon
+    ng.append('text')
+      .attr('x', 14)
+      .attr('y', node.height / 2)
+      .attr('dy', '0.35em')
+      .attr('font-size', '1rem')
+      .text(group.icon);
+
+    // Label
+    ng.append('text')
+      .attr('x', 32)
+      .attr('y', node.height / 2)
+      .attr('dy', '0.35em')
+      .attr('font-size', '0.72rem')
+      .attr('font-weight', '600')
+      .attr('fill', group.color)
+      .text(node.label);
+
+    // Traffic badge (top-right)
+    const total = node.inCount + node.outCount;
+    if (total > 0) {
+      const badgeW = String(total).length * 7 + 12;
+      ng.append('rect')
+        .attr('x', node.width - badgeW - 6)
+        .attr('y', 6)
+        .attr('width', badgeW)
+        .attr('height', 18)
+        .attr('rx', 9)
+        .attr('fill', group.color)
+        .attr('fill-opacity', 0.25);
+      ng.append('text')
+        .attr('x', node.width - badgeW/2 - 6)
+        .attr('y', 15)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '0.6rem')
+        .attr('font-weight', '700')
+        .attr('font-family', 'var(--mono)')
+        .attr('fill', group.color)
+        .text(total);
+    }
+  });
 
   // Legend
   const usedGroups = {};
-  nodeNames.forEach(n => {
-    const g = getEventGroup(n);
-    if (!usedGroups[g.label]) usedGroups[g.label] = g;
+  nodeSet.forEach(n => {
+    const gr = getEventGroup(n);
+    if (!usedGroups[gr.label]) usedGroups[gr.label] = gr;
   });
-  const legendHtml = Object.entries(usedGroups).map(([label, g]) =>
-    `<div class="sankey-legend-item"><div class="sankey-legend-dot" style="background:${g.color}"></div>${g.icon} ${label}</div>`
+  const legendHtml = Object.entries(usedGroups).map(([label, gr]) =>
+    `<div class="fg-legend-item"><div class="fg-legend-dot" style="background:${gr.color}"></div>${gr.icon} ${label}</div>`
   ).join('');
 
   const legendDiv = document.createElement('div');
-  legendDiv.className = 'sankey-legend';
+  legendDiv.className = 'fg-legend';
   legendDiv.innerHTML = legendHtml;
-  sankeyContainer.appendChild(legendDiv);
+  wrapper.appendChild(legendDiv);
 }
 
 /* ================================================================
