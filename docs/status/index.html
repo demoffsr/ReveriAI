@@ -912,6 +912,60 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 .flowmap-link-btn { font-size: 0.78rem; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 6px; padding: 0.3rem 0.75rem; cursor: pointer; transition: background 0.15s; margin-top: 0.5rem; }
 .flowmap-link-btn:hover { background: var(--accent-dim); }
 
+/* ===== Heatmap ===== */
+.heatmap-container { overflow-x: auto; }
+.heatmap-grid { display: grid; grid-template-columns: 50px repeat(24, 1fr); gap: 2px; min-width: 700px; }
+.heatmap-cell { aspect-ratio: 1; border-radius: 3px; cursor: pointer; transition: transform 0.1s, opacity 0.15s; position: relative; min-width: 16px; }
+.heatmap-cell:hover { transform: scale(1.3); z-index: 2; }
+.heatmap-label { font-size: 0.62rem; color: var(--text-dim); font-family: var(--mono); display: flex; align-items: center; justify-content: center; }
+.heatmap-label-row { font-size: 0.65rem; color: var(--text-muted); display: flex; align-items: center; padding-right: 8px; justify-content: flex-end; }
+.heatmap-scale { display: flex; align-items: center; gap: 4px; margin-top: 0.75rem; font-size: 0.68rem; color: var(--text-dim); }
+.heatmap-scale-cell { width: 14px; height: 14px; border-radius: 2px; }
+
+/* ===== Live Feed ===== */
+.live-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: livePulse 2s ease-in-out infinite; }
+@keyframes livePulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(16,185,129,0); } }
+.live-paused .live-dot { background: var(--yellow); animation: none; }
+.live-toggle { font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.live-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.live-table { width: 100%; border-collapse: collapse; }
+.live-table th, .live-table td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+.live-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.65rem; }
+.live-table tr { transition: background 0.15s; }
+.live-table tr:hover { background: var(--card-elevated); }
+.live-row-new { animation: liveRowFade 0.5s ease; }
+@keyframes liveRowFade { from { background: var(--accent-dim); } to { background: transparent; } }
+.live-event-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+/* ===== AI Performance ===== */
+.ai-alert { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.ai-alert-warn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: var(--yellow); }
+.ai-alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+
+/* ===== Retention Comparison ===== */
+.ret-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+.ret-compare-card { padding: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); }
+.ret-compare-title { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; }
+.ret-compare-row { display: flex; justify-content: space-between; padding: 0.35rem 0; font-size: 0.82rem; }
+.ret-compare-highlight { color: var(--green); font-weight: 600; }
+
+/* ===== Reminder Funnel ===== */
+.reminder-funnel { display: flex; align-items: center; gap: 0; margin: 1.5rem 0; }
+.reminder-funnel-step { text-align: center; flex: 1; padding: 0.75rem; border-radius: 10px; background: var(--card); border: 1px solid var(--border); }
+.reminder-funnel-step .rfs-value { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.reminder-funnel-step .rfs-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; }
+.reminder-funnel-arrow { font-size: 1.5rem; color: var(--text-dim); padding: 0 0.5rem; flex-shrink: 0; }
+.reminder-funnel-pct { font-size: 0.72rem; color: var(--accent); font-weight: 600; }
+
+/* ===== Emotion Bars ===== */
+.emotion-bar-wrap { margin-bottom: 0.4rem; }
+.emotion-bar-label { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 2px; }
+.emotion-bar-name { color: var(--text-secondary); }
+.emotion-bar-count { color: var(--text-dim); font-family: var(--mono); font-size: 0.72rem; }
+.emotion-bar { height: 20px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.emotion-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .top-nav-inner { gap: 0.75rem; }
@@ -1104,6 +1158,7 @@ const S = {
   flowsTab: 'f_sessions',
   funnelPreset: 'recording',
   flowmapPreset: 'all',
+  liveInterval: null,
 };
 
 /* ================================================================
@@ -1424,6 +1479,7 @@ function destroyChart(name) {
 }
 
 function destroyAllCharts() {
+  if (S.liveInterval) { clearInterval(S.liveInterval); S.liveInterval = null; }
   for (const k of Object.keys(S.charts)) destroyChart(k);
 }
 
@@ -2097,8 +2153,8 @@ async function loadAnalytics() {
   const tab = S.analyticsTab || 'a_overview';
   el.innerHTML = `
     <div class="analytics-tabs">
-      ${['a_overview','a_users','a_features','a_content'].map(t => {
-        const labels = {a_overview:'Overview',a_users:'Users',a_features:'Features',a_content:'Content'};
+      ${['a_overview','a_users','a_features','a_dreams','a_heatmap','a_ai','a_reminders','a_live'].map(t => {
+        const labels = {a_overview:'Overview',a_users:'Users',a_features:'Features',a_dreams:'Dreams',a_heatmap:'Heatmap',a_ai:'AI',a_reminders:'Reminders',a_live:'Live'};
         return `<button class="filter-pill${tab===t?' active':''}" onclick="setAnalyticsTab('${t}')">${labels[t]}</button>`;
       }).join('')}
     </div>
@@ -2109,7 +2165,7 @@ async function loadAnalytics() {
 
 function setAnalyticsTab(tab) {
   S.analyticsTab = tab;
-  const labels = {a_overview:'Overview',a_users:'Users',a_features:'Features',a_content:'Content'};
+  const labels = {a_overview:'Overview',a_users:'Users',a_features:'Features',a_dreams:'Dreams',a_heatmap:'Heatmap',a_ai:'AI',a_reminders:'Reminders',a_live:'Live'};
   document.querySelectorAll('.analytics-tabs .filter-pill').forEach(p =>
     p.classList.toggle('active', p.textContent === labels[tab])
   );
@@ -2126,7 +2182,11 @@ async function loadAnalyticsTab(tab) {
       case 'a_overview': await loadAnalyticsOverview(el); break;
       case 'a_users':    await loadAnalyticsUsers(el); break;
       case 'a_features': await loadAnalyticsFeatures(el); break;
-      case 'a_content':  await loadAnalyticsContent(el); break;
+      case 'a_dreams':    await loadAnalyticsDreams(el); break;
+      case 'a_heatmap':   await loadAnalyticsHeatmap(el); break;
+      case 'a_ai':        await loadAnalyticsAI(el); break;
+      case 'a_reminders': await loadAnalyticsReminders(el); break;
+      case 'a_live':      await loadAnalyticsLive(el); break;
     }
   } catch (err) {
     if (err.message === 'Session expired') return;
@@ -2249,7 +2309,19 @@ async function loadAnalyticsUsers(el) {
         </div>
       </div>
     ` : ''}
+    <div class="section-title" style="margin-top:1.5rem;">Retention by Action</div>
+    <div class="card" style="padding:1rem;">
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <button class="filter-pill active" onclick="loadRetentionAction('dream_recorded',this)">dream_recorded</button>
+        <button class="filter-pill" onclick="loadRetentionAction('record_started',this)">record_started</button>
+        <button class="filter-pill" onclick="loadRetentionAction('ai_title_requested',this)">ai_title_requested</button>
+      </div>
+      <div id="retention-action-wrap">${skelHtml('overview')}</div>
+    </div>
   `;
+
+  // Load initial retention action
+  loadRetentionAction('dream_recorded', null);
 
   // Render DAU chart
   if (daily.length > 0) {
@@ -2267,6 +2339,53 @@ async function loadAnalyticsUsers(el) {
       sessionsByHour.map(s => s.cnt),
       'Sessions'
     );
+  }
+}
+
+async function loadRetentionAction(action, btnEl) {
+  // Update active button
+  if (btnEl) {
+    btnEl.parentElement.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+  }
+  const wrap = document.getElementById('retention-action-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = skelHtml('overview');
+
+  try {
+    const data = await api({ view: 'analytics_retention_action', action, threshold: 3, days: 30 });
+    const cohorts = Array.isArray(data?.cohorts) ? data.cohorts : [];
+
+    if (cohorts.length === 0) {
+      wrap.innerHTML = emptyHtml('Not enough data for retention comparison');
+      return;
+    }
+
+    const active = cohorts.find(c => c.cohort === 'active') || {};
+    const control = cohorts.find(c => c.cohort === 'control') || {};
+
+    const d7Better = (active.d7_pct || 0) > (control.d7_pct || 0);
+    const d30Better = (active.d30_pct || 0) > (control.d30_pct || 0);
+
+    wrap.innerHTML = `
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        Comparing users with \u2265${data.threshold || 3} <strong style="color:var(--accent)">${escHtml(action)}</strong> in first 7 days vs rest
+      </div>
+      <div class="ret-compare">
+        <div class="ret-compare-card">
+          <div class="ret-compare-title">\u2B50 Active (${active.total_users || 0} users)</div>
+          <div class="ret-compare-row"><span>Day 7</span><span class="${d7Better?'ret-compare-highlight':''}">${active.d7_pct || 0}%</span></div>
+          <div class="ret-compare-row"><span>Day 30</span><span class="${d30Better?'ret-compare-highlight':''}">${active.d30_pct || 0}%</span></div>
+        </div>
+        <div class="ret-compare-card">
+          <div class="ret-compare-title">Control (${control.total_users || 0} users)</div>
+          <div class="ret-compare-row"><span>Day 7</span><span class="${!d7Better?'ret-compare-highlight':''}">${control.d7_pct || 0}%</span></div>
+          <div class="ret-compare-row"><span>Day 30</span><span class="${!d30Better?'ret-compare-highlight':''}">${control.d30_pct || 0}%</span></div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    wrap.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
   }
 }
 
@@ -2296,55 +2415,349 @@ async function loadAnalyticsFeatures(el) {
   `;
 }
 
-async function loadAnalyticsContent(el) {
-  const data = await api({ view: 'analytics_content', hours: S.hours });
-  const voicePct = data.voice_pct || 0;
-  const textPct = data.text_pct || 0;
+async function loadAnalyticsDreams(el) {
+  try {
+    const [contentData, dreamData] = await Promise.all([
+      api({ view: 'analytics_content', hours: S.hours }),
+      api({ view: 'analytics_dreams', hours: S.hours }).catch(() => null),
+    ]);
+    const d = contentData || {};
+    const dr = dreamData || {};
+
+    // Voice vs Text
+    const voicePct = d.voice_pct || 0;
+    const textPct = d.text_pct || 0;
+
+    // Emotions
+    const emotions = Array.isArray(dr.emotions) ? dr.emotions : [];
+    const maxEmo = emotions.length > 0 ? Math.max(...emotions.map(e => e.count)) : 1;
+    const EMOTION_COLORS = {joyful:'#fbbf24',calm:'#34d399',anxious:'#f97316',scared:'#ef4444',confused:'#a78bfa',angry:'#dc2626',in_love:'#ec4899',sad:'#60a5fa'};
+    const emotionBarsHtml = emotions.slice(0, 10).map(e => {
+      const pct = (e.count / maxEmo * 100).toFixed(0);
+      const color = EMOTION_COLORS[e.emotion] || 'var(--accent)';
+      return `<div class="emotion-bar-wrap">
+        <div class="emotion-bar-label"><span class="emotion-bar-name">${escHtml(e.emotion)}</span><span class="emotion-bar-count">${e.count}</span></div>
+        <div class="emotion-bar"><div class="emotion-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+      </div>`;
+    }).join('');
+
+    // Daily trend
+    const daily = Array.isArray(dr.daily) ? dr.daily : [];
+    const dailyChartHtml = daily.length > 0 ? `<canvas id="dreamsDailyChart" height="200"></canvas>` : '';
+
+    // Length buckets
+    const buckets = Array.isArray(dr.length_buckets) ? dr.length_buckets : [];
+    const bucketsHtml = buckets.map(b => {
+      const labels = {short:'Short (<50w)',medium:'Medium (50-200w)',long:'Long (>200w)'};
+      return `<div style="display:flex;justify-content:space-between;padding:0.35rem 0;font-size:0.82rem;">
+        <span style="color:var(--text-secondary)">${labels[b.bucket]||b.bucket}</span>
+        <span style="font-family:var(--mono);color:var(--text-muted)">${b.count}</span>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="section-title">Dream Analytics (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+      <div class="analytics-metric-grid cols-4">
+        <div class="analytics-metric card"><div class="metric-label">Total Dreams</div><div class="metric-value">${dr.total_dreams || d.total_dreams || 0}</div></div>
+        <div class="analytics-metric card"><div class="metric-label">Voice</div><div class="metric-value">${dr.voice_dreams || d.voice_dreams || 0}</div><div class="metric-sub">${voicePct}%</div></div>
+        <div class="analytics-metric card"><div class="metric-label">Text</div><div class="metric-value">${dr.text_dreams || d.text_dreams || 0}</div><div class="metric-sub">${textPct}%</div></div>
+        <div class="analytics-metric card"><div class="metric-label">AI Images</div><div class="metric-value">${dr.ai_images || d.ai_images || 0}</div></div>
+      </div>
+      ${emotions.length > 0 ? `
+        <div class="section-title" style="margin-top:1.5rem;">Emotion Distribution</div>
+        <div class="card" style="padding:1.25rem;">${emotionBarsHtml}</div>
+      ` : ''}
+      ${dailyChartHtml ? `
+        <div class="section-title" style="margin-top:1.5rem;">Dreams Per Day</div>
+        <div class="card" style="padding:1rem;">${dailyChartHtml}</div>
+      ` : ''}
+      ${bucketsHtml ? `
+        <div class="section-title" style="margin-top:1.5rem;">Dream Length</div>
+        <div class="card" style="padding:1rem;">${bucketsHtml}</div>
+      ` : ''}
+    `;
+
+    // Render daily chart
+    if (daily.length > 0) {
+      const labels = daily.map(d => { const dt = new Date(d.day); return dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short'}); });
+      const data = daily.map(d => d.count);
+      renderAnalyticsChart('dreamsDailyChart', 'dreamsDailyChart', labels, data, 'Dreams');
+    }
+  } catch (err) {
+    el.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function loadAnalyticsHeatmap(el) {
+  try {
+    const data = await api({ view: 'analytics_heatmap', days: 30 });
+    const cells = Array.isArray(data) ? data : [];
+
+    // Build 7x24 grid
+    const grid = {};
+    let maxCount = 1;
+    cells.forEach(c => {
+      const key = `${c.day_of_week}_${c.hour}`;
+      grid[key] = c;
+      if (c.event_count > maxCount) maxCount = c.event_count;
+    });
+
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dayOrder = [1,2,3,4,5,6,0]; // Mon first
+
+    // Header row: empty + 24 hour labels
+    let gridHtml = '<div class="heatmap-label"></div>';
+    for (let h = 0; h < 24; h++) {
+      gridHtml += `<div class="heatmap-label">${h}</div>`;
+    }
+
+    // Data rows
+    dayOrder.forEach(dow => {
+      gridHtml += `<div class="heatmap-label-row">${dayNames[dow]}</div>`;
+      for (let h = 0; h < 24; h++) {
+        const cell = grid[`${dow}_${h}`] || { event_count: 0, unique_users: 0 };
+        const intensity = cell.event_count / maxCount;
+        const level = intensity === 0 ? 0 : intensity < 0.25 ? 1 : intensity < 0.5 ? 2 : intensity < 0.75 ? 3 : 4;
+        const colors = ['var(--card)','rgba(167,139,250,0.15)','rgba(167,139,250,0.35)','rgba(167,139,250,0.6)','rgba(167,139,250,0.9)'];
+        gridHtml += `<div class="heatmap-cell" style="background:${colors[level]}" title="${dayNames[dow]} ${h}:00 — ${cell.event_count} events, ${cell.unique_users} users"></div>`;
+      }
+    });
+
+    // Scale legend
+    const scaleHtml = `<div class="heatmap-scale">
+      <span>Less</span>
+      <div class="heatmap-scale-cell" style="background:var(--card);border:1px solid var(--border)"></div>
+      <div class="heatmap-scale-cell" style="background:rgba(167,139,250,0.15)"></div>
+      <div class="heatmap-scale-cell" style="background:rgba(167,139,250,0.35)"></div>
+      <div class="heatmap-scale-cell" style="background:rgba(167,139,250,0.6)"></div>
+      <div class="heatmap-scale-cell" style="background:rgba(167,139,250,0.9)"></div>
+      <span>More</span>
+    </div>`;
+
+    el.innerHTML = `
+      <div class="section-title">Activity Heatmap (30 days)</div>
+      <div class="card" style="padding:1.25rem;">
+        <div class="heatmap-container">
+          <div class="heatmap-grid">${gridHtml}</div>
+        </div>
+        ${scaleHtml}
+      </div>
+    `;
+  } catch (err) {
+    el.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function loadAnalyticsAI(el) {
+  try {
+    const data = await api({ view: 'analytics_ai_perf', hours: S.hours });
+    const services = Array.isArray(data?.services) ? data.services : [];
+    const timeline = Array.isArray(data?.timeline) ? data.timeline : [];
+
+    if (services.length === 0) {
+      el.innerHTML = emptyHtml('No AI service data');
+      return;
+    }
+
+    // Check for failures
+    const totalReq = services.reduce((s, sv) => s + (sv.requests || 0), 0);
+    const totalFail = services.reduce((s, sv) => s + (sv.failures || 0), 0);
+    const failRate = totalReq > 0 ? (totalFail / totalReq * 100) : 0;
+    let alertHtml = '';
+    if (failRate > 10) {
+      alertHtml = `<div class="ai-alert ai-alert-error">\u26A0 High failure rate: ${failRate.toFixed(1)}% of AI requests failing</div>`;
+    } else if (failRate > 5) {
+      alertHtml = `<div class="ai-alert ai-alert-warn">\u26A0 Elevated failure rate: ${failRate.toFixed(1)}%</div>`;
+    }
+
+    const metricsHtml = services.map(sv => {
+      const name = sv.service.replace('ai_', '').replace(/_/g, ' ');
+      const rateColor = sv.success_rate >= 95 ? 'var(--green)' : sv.success_rate >= 80 ? 'var(--yellow)' : 'var(--red)';
+      return `
+        <div class="analytics-metric card">
+          <div class="metric-label">${escHtml(name)}</div>
+          <div class="metric-value" style="color:${rateColor}">${sv.success_rate}%</div>
+          <div class="metric-sub">${sv.successes}/${sv.requests} success &middot; ${sv.failures} failed</div>
+          <div class="metric-sub" style="margin-top:4px;">\u23F1 ${sv.avg_response_sec}s avg</div>
+        </div>`;
+    }).join('');
+
+    const chartHtml = timeline.length > 0 ? `<canvas id="aiTimelineChart" height="200"></canvas>` : '';
+
+    el.innerHTML = `
+      <div class="section-title">AI Performance (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
+      ${alertHtml}
+      <div class="analytics-metric-grid">${metricsHtml}</div>
+      ${chartHtml ? `
+        <div class="section-title" style="margin-top:1.5rem;">AI Usage Timeline</div>
+        <div class="card" style="padding:1rem;">${chartHtml}</div>
+      ` : ''}
+    `;
+
+    // Render timeline chart
+    if (timeline.length > 0) {
+      destroyChart('aiTimelineChart');
+      const canvas = document.getElementById('aiTimelineChart');
+      if (canvas) {
+        const labels = timeline.map(t => new Date(t.hour).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}));
+        S.charts['aiTimelineChart'] = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Titles', data: timeline.map(t => t.titles), backgroundColor: 'rgba(251,191,36,0.6)', borderRadius: 3 },
+              { label: 'Images', data: timeline.map(t => t.images), backgroundColor: 'rgba(167,139,250,0.6)', borderRadius: 3 },
+              { label: 'Interpretations', data: timeline.map(t => t.interps), backgroundColor: 'rgba(52,211,153,0.6)', borderRadius: 3 },
+            ],
+          },
+          options: { ...chartOptions('Count'), plugins: { ...chartOptions('Count').plugins, legend: { display: true, labels: { color: '#94a3b8', font: { size: 10 }, usePointStyle: true, boxWidth: 8 } } } },
+        });
+      }
+    }
+  } catch (err) {
+    el.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function loadAnalyticsReminders(el) {
+  try {
+    const data = await api({ view: 'analytics_reminders', days: 30 });
+
+    if (!data || (data.total_reminders === 0 && !data.led_to_record)) {
+      el.innerHTML = `
+        <div class="section-title">Reminder Effectiveness (30 days)</div>
+        ${emptyHtml('No reminder data yet. Deep link events (deep_link_record, deep_link_write) are used to track reminder opens. Use the app with reminders enabled to generate data.')}
+      `;
+      return;
+    }
+
+    const total = data.total_reminders || 0;
+    const recorded = data.led_to_record || 0;
+    const dreamed = data.led_to_dream || 0;
+    const recordPct = data.record_rate_pct || 0;
+    const dreamPct = data.dream_rate_pct || 0;
+
+    const byDow = Array.isArray(data.by_day_of_week) ? data.by_day_of_week : [];
+    const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    el.innerHTML = `
+      <div class="section-title">Reminder Effectiveness (30 days)</div>
+      <div class="reminder-funnel">
+        <div class="reminder-funnel-step">
+          <div class="rfs-value">${total}</div>
+          <div class="rfs-label">Reminder Opens</div>
+        </div>
+        <div class="reminder-funnel-arrow">\u2192 <div class="reminder-funnel-pct">${recordPct}%</div></div>
+        <div class="reminder-funnel-step">
+          <div class="rfs-value">${recorded}</div>
+          <div class="rfs-label">Started Recording</div>
+        </div>
+        <div class="reminder-funnel-arrow">\u2192 <div class="reminder-funnel-pct">${dreamPct}%</div></div>
+        <div class="reminder-funnel-step">
+          <div class="rfs-value">${dreamed}</div>
+          <div class="rfs-label">Dream Saved</div>
+        </div>
+      </div>
+      ${byDow.length > 0 ? `
+        <div class="section-title" style="margin-top:1.5rem;">By Day of Week</div>
+        <div class="card" style="padding:1rem;"><canvas id="reminderDowChart" height="200"></canvas></div>
+      ` : ''}
+    `;
+
+    if (byDow.length > 0) {
+      destroyChart('reminderDowChart');
+      const canvas = document.getElementById('reminderDowChart');
+      if (canvas) {
+        S.charts['reminderDowChart'] = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: byDow.map(d => dowNames[d.dow] || d.dow),
+            datasets: [
+              { label: 'Opens', data: byDow.map(d => d.total), backgroundColor: 'rgba(148,163,184,0.5)', borderRadius: 3 },
+              { label: 'Recorded', data: byDow.map(d => d.recorded), backgroundColor: 'rgba(167,139,250,0.6)', borderRadius: 3 },
+              { label: 'Dream Saved', data: byDow.map(d => d.dreamed), backgroundColor: 'rgba(52,211,153,0.6)', borderRadius: 3 },
+            ],
+          },
+          options: chartOptions('Count'),
+        });
+      }
+    }
+  } catch (err) {
+    el.innerHTML = `<div class="error-box">${escHtml(err.message)}</div>`;
+  }
+}
+
+let _liveLastId = null;
+
+async function loadAnalyticsLive(el) {
+  // Clear any existing interval
+  if (S.liveInterval) { clearInterval(S.liveInterval); S.liveInterval = null; }
+  _liveLastId = null;
 
   el.innerHTML = `
-    <div class="section-title">Dream Recording (${S.hours >= 168 ? '7d' : S.hours + 'h'})</div>
-    <div class="card" style="padding:1.25rem; margin-bottom:1.5rem;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem;">
-        <span style="font-size:0.82rem; font-weight:600;">Voice vs Text</span>
-        <span style="font-size:0.78rem; color:var(--text-muted);">${data.total_dreams || 0} total dreams</span>
-      </div>
-      <div class="pct-bar">
-        <div class="pct-fill" style="width:${voicePct}%; background:var(--accent);"></div>
-      </div>
-      <div class="pct-legend">
-        <span><span class="pct-legend-dot" style="background:var(--accent);"></span>Voice ${voicePct}% (${data.voice_dreams || 0})</span>
-        <span><span class="pct-legend-dot" style="background:var(--border);"></span>Text ${textPct}% (${data.text_dreams || 0})</span>
-      </div>
+    <div class="live-header">
+      <div class="live-dot"></div>
+      <div class="section-title" style="margin:0;">Live Events</div>
+      <button class="live-toggle" id="live-toggle-btn" onclick="toggleLive()">Pause</button>
+      <span style="font-size:0.72rem;color:var(--text-dim);margin-left:auto;">Updates every 10s</span>
     </div>
-    <div class="section-title">AI Usage</div>
-    <div class="analytics-metric-grid">
-      <div class="card analytics-metric">
-        <div class="metric-label">AI Titles</div>
-        <div class="metric-value">${data.ai_titles || 0}</div>
-      </div>
-      <div class="card analytics-metric">
-        <div class="metric-label">AI Interpretations</div>
-        <div class="metric-value">${data.ai_interpretations || 0}</div>
-      </div>
-      <div class="card analytics-metric">
-        <div class="metric-label">AI Images</div>
-        <div class="metric-value">${data.ai_images || 0}</div>
-      </div>
-    </div>
-    <div class="section-title">Content Stats</div>
-    <div class="analytics-metric-grid cols-2">
-      <div class="card analytics-metric">
-        <div class="metric-label">Avg Text Length</div>
-        <div class="metric-value">${data.avg_text_length || 0}</div>
-        <div class="metric-sub">characters per dream</div>
-      </div>
-      <div class="card analytics-metric">
-        <div class="metric-label">Avg Emotions</div>
-        <div class="metric-value">${data.avg_emotions || 0}</div>
-        <div class="metric-sub">emotions per dream</div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div style="max-height:600px;overflow-y:auto;">
+        <table class="live-table">
+          <thead><tr><th>Time</th><th>Event</th><th>Session</th><th>Device</th><th>Meta</th></tr></thead>
+          <tbody id="live-tbody"></tbody>
+        </table>
       </div>
     </div>
   `;
+
+  await refreshLiveEvents(true);
+  S.liveInterval = setInterval(() => refreshLiveEvents(false), 10000);
+}
+
+async function refreshLiveEvents(isFirst) {
+  try {
+    const data = await api({ view: 'analytics_live', limit: 50 });
+    const events = Array.isArray(data) ? data : [];
+    const tbody = document.getElementById('live-tbody');
+    if (!tbody) return;
+
+    const rows = events.map((e, i) => {
+      const ts = new Date(e.created_at);
+      const timeStr = ts.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      const group = getEventGroup(e.event_type);
+      const isNew = !isFirst && _liveLastId && e.id !== _liveLastId && i === 0;
+      const metaStr = e.metadata ? JSON.stringify(e.metadata).slice(0, 60) : '';
+      return `<tr class="${isNew ? 'live-row-new' : ''}">
+        <td style="font-family:var(--mono);color:var(--text-dim);white-space:nowrap;">${timeStr}</td>
+        <td><span class="live-event-dot" style="background:${group.color}"></span>${escHtml(e.event_type)}</td>
+        <td style="font-family:var(--mono);color:var(--text-dim);">${escHtml(e.session_id || '')}</td>
+        <td style="color:var(--text-muted);font-size:0.72rem;">${escHtml(e.device || '')}</td>
+        <td style="font-size:0.68rem;color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(metaStr)}">${escHtml(metaStr)}</td>
+      </tr>`;
+    }).join('');
+
+    tbody.innerHTML = rows;
+    if (events.length > 0) _liveLastId = events[0].id;
+  } catch (err) {
+    // Silently retry on next interval
+  }
+}
+
+function toggleLive() {
+  const btn = document.getElementById('live-toggle-btn');
+  const header = document.querySelector('.live-header');
+  if (S.liveInterval) {
+    clearInterval(S.liveInterval);
+    S.liveInterval = null;
+    if (btn) btn.textContent = 'Resume';
+    if (header) header.classList.add('live-paused');
+  } else {
+    refreshLiveEvents(false);
+    S.liveInterval = setInterval(() => refreshLiveEvents(false), 10000);
+    if (btn) btn.textContent = 'Pause';
+    if (header) header.classList.remove('live-paused');
+  }
 }
 
 function renderAnalyticsChart(canvasId, chartKey, labels, data, label) {
@@ -2380,6 +2793,7 @@ const FUNNEL_PRESETS = {
   ai_image:  { label: 'AI Image',      steps: ['dream_recorded','ai_image_requested','ai_image_completed'] },
   feelings:  { label: 'Feelings',      steps: ['feelings_prompt_shown','feelings_grid_opened','feelings_saved'] },
   journal:   { label: 'Journal Browse', steps: ['tab_switched','dream_viewed','detail_tab_switched'] },
+  onboarding:{ label: 'Onboarding',    steps: ['session_start','tab_switched','record_started','record_stopped','review_saved_audio','dream_recorded','ai_title_completed'] },
 };
 
 const FLOWS_TABS = {f_sessions:'Sessions',f_funnel:'Funnel',f_screentime:'Screen Time',f_transitions:'Transitions',f_flowmap:'Flow Map'};
