@@ -98,6 +98,7 @@ enum AnalyticsService {
     private struct EventPayload: Encodable {
         let event_type: String
         let session_id: String
+        let user_id: String
         let metadata: [String: AnyCodable]?
         let device: String?
         let app_version: String
@@ -159,6 +160,17 @@ enum AnalyticsService {
         Locale.current.identifier
     }()
 
+    /// Persistent user ID — survives app reinstalls via UserDefaults.
+    private static let userId: String = {
+        let key = "analyticsUserId"
+        if let existing = UserDefaults.standard.string(forKey: key) {
+            return existing
+        }
+        let newId = UUID().uuidString
+        UserDefaults.standard.set(newId, forKey: key)
+        return newId
+    }()
+
     // MARK: - Public API
 
     /// Call once from RootView.task to start the flush timer and track session_start.
@@ -179,6 +191,7 @@ enum AnalyticsService {
         let payload = EventPayload(
             event_type: event.rawValue,
             session_id: sessionId,
+            user_id: userId,
             metadata: metadata?.mapValues { AnyCodable($0) },
             device: deviceString,
             app_version: appVersion,

@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { supabaseAdmin, validateAuth, isAuthError } from "../_shared/auth.ts"
+import { supabaseAdmin } from "../_shared/auth.ts"
 
 // Allowed event types (whitelist to prevent garbage data)
 const ALLOWED_EVENTS = new Set([
@@ -82,6 +82,7 @@ const ALLOWED_EVENTS = new Set([
 interface EventPayload {
   event_type: string
   session_id: string
+  user_id?: string
   metadata?: Record<string, unknown>
   device?: string
   app_version?: string
@@ -108,11 +109,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate user via Supabase JWT
-    const authResult = await validateAuth(req, jsonHeaders)
-    if (isAuthError(authResult)) return authResult
-    const userId = authResult.userId
-
     const body = await req.json()
 
     // Support both single event and batch
@@ -137,7 +133,7 @@ Deno.serve(async (req) => {
         continue
       }
       rows.push({
-        user_id: userId,
+        user_id: evt.user_id || '00000000-0000-0000-0000-000000000000',
         event_type: evt.event_type,
         session_id: evt.session_id,
         metadata: evt.metadata || null,
