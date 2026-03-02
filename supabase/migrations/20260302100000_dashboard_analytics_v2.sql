@@ -406,11 +406,17 @@ END;
 $$;
 
 -- ============================================================
--- Grants
+-- Restrict to service_role only (called via edge functions)
 -- ============================================================
-GRANT EXECUTE ON FUNCTION analytics_activity_heatmap(int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_retention_by_action(text, int, int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_ai_performance(int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_reminder_stats(int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_dream_stats(int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_live_events(int) TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION analytics_activity_heatmap(int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_activity_heatmap(int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_retention_by_action(text, int, int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_retention_by_action(text, int, int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_ai_performance(int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_ai_performance(int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_reminder_stats(int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_reminder_stats(int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_dream_stats(int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_dream_stats(int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_live_events(int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_live_events(int) TO service_role;

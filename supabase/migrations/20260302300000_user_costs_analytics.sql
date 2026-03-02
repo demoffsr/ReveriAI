@@ -105,7 +105,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION analytics_user_costs TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION analytics_user_costs FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_user_costs TO service_role;
 
 -- Update analytics_user_list to include cost data
 CREATE OR REPLACE FUNCTION analytics_user_list(

@@ -280,8 +280,11 @@ END;
 $$;
 
 -- ============================================================
--- Grants
+-- Restrict to service_role only (called via edge functions)
 -- ============================================================
-GRANT EXECUTE ON FUNCTION analytics_user_list(int, int, int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_user_profile(text) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_user_events(text, int, int, int) TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION analytics_user_list(int, int, int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_user_list(int, int, int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_user_profile(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_user_profile(text) TO service_role;
+REVOKE ALL ON FUNCTION analytics_user_events(text, int, int, int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_user_events(text, int, int, int) TO service_role;

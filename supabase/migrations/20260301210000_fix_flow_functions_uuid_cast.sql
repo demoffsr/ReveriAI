@@ -124,6 +124,8 @@ BEGIN
 END;
 $$;
 
--- Grant execute to anon and service_role
-GRANT EXECUTE ON FUNCTION analytics_funnel(text[], int) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION analytics_user_flow(text) TO anon, authenticated, service_role;
+-- Restrict to service_role only (called via edge functions)
+REVOKE ALL ON FUNCTION analytics_funnel(text[], int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_funnel(text[], int) TO service_role;
+REVOKE ALL ON FUNCTION analytics_user_flow(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION analytics_user_flow(text) TO service_role;
