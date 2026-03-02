@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
       .insert(rows)
 
     if (error) {
-      console.error('[track-event] Insert failed:', error.message)
-      return new Response(JSON.stringify({ error: 'Insert failed' }), { status: 500, headers: jsonHeaders })
+      console.error('[track-event] Insert failed:', error.message, error.details, error.hint)
+      return new Response(JSON.stringify({ error: 'Insert failed', details: error.message }), { status: 500, headers: jsonHeaders })
     }
 
     return new Response(JSON.stringify({ ok: true, count: rows.length }), { headers: jsonHeaders })
