@@ -35,6 +35,7 @@ struct RootView: View {
     @State private var journalMounted = false
     @State private var isJournalSearchActive = false
     @State private var tabBarSearchHidden = false
+    @State private var isInProfile = false
     @State private var tabBarShowTask: Task<Void, Never>?
     @State private var showDeepLinkRecordConfirmation = false
     @State private var launchComplete = false
@@ -82,7 +83,8 @@ struct RootView: View {
             dreamReminderManager: dreamReminderManager,
             avatarStorage: avatarStorage,
             headerBackgroundStorage: headerBackgroundStorage,
-            isSearchActive: $isJournalSearchActive
+            isSearchActive: $isJournalSearchActive,
+            isInProfile: $isInProfile
         )
         .zIndex(selectedTab == .journal ? 1 : 0)
         .allowsHitTesting(selectedTab == .journal)
@@ -194,8 +196,9 @@ struct RootView: View {
                 audioRecorder: audioRecorder,  // Reference only — NO property read in RootView
                 audioPlaybackService: audioPlaybackService
             )
-            .opacity(tabBarSearchHidden ? 0 : 1)
+            .opacity(tabBarSearchHidden || isInProfile ? 0 : 1)
             .animation(nil, value: tabBarSearchHidden)
+            .allowsHitTesting(!isInProfile)
         }
         .environment(\.audioPlayback, audioPlaybackService)
         .ignoresSafeArea(.keyboard)

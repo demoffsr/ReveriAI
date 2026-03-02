@@ -24,8 +24,11 @@ struct ProfileView: View {
     @State private var showTimePicker = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
-    @State private var cacheCleared = false
     @State private var showBackgroundPicker = false
+    @State private var showAvatarDialog = false
+    @State private var showAvatarPhotoPicker = false
+    @State private var dayPreset: DayPreset = .weekdays
+    @State private var showHeaderPhotoDialog = false
 
     private var selectedLocale: SpeechLocale {
         SpeechLocale(rawValue: selectedLocaleId) ?? .defaultLocale
@@ -93,19 +96,16 @@ struct ProfileView: View {
 
     private var scrollContent: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 avatarSection
-                speechRecognitionCard
-                reminderCard
-                themeCard
-                backgroundCard
-                supportCard
-                dataCard
-                aboutCard
+                headerPhotoCard
+                mainSettingsCard
+                supportCardSection
+                dataAndAboutCard
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
-            .padding(.bottom, 100)
+            .padding(.bottom, 120)
         }
     }
 
@@ -113,7 +113,9 @@ struct ProfileView: View {
 
     private var avatarSection: some View {
         VStack(spacing: 12) {
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+            Button {
+                showAvatarDialog = true
+            } label: {
                 ZStack(alignment: .bottomTrailing) {
                     if let image = avatarStorage.avatarImage {
                         Image(uiImage: image)
@@ -142,6 +144,21 @@ struct ProfileView: View {
                         .offset(x: -2, y: -2)
                 }
             }
+            .confirmationDialog(
+                String(localized: "profile.avatarOptions", defaultValue: "Profile Photo"),
+                isPresented: $showAvatarDialog,
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "profile.chooseFromLibrary", defaultValue: "Choose from Library")) {
+                    showAvatarPhotoPicker = true
+                }
+                if avatarStorage.avatarImage != nil {
+                    Button(String(localized: "profile.removePhoto", defaultValue: "Remove Photo"), role: .destructive) {
+                        avatarStorage.delete()
+                    }
+                }
+            }
+            .photosPicker(isPresented: $showAvatarPhotoPicker, selection: $selectedPhoto, matching: .images)
 
             if isEditingName {
                 TextField(String(localized: "profile.yourName", defaultValue: "Your name"), text: $userName)
@@ -154,408 +171,465 @@ struct ProfileView: View {
                 Button {
                     isEditingName = true
                 } label: {
-                    Text(userName.isEmpty ? String(localized: "profile.addName", defaultValue: "Add name") : userName)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(userName.isEmpty ? .secondary : .primary)
+                    if userName.isEmpty {
+                        Text(String(localized: "profile.addName", defaultValue: "Add your name"))
+                            .font(.system(size: 17))
+                            .italic()
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(userName)
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(.primary)
+                    }
                 }
             }
         }
         .padding(.vertical, 8)
     }
 
-    // MARK: - Settings Cards
+    // MARK: - Header Photo Card
 
-    private var speechRecognitionCard: some View {
-        settingsCard(title: String(localized: "profile.speechRecognition", defaultValue: "Speech Recognition")) {
-            settingsRow(icon: "globe", iconColor: .blue, title: String(localized: "profile.language", defaultValue: "Language")) {
-                Menu {
-                    ForEach(SpeechLocale.allCases) { locale in
-                        Button {
-                            AnalyticsService.track(.languageChanged, metadata: ["locale": locale.identifier])
-                            selectedLocaleId = locale.identifier
-                        } label: {
-                            HStack {
-                                Text(locale.displayName)
-                                if locale == selectedLocale {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(selectedLocale.displayName)
-                            .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+    private var headerPhotoCard: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .bottom) {
+                Group {
+                    if let bg = headerBackgroundStorage.backgroundImage {
+                        Image(uiImage: bg)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image("BackgroundDaylight")
+                            .resizable()
+                            .scaledToFill()
                     }
                 }
+                .frame(height: 160)
+                .frame(maxWidth: .infinity)
+                .clipped()
             }
-        }
-    }
 
-    private var reminderCard: some View {
-        settingsCard(title: String(localized: "profile.dreamReminder", defaultValue: "Dream Reminder")) {
-            VStack(spacing: 0) {
-                // Toggle row
+            Divider()
+
+            Button {
+                showHeaderPhotoDialog = true
+            } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("bell.fill", color: .orange)
-                    Text(String(localized: "profile.enableReminder", defaultValue: "Enable Reminder"))
+                    iconBadge("ProfileDay", color: .purple)
+                    Text(String(localized: "profile.headerPhoto", defaultValue: "Header Photo"))
                         .font(.system(size: 16))
+                        .foregroundStyle(.primary)
                     Spacer()
-                    Toggle("", isOn: $reminderEnabled)
-                        .labelsHidden()
-                        .tint(theme.accent)
-                }
-                .frame(height: 52)
-                .onChange(of: reminderEnabled) { _, enabled in
-                    handleReminderToggle(enabled)
-                }
-
-                if reminderEnabled {
-                    cardDivider
-
-                    // Time row
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            showTimePicker.toggle()
-                        }
-                    } label: {
-                        HStack(spacing: 12) {
-                            settingsIcon("clock.fill", color: .purple)
-                            Text(String(localized: "profile.time", defaultValue: "Time"))
-                                .font(.system(size: 16))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(reminderDate, style: .time)
-                                .foregroundStyle(.secondary)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                                .rotationEffect(.degrees(showTimePicker ? 90 : 0))
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .frame(height: 52)
-
-                    if showTimePicker {
-                        DatePicker(
-                            "",
-                            selection: $reminderDate,
-                            displayedComponents: .hourAndMinute
-                        )
-                        .datePickerStyle(.wheel)
-                        .labelsHidden()
-                        .frame(height: 150)
-                        .onChange(of: reminderDate) { _, newDate in
-                            let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                            reminderHour = components.hour ?? 7
-                            reminderMinute = components.minute ?? 0
-                            AnalyticsService.track(.reminderTimeChanged, metadata: [
-                                "hour": reminderHour,
-                                "minute": reminderMinute
-                            ])
-                            reschedule()
-                            dreamReminderManager.validateAndAutoStart()
-                        }
-                    }
-
-                    cardDivider
-
-                    // Weekday selector
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(String(localized: "profile.days", defaultValue: "Days"))
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-
-                        HStack(spacing: 8) {
-                            ForEach(Self.weekdaySymbols, id: \.index) { day in
-                                weekdayButton(day)
-                            }
-                        }
-                    }
-                    .frame(height: 72)
-
-                    cardDivider
-
-                    // Test notification
-                    Button {
-                        notificationService.sendTestNotification()
-                    } label: {
-                        HStack(spacing: 12) {
-                            settingsIcon("bell.badge.fill", color: .red)
-                            Text(String(localized: "profile.sendTestNotification", defaultValue: "Send Test Notification"))
-                                .font(.system(size: 16))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .frame(height: 52)
-                }
-            }
-        }
-    }
-
-    private var themeCard: some View {
-        settingsCard(title: String(localized: "profile.theme", defaultValue: "Theme")) {
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    settingsIcon("paintbrush.fill", color: .indigo)
-                    Text(String(localized: "profile.appearance", defaultValue: "Appearance"))
+                    Text(String(localized: "profile.change", defaultValue: "Change"))
                         .font(.system(size: 16))
-                    Spacer()
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
                 }
-
-                Picker("", selection: $themeOverride) {
-                    Text(String(localized: "profile.auto", defaultValue: "Auto")).tag("auto")
-                    Text(String(localized: "profile.day", defaultValue: "Day")).tag("day")
-                    Text(String(localized: "profile.night", defaultValue: "Night")).tag("night")
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: themeOverride) { _, newTheme in
-                    AnalyticsService.track(.themeChanged, metadata: ["theme": newTheme])
-                }
+                .frame(height: 48)
+                .padding(.horizontal, 14)
             }
-            .frame(minHeight: 52)
-        }
-    }
-
-    private var backgroundCard: some View {
-        settingsCard(title: String(localized: "profile.recordBackground", defaultValue: "Record Background")) {
-            VStack(spacing: 0) {
-                Button {
+            .buttonStyle(.plain)
+            .confirmationDialog(
+                String(localized: "profile.headerPhotoOptions", defaultValue: "Header Photo"),
+                isPresented: $showHeaderPhotoDialog,
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "profile.chooseFromGallery", defaultValue: "Choose from Gallery")) {
                     showBackgroundPicker = true
-                } label: {
-                    HStack(spacing: 12) {
-                        if let bg = headerBackgroundStorage.backgroundImage {
-                            Image(uiImage: bg)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 40, height: 24)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        } else {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(theme.accent.opacity(0.12))
-                                .frame(width: 40, height: 24)
-                                .overlay {
-                                    Image(systemName: "photo")
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(theme.accent)
-                                }
-                        }
-                        Text(String(localized: "profile.headerPhoto", defaultValue: "Header Photo"))
-                            .font(.system(size: 16))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                    }
                 }
-                .buttonStyle(.plain)
-                .frame(height: 52)
-
                 if headerBackgroundStorage.backgroundImage != nil {
-                    cardDivider
-
-                    Button {
+                    Button(String(localized: "profile.resetToDefault", defaultValue: "Reset to Default"), role: .destructive) {
                         headerBackgroundStorage.delete()
-                    } label: {
-                        HStack(spacing: 12) {
-                            settingsIcon("arrow.counterclockwise", color: .red)
-                            Text(String(localized: "profile.resetToDefault", defaultValue: "Reset to Default"))
-                                .font(.system(size: 16))
-                                .foregroundStyle(.red)
-                            Spacer()
-                        }
                     }
-                    .buttonStyle(.plain)
-                    .frame(height: 52)
                 }
             }
         }
+        .background(.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.black.opacity(0.1), lineWidth: 1))
         .sheet(isPresented: $showBackgroundPicker) {
             HeaderBackgroundPickerSheet(headerBackgroundStorage: headerBackgroundStorage)
         }
     }
 
-    private var supportCard: some View {
-        settingsCard(title: String(localized: "profile.support", defaultValue: "Support")) {
-            VStack(spacing: 0) {
-                // Contact us
-                Link(destination: URL(string: "mailto:demidovdmitry07@gmail.com")!) {
-                    settingsRowContent(icon: "envelope.fill", iconColor: .green, title: String(localized: "profile.contactUs", defaultValue: "Contact Us"))
-                }
-                .buttonStyle(.plain)
-                .frame(height: 52)
-                .simultaneousGesture(TapGesture().onEnded {
-                    AnalyticsService.track(.contactUsTapped)
-                })
+    // MARK: - Main Settings Card
 
-                cardDivider
-
-                // Rate app
-                Button {
-                    AnalyticsService.track(.rateAppTapped)
-                    requestReview()
-                } label: {
-                    settingsRowContent(icon: "star.fill", iconColor: .yellow, title: String(localized: "profile.rateApp", defaultValue: "Rate the App"))
-                }
-                .buttonStyle(.plain)
-                .frame(height: 52)
-
-                cardDivider
-
-                // Privacy Policy
-                Button {
-                    showPrivacyPolicy = true
-                } label: {
-                    settingsRowContent(icon: "lock.shield.fill", iconColor: .blue, title: String(localized: "profile.privacyPolicy", defaultValue: "Privacy Policy"))
-                }
-                .buttonStyle(.plain)
-                .frame(height: 52)
-
-                cardDivider
-
-                // Terms of Use
-                Button {
-                    showTermsOfUse = true
-                } label: {
-                    settingsRowContent(icon: "doc.text.fill", iconColor: .gray, title: String(localized: "profile.termsOfUse", defaultValue: "Terms of Use"))
-                }
-                .buttonStyle(.plain)
-                .frame(height: 52)
-            }
+    private var themeDisplayName: String {
+        switch themeOverride {
+        case "day": String(localized: "profile.day", defaultValue: "Day")
+        case "night": String(localized: "profile.night", defaultValue: "Night")
+        default: String(localized: "profile.auto", defaultValue: "Auto")
         }
     }
 
-    private var dataCard: some View {
-        settingsCard(title: String(localized: "profile.data", defaultValue: "Data")) {
-            Button {
-                AnalyticsService.track(.cacheCleared)
-                ImageCache.shared.clearAll()
-                cacheCleared = true
-                Task {
-                    try? await Task.sleep(for: .seconds(2))
-                    cacheCleared = false
+    private var mainSettingsCard: some View {
+        card {
+            // Theme row
+            Menu {
+                Button {
+                    themeOverride = "auto"
+                    AnalyticsService.track(.themeChanged, metadata: ["theme": "auto"])
+                } label: {
+                    if themeOverride == "auto" { Image(systemName: "checkmark") }
+                    Text(String(localized: "profile.auto", defaultValue: "Auto"))
+                }
+                Button {
+                    themeOverride = "day"
+                    AnalyticsService.track(.themeChanged, metadata: ["theme": "day"])
+                } label: {
+                    if themeOverride == "day" { Image(systemName: "checkmark") }
+                    Text(String(localized: "profile.day", defaultValue: "Day"))
+                }
+                Button {
+                    themeOverride = "night"
+                    AnalyticsService.track(.themeChanged, metadata: ["theme": "night"])
+                } label: {
+                    if themeOverride == "night" { Image(systemName: "checkmark") }
+                    Text(String(localized: "profile.night", defaultValue: "Night"))
                 }
             } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("trash.fill", color: .red)
-                    Text(String(localized: "profile.clearCache", defaultValue: "Clear Cache"))
+                    iconBadge("ProfileNight", color: .indigo)
+                    Text(String(localized: "profile.theme", defaultValue: "Theme"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
                     Spacer()
-                    if cacheCleared {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                    Text(themeDisplayName)
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
+            }
+            .tint(theme.accent)
+
+            rowDivider
+
+            // Language row
+            Menu {
+                ForEach(SpeechLocale.allCases) { locale in
+                    Button {
+                        AnalyticsService.track(.languageChanged, metadata: ["locale": locale.identifier])
+                        selectedLocaleId = locale.identifier
+                    } label: {
+                        if locale == selectedLocale { Image(systemName: "checkmark") }
+                        Text(locale.shortDisplayName)
                     }
                 }
+            } label: {
+                HStack(spacing: 12) {
+                    iconBadge(systemName: "globe", color: .blue)
+                    Text(String(localized: "profile.language", defaultValue: "Language"))
+                        .font(.system(size: 16))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text(selectedLocale.shortDisplayName)
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
+            }
+            .tint(theme.accent)
+
+            rowDivider
+
+            // Reminder toggle row
+            HStack(spacing: 12) {
+                iconBadge("ProfileReminder", color: .orange)
+                Text(String(localized: "profile.dreamReminder", defaultValue: "Dream Reminder"))
+                    .font(.system(size: 16))
+                Spacer()
+                Toggle("", isOn: $reminderEnabled)
+                    .labelsHidden()
+                    .tint(theme.accent)
+            }
+            .frame(height: 48)
+            .onChange(of: reminderEnabled) { _, enabled in
+                handleReminderToggle(enabled)
+            }
+
+            // Expandable reminder details
+            if reminderEnabled {
+                rowDivider
+
+                // Time row
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showTimePicker.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        iconBadge("ProfileDay", color: .purple)
+                        Text(String(localized: "profile.timeToBed", defaultValue: "Time to Bed"))
+                            .font(.system(size: 16))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(reminderDate, style: .time)
+                            .font(.system(size: 16))
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .rotationEffect(.degrees(showTimePicker ? 90 : 0))
+                    }
+                    .frame(height: 48)
+                }
+                .buttonStyle(.plain)
+
+                if showTimePicker {
+                    DatePicker(
+                        "",
+                        selection: $reminderDate,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(height: 150)
+                    .onChange(of: reminderDate) { _, newDate in
+                        let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                        reminderHour = components.hour ?? 7
+                        reminderMinute = components.minute ?? 0
+                        AnalyticsService.track(.reminderTimeChanged, metadata: [
+                            "hour": reminderHour,
+                            "minute": reminderMinute
+                        ])
+                        reschedule()
+                        dreamReminderManager.validateAndAutoStart()
+                    }
+                }
+
+                rowDivider
+
+                // Day presets — segmented control
+                Picker("", selection: $dayPreset) {
+                    ForEach(DayPreset.allCases, id: \.rawValue) { preset in
+                        Text(preset.displayName).tag(preset)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.vertical, 8)
+                .onChange(of: dayPreset) { _, newPreset in
+                    applyDayPreset(newPreset)
+                }
+
+                // Weekday circles — only for custom preset
+                if dayPreset == .custom {
+                    rowDivider
+
+                    HStack(spacing: 6) {
+                        ForEach(Self.weekdaySymbols, id: \.index) { day in
+                            weekdayButton(day)
+                        }
+                    }
+                    .frame(height: 52)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .top)))
+                }
+            }
+        }
+        .animation(.spring(duration: 0.3, bounce: 0.15), value: reminderEnabled)
+        .animation(.spring(duration: 0.3, bounce: 0.15), value: dayPreset)
+        .onAppear { dayPreset = computeDayPreset() }
+    }
+
+    // MARK: - Support Card
+
+    private var supportCardSection: some View {
+        card {
+            Link(destination: URL(string: "mailto:demidovdmitry07@gmail.com")!) {
+                HStack(spacing: 12) {
+                    iconBadge("ProfileContact", color: .green)
+                    Text(String(localized: "profile.contactUs", defaultValue: "Contact Us"))
+                        .font(.system(size: 16))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
             }
             .buttonStyle(.plain)
-            .frame(height: 52)
+            .simultaneousGesture(TapGesture().onEnded {
+                AnalyticsService.track(.contactUsTapped)
+            })
+
+            rowDivider
+
+            Button {
+                AnalyticsService.track(.rateAppTapped)
+                requestReview()
+            } label: {
+                HStack(spacing: 12) {
+                    iconBadge("ProfileRate", color: .yellow)
+                    Text(String(localized: "profile.rateApp", defaultValue: "Rate the App"))
+                        .font(.system(size: 16))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
+            }
+            .buttonStyle(.plain)
+
+            rowDivider
+
+            Button {
+                showPrivacyPolicy = true
+            } label: {
+                HStack(spacing: 12) {
+                    iconBadge("ProfilePrivacy", color: .blue)
+                    Text(String(localized: "profile.privacyPolicy", defaultValue: "Privacy Policy"))
+                        .font(.system(size: 16))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
+            }
+            .buttonStyle(.plain)
+
+            rowDivider
+
+            Button {
+                showTermsOfUse = true
+            } label: {
+                HStack(spacing: 12) {
+                    iconBadge("ProfileTerms", color: .gray)
+                    Text(String(localized: "profile.termsOfUse", defaultValue: "Terms of Use"))
+                        .font(.system(size: 16))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
+            }
+            .buttonStyle(.plain)
         }
     }
 
-    private var aboutCard: some View {
-        settingsCard(title: String(localized: "profile.about", defaultValue: "About")) {
+    // MARK: - Data & About Card
+
+    private var dataAndAboutCard: some View {
+        card {
             HStack(spacing: 12) {
-                settingsIcon("info.circle.fill", color: .secondary)
+                iconBadge("ProfileVersion", color: .secondary)
                 Text(String(localized: "profile.version", defaultValue: "Version"))
                     .font(.system(size: 16))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+                    .font(.system(size: 16))
                     .foregroundStyle(.secondary)
             }
-            .frame(height: 52)
+            .frame(height: 48)
         }
     }
 
-    // MARK: - Reusable Components
+    // MARK: - Helpers
 
-    private func settingsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .padding(.bottom, 8)
-                .padding(.leading, 4)
-
-            VStack(spacing: 0) {
-                content()
-            }
-            .padding(.horizontal, 14)
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(.black.opacity(0.1), lineWidth: 1)
-            )
-        }
-    }
-
-    private func settingsRow<Accessory: View>(icon: String, iconColor: Color, title: String, @ViewBuilder accessory: () -> Accessory) -> some View {
-        HStack(spacing: 12) {
-            settingsIcon(icon, color: iconColor)
-            Text(title)
-                .font(.system(size: 16))
-            Spacer()
-            accessory()
-        }
-        .frame(height: 52)
-    }
-
-    private func settingsRowContent(icon: String, iconColor: Color, title: String) -> some View {
-        HStack(spacing: 12) {
-            settingsIcon(icon, color: iconColor)
-            Text(title)
-                .font(.system(size: 16))
-                .foregroundStyle(.primary)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    private func settingsIcon(_ name: String, color: Color) -> some View {
-        RoundedRectangle(cornerRadius: 7)
-            .fill(color.opacity(0.12))
-            .frame(width: 28, height: 28)
+    private func iconBadge(_ asset: String, color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(color.opacity(0.15))
+            .frame(width: 32, height: 32)
             .overlay {
-                Image(systemName: name)
-                    .font(.system(size: 15))
+                Image(asset)
+                    .resizable().scaledToFit()
+                    .frame(width: 18, height: 18)
                     .foregroundStyle(color)
             }
     }
 
-    private var cardDivider: some View {
-        Divider()
-            .background(.black.opacity(0.08))
-            .padding(.leading, 40)
+    private func iconBadge(systemName: String, color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(color.opacity(0.15))
+            .frame(width: 32, height: 32)
+            .overlay {
+                Image(systemName: systemName)
+                    .font(.system(size: 16))
+                    .foregroundStyle(color)
+            }
+    }
+
+    private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 0) { content() }
+            .padding(.horizontal, 14)
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.black.opacity(0.1), lineWidth: 1))
+    }
+
+    private var rowDivider: some View {
+        Divider().padding(.leading, 38)
     }
 
     private func weekdayButton(_ day: (index: Int, short: String)) -> some View {
         let isSelected = selectedDaysSet.contains(day.index)
         return Button {
-            toggleDay(day.index)
+            withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                toggleDay(day.index)
+            }
         } label: {
             Text(day.short)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isSelected ? .white : .secondary)
-                .frame(width: 32, height: 32)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : .primary.opacity(0.4))
+                .frame(width: 38, height: 38)
                 .background {
                     if isSelected {
                         Circle().fill(theme.accent)
-                    } else {
-                        Circle().fill(.black.opacity(0.05))
                     }
                 }
+                .reveriGlass(.circle, interactive: false)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Day Preset
+
+    private enum DayPreset: String, CaseIterable {
+        case everyDay = "every_day"
+        case weekdays = "weekdays"
+        case custom = "custom"
+
+        var displayName: String {
+            switch self {
+            case .everyDay: String(localized: "profile.everyDay", defaultValue: "Every day")
+            case .weekdays: String(localized: "profile.weekdays", defaultValue: "Weekdays")
+            case .custom: String(localized: "profile.custom", defaultValue: "Custom")
+            }
+        }
+    }
+
+    private func computeDayPreset() -> DayPreset {
+        let days = selectedDaysSet
+        if days == Set(1...7) { return .everyDay }
+        if days == Set(2...6) { return .weekdays }
+        return .custom
+    }
+
+    private func applyDayPreset(_ preset: DayPreset) {
+        switch preset {
+        case .everyDay:
+            reminderDays = (1...7).map(String.init).joined(separator: ",")
+        case .weekdays:
+            reminderDays = (2...6).map(String.init).joined(separator: ",")
+        case .custom:
+            break
+        }
+        if reminderEnabled {
+            reschedule()
+            dreamReminderManager.validateAndAutoStart()
+        }
     }
 
     // MARK: - Actions
@@ -622,4 +696,5 @@ struct ProfileView: View {
             }
         }
     }
+
 }

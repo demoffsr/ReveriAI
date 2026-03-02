@@ -28,6 +28,7 @@ struct JournalView: View {
     @State private var pendingEditAction: DreamDetailView.EditAction? = nil
     @State private var showProfile = false
     @Binding var isSearchActive: Bool
+    @Binding var isInProfile: Bool
     @State private var searchQuery = ""
     @State private var searchDebounceTask: Task<Void, Never>?
     @Query(sort: \Dream.createdAt, order: .reverse) private var allDreams: [Dream]
@@ -93,22 +94,10 @@ struct JournalView: View {
     // MARK: - Main Content
 
     private var journalContent: some View {
-        journalLayout
-            .navigationDestination(item: $selectedDream) { dream in
-                dreamDetail(for: dream)
+        journalContentBase
+            .onChange(of: showProfile) { _, value in
+                isInProfile = value
             }
-            .navigationDestination(item: $selectedFolder) { folder in
-                folderDetail(for: folder)
-            }
-            .navigationDestination(isPresented: $showProfile) {
-                ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage)
-            }
-            .onAppear { refreshFilters() }
-            .onChange(of: selectedEmotion) { _, newValue in
-                viewModel.selectedEmotion = newValue
-                refreshFilters()
-            }
-            .onChange(of: allDreams) { _, _ in refreshFilters() }
             .onChange(of: viewModel.searchText) { _, _ in
                 searchDebounceTask?.cancel()
                 searchDebounceTask = Task {
@@ -141,6 +130,25 @@ struct JournalView: View {
             .onChange(of: showNewFolderAlert) { _, newValue in
                 if newValue { newFolderName = "" }
             }
+    }
+
+    private var journalContentBase: some View {
+        journalLayout
+            .navigationDestination(item: $selectedDream) { dream in
+                dreamDetail(for: dream)
+            }
+            .navigationDestination(item: $selectedFolder) { folder in
+                folderDetail(for: folder)
+            }
+            .navigationDestination(isPresented: $showProfile) {
+                ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage)
+            }
+            .onAppear { refreshFilters() }
+            .onChange(of: selectedEmotion) { _, newValue in
+                viewModel.selectedEmotion = newValue
+                refreshFilters()
+            }
+            .onChange(of: allDreams) { _, _ in refreshFilters() }
     }
 
     private var journalLayout: some View {
