@@ -75,6 +75,7 @@ RecordingActivityWidget/    # Widget Extension (RecordingActivityWidgetExtension
 - **TimelineView + @State timing:** Never initialize time references to `0` or epoch — TimelineView fires before `onAppear`. Use `TimeInterval?` with nil-coalescing.
 - **Observation isolation:** Frequent `@Observable` updates (e.g. audio metering ~43Hz) must be consumed in small wrapper views. Pattern: `LiveWaveformView`.
 - **Complex view type-check:** When compiler fails "unable to type-check", extract `body` into computed properties + helper functions, use explicit `{ _, _ in }` onChange closures.
+- **SQL functions security:** Все public-schema функции должны иметь REVOKE от anon/authenticated и GRANT только service_role. Прямой клиентский RPC-доступ запрещён. При создании новой функции добавлять REVOKE/GRANT блок (см. миграцию 20260302500000).
 
 ## Detailed References
 
