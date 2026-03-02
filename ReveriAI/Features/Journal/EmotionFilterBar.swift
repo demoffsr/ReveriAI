@@ -71,6 +71,9 @@ struct EmotionFilterBar: View {
         let isDeselecting = selectedEmotion == emotion
 
         selectedEmotion = isDeselecting ? nil : emotion
+        AnalyticsService.track(.emotionFilterChanged, metadata: [
+            "emotion": isDeselecting ? "none" : emotion.rawValue
+        ])
 
         withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
             if !isDeselecting {

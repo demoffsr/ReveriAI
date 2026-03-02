@@ -41,6 +41,7 @@ struct FolderPickerSheet: View {
                         LazyVGrid(columns: columns, spacing: 14) {
                             ForEach(cachedFilteredFolders, id: \.id) { folder in
                                 FolderCard(folder: folder, onTap: {
+                                    AnalyticsService.track(.dreamMovedToFolder)
                                     dream.folder = folder
                                     try? modelContext.save()
                                     dismiss()
@@ -86,6 +87,7 @@ struct FolderPickerSheet: View {
                     let folder = DreamFolder(name: newFolderName.trimmingCharacters(in: .whitespaces))
                     modelContext.insert(folder)
                     try? modelContext.save()
+                    AnalyticsService.track(.folderCreated)
                 }
                 Button(String(localized: "folder.cancel", defaultValue: "Cancel"), role: .cancel) {}
             }

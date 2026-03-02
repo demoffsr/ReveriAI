@@ -347,6 +347,7 @@ extension DreamAIService {
             let fileSize = (try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? Int) ?? 0
             logger.info("📂 Whisper: file size = \(fileSize) bytes")
 
+            AnalyticsService.track(.aiTranscriptionStarted)
             var lastError: Swift.Error?
             for attempt in 1...maxWhisperRetries {
                 do {
@@ -364,6 +365,9 @@ extension DreamAIService {
                     dream.text = transcript
                     try context.save()
                     logger.info("Whisper transcription saved (\(transcript.count) chars)")
+                    let estimatedMinutes = Double(fileSize) / (16000 * 2 * 60) // rough PCM estimate
+                    let cost = max(0.006, estimatedMinutes * 0.006)
+                    AnalyticsService.track(.aiTranscriptionCompleted, metadata: ["cost_usd": cost])
 
                     // Generate title from high-quality Whisper text
                     if dream.title.isEmpty {
@@ -390,6 +394,7 @@ extension DreamAIService {
             }
 
             // All retries exhausted or non-retryable error — keep original transcript
+            AnalyticsService.track(.aiTranscriptionFailed, metadata: ["error": lastError?.localizedDescription ?? "unknown"])
             logger.warning("Whisper failed after retries, keeping original transcript")
             let context = modelContainer.mainContext
             if let dream = context.model(for: dreamID) as? Dream {
@@ -491,6 +496,7 @@ extension DreamAIService {
         onComplete: (@MainActor (String?) -> Void)? = nil
     ) {
         Task { @MainActor in
+            AnalyticsService.track(.aiImageStarted)
             do {
                 let context = modelContainer.mainContext
                 let oldImagePath = (context.model(for: dreamID) as? Dream)?.imagePath
@@ -503,7 +509,6 @@ extension DreamAIService {
                 await downloadImageToDisk(from: result.imageURL, fileName: result.imagePath)
 
                 guard let dream = context.model(for: dreamID) as? Dream else {
-                    // Dream deleted while generating — cleanup new file
                     logger.warning("Dream not found for image update, cleaning up")
                     deleteImageFromStorage(imagePath: result.imagePath)
                     deleteLocalImage(imagePath: result.imagePath)
@@ -515,6 +520,7 @@ extension DreamAIService {
                 dream.imagePath = result.imagePath
                 try context.save()
                 logger.info("Dream image generated: \(result.imageURL)")
+                AnalyticsService.track(.aiImageCompleted, metadata: ["cost_usd": 0.168])
                 onComplete?(result.imageURL)
 
                 // Cleanup old image (local + remote)
@@ -524,10 +530,12 @@ extension DreamAIService {
                 }
             } catch Error.rateLimited {
                 logger.warning("Image generation rate limited")
+                AnalyticsService.track(.aiImageFailed, metadata: ["error": "rate_limited"])
                 detailState?.showRateLimitToast = true
                 onComplete?(nil)
             } catch {
                 logger.error("Failed to generate dream image: \(error.localizedDescription)")
+                AnalyticsService.track(.aiImageFailed, metadata: ["error": error.localizedDescription])
                 onComplete?(nil)
             }
         }
@@ -578,6 +586,7 @@ extension DreamAIService {
     ) {
         guard !detailState.isGeneratingInterpretation else { return }
         Task { @MainActor in
+            AnalyticsService.track(.aiInterpretationStarted)
             detailState.isGeneratingInterpretation = true
             detailState.interpretationError = nil
             do {
@@ -595,12 +604,15 @@ extension DreamAIService {
                 detailState.hasInterpretation = true
                 detailState.isGeneratingInterpretation = false
                 logger.info("Dream interpretation generated")
+                AnalyticsService.track(.aiInterpretationCompleted, metadata: ["cost_usd": 0.003])
             } catch Error.rateLimited {
                 logger.warning("Interpretation rate limited")
+                AnalyticsService.track(.aiInterpretationFailed, metadata: ["error": "rate_limited"])
                 detailState.interpretationError = String(localized: "error.rateLimited")
                 detailState.isGeneratingInterpretation = false
             } catch {
                 logger.error("Failed to generate interpretation: \(error.localizedDescription)")
+                AnalyticsService.track(.aiInterpretationFailed, metadata: ["error": error.localizedDescription])
                 detailState.interpretationError = error.localizedDescription
                 detailState.isGeneratingInterpretation = false
             }
@@ -614,6 +626,7 @@ extension DreamAIService {
         modelContainer: ModelContainer
     ) {
         Task { @MainActor in
+            AnalyticsService.track(.aiTitleStarted)
             do {
                 let title = try await AITaskQueue.shared.enqueue {
                     try await generateTitle(for: dreamText, locale: locale)
@@ -630,8 +643,10 @@ extension DreamAIService {
                 dream.title = title
                 try context.save()
                 logger.info("Dream title generated: \(title)")
+                AnalyticsService.track(.aiTitleCompleted, metadata: ["cost_usd": 0.0003])
             } catch {
                 logger.error("Failed to generate dream title: \(error.localizedDescription)")
+                AnalyticsService.track(.aiTitleFailed, metadata: ["error": error.localizedDescription])
             }
         }
     }

@@ -28,6 +28,9 @@ struct DreamCardPlayer: View {
         HStack(spacing: spacing) {
             Button {
                 HapticService.impact(.light)
+                if !isPlaying {
+                    AnalyticsService.track(.audioPlaybackStarted, metadata: ["source": "journal"])
+                }
                 playback.toggle(url: audioURL)
             } label: {
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")

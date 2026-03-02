@@ -73,6 +73,7 @@ struct SearchOverlayView: View {
                         if !matchingDreams.isEmpty {
                             ForEach(matchingDreams, id: \.id) { dream in
                                 SearchDreamRow(dream: dream) {
+                                    AnalyticsService.track(.searchResultTapped, metadata: ["type": "dream"])
                                     onDreamTap(dream)
                                     dismiss()
                                 }
@@ -83,6 +84,7 @@ struct SearchOverlayView: View {
                         if !matchingFolders.isEmpty {
                             ForEach(matchingFolders, id: \.id) { folder in
                                 SearchFolderRow(folder: folder) {
+                                    AnalyticsService.track(.searchResultTapped, metadata: ["type": "folder"])
                                     onFolderTap(folder)
                                     dismiss()
                                 }

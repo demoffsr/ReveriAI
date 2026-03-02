@@ -12,6 +12,11 @@ enum DreamCleanupService {
 
     /// Deletes a Dream and all associated files (local image, local audio, remote image).
     static func deleteDream(_ dream: Dream, context: ModelContext, animated: Bool = true) {
+        AnalyticsService.track(.dreamDeleted, metadata: [
+            "had_audio": dream.audioFilePath != nil,
+            "had_image": dream.imagePath != nil,
+            "had_emotions": !dream.emotions.isEmpty
+        ])
         let imagePath = dream.imagePath
         let audioFilePath = dream.audioFilePath
 

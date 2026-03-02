@@ -97,6 +97,12 @@ struct DreamDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
         .onAppear {
+            AnalyticsService.track(.dreamDetailOpened, metadata: [
+                "has_audio": dream.audioFilePath != nil,
+                "has_image": dream.imagePath != nil,
+                "has_interpretation": dream.interpretation != nil,
+                "has_emotions": !dream.emotions.isEmpty
+            ])
             isInDetailDreamTab = true
             detailDreamHasImage = resolvedImageURL != nil
             detailDreamIsGenerating = isGenerating
@@ -137,6 +143,7 @@ struct DreamDetailView: View {
             loadQuestions()
         }
         .onChange(of: selectedTab) {
+            AnalyticsService.track(.dreamDetailTabSwitched, metadata: ["tab": selectedTab == .dream ? "dream" : "meaning"])
             updateTabBarMode()
         }
         .onChange(of: detailState.interpretTrigger) {

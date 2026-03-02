@@ -47,6 +47,7 @@ struct DreamCard: View {
                     Section {
                         if dream.audioFilePath == nil {
                             Button {
+                                AnalyticsService.track(.dreamEdited, metadata: ["action": "edit_text"])
                                 onEditAction?(.editText)
                             } label: {
                                 Label(String(localized: "detail.updateText", defaultValue: "Update Text"), image: "EditContentIcon")
@@ -54,22 +55,26 @@ struct DreamCard: View {
                         }
                         if dream.audioFilePath != nil {
                             Button {
+                                AnalyticsService.track(.dreamEdited, metadata: ["action": "re_record"])
                                 onEditAction?(.reRecord)
                             } label: {
                                 Label(String(localized: "detail.recordAgain", defaultValue: "Record Again"), image: "MicrophoneIcon")
                             }
                         }
                         Button {
+                            AnalyticsService.track(.dreamEdited, metadata: ["action": "change_emotions"])
                             showEmotionPicker = true
                         } label: {
                             Label(String(localized: "detail.changeEmotions", defaultValue: "Change Emotions"), image: "EmotionIcon")
                         }
                         Button {
+                            AnalyticsService.track(.dreamEdited, metadata: ["action": "rename"])
                             onEditAction?(.renameTitle)
                         } label: {
                             Label(String(localized: "detail.renameDream", defaultValue: "Rename Dream"), image: "RenameIcon")
                         }
                         Button {
+                            AnalyticsService.track(.aiTitleRegenerated)
                             regenerateTitle()
                         } label: {
                             Label(String(localized: "detail.generateName", defaultValue: "Generate Name"), image: "GenerateNameIcon")
@@ -81,6 +86,7 @@ struct DreamCard: View {
                         }
                         if cachedAudioURL != nil {
                             Button {
+                                AnalyticsService.track(.dreamShared, metadata: ["type": "audio"])
                                 convertAndShareAudio()
                             } label: {
                                 Label(String(localized: "detail.shareAudio", defaultValue: "Share Audio"), image: "SoundWaveIcon")
@@ -228,6 +234,9 @@ struct DreamCard: View {
             .onChange(of: editingEmotions) {
                 dream.emotions = Array(editingEmotions)
                 try? modelContext.save()
+                AnalyticsService.track(.dreamEmotionsChanged, metadata: [
+                    "count": editingEmotions.count
+                ])
             }
         }
         .sheet(isPresented: Binding(

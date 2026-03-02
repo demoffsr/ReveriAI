@@ -284,9 +284,11 @@ struct RecordView: View {
             if viewModel.mode == .voice {
                 viewModel.mode = .text
                 isTextFocused = true
+                AnalyticsService.track(.modeSwitched, metadata: ["mode": "text"])
             } else {
                 isTextFocused = false
                 viewModel.mode = .voice
+                AnalyticsService.track(.modeSwitched, metadata: ["mode": "voice"])
             }
         } label: {
             HStack(spacing: 6) {

@@ -48,7 +48,10 @@ struct FolderDetailView: View {
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
-        .onAppear { updateFilteredDreams() }
+        .onAppear {
+            AnalyticsService.track(.folderOpened, metadata: ["dream_count": folder.dreams.count])
+            updateFilteredDreams()
+        }
         .onChange(of: searchText) { _, _ in updateFilteredDreams() }
         .onChange(of: folder.dreams.count) { _, _ in updateFilteredDreams() }
         .navigationDestination(item: $selectedDream) { dream in

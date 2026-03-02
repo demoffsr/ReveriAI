@@ -14,6 +14,7 @@ final class DreamReminderManager {
     /// Start the dream reminder Live Activity (user taps "Going to sleep")
     func start() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        AnalyticsService.track(.reminderStarted)
 
         // End any existing reminder first
         endSync()
@@ -48,6 +49,7 @@ final class DreamReminderManager {
 
     /// End the Live Activity (user saved a dream)
     func end() {
+        AnalyticsService.track(.reminderEnded)
         Task {
             let state = DreamReminderAttributes.ContentState(status: "sleeping")
             await activity?.end(.init(state: state, staleDate: nil), dismissalPolicy: .immediate)

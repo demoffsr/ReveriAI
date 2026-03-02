@@ -81,7 +81,10 @@ struct JournalView: View {
             avatarStorage: avatarStorage,
             isSearchActive: isSearchActive,
             searchQuery: $searchQuery,
-            onProfileTap: { showProfile = true },
+            onProfileTap: {
+                AnalyticsService.track(.profileOpened)
+                showProfile = true
+            },
             onSearchTap: { isSearchActive = true },
             onSearchClose: { isSearchActive = false }
         )
@@ -90,8 +93,58 @@ struct JournalView: View {
     // MARK: - Main Content
 
     private var journalContent: some View {
+        journalLayout
+            .navigationDestination(item: $selectedDream) { dream in
+                dreamDetail(for: dream)
+            }
+            .navigationDestination(item: $selectedFolder) { folder in
+                folderDetail(for: folder)
+            }
+            .navigationDestination(isPresented: $showProfile) {
+                ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage)
+            }
+            .onAppear { refreshFilters() }
+            .onChange(of: selectedEmotion) { _, newValue in
+                viewModel.selectedEmotion = newValue
+                refreshFilters()
+            }
+            .onChange(of: allDreams) { _, _ in refreshFilters() }
+            .onChange(of: viewModel.searchText) { _, _ in
+                searchDebounceTask?.cancel()
+                searchDebounceTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    refreshFilters()
+                }
+            }
+            .onChange(of: viewModel.selectedTimeRange) { _, newRange in
+                refreshFilters()
+                AnalyticsService.track(.timeRangeChanged, metadata: ["range": "\(newRange)"])
+            }
+            .onChange(of: selectedTab) { _, newTab in
+                AnalyticsService.track(.journalTabSwitched, metadata: ["tab": newTab == .dreams ? "dreams" : "folders"])
+            }
+            .onChange(of: isSearchActive) { _, active in
+                if active {
+                    AnalyticsService.track(.searchOpened)
+                }
+                if !active { searchQuery = "" }
+            }
+            .onChange(of: selectedDream) { _, newValue in
+                if newValue == nil { isInDetailDreamTab = false }
+            }
+            .alert(String(localized: "folder.newFolder", defaultValue: "New Folder"), isPresented: $showNewFolderAlert) {
+                TextField(String(localized: "folder.folderName", defaultValue: "Folder name"), text: $newFolderName)
+                Button(String(localized: "folder.create", defaultValue: "Create")) { createFolder() }
+                Button(String(localized: "folder.cancel", defaultValue: "Cancel"), role: .cancel) {}
+            }
+            .onChange(of: showNewFolderAlert) { _, newValue in
+                if newValue { newFolderName = "" }
+            }
+    }
+
+    private var journalLayout: some View {
         VStack(spacing: 0) {
-            // Spacer matching header height (68 top + 44 row + 20 spacing + 42 row + 16 bottom = 190)
             Color.clear.frame(height: 190)
 
             Picker("", selection: $selectedTab) {
@@ -117,44 +170,6 @@ struct JournalView: View {
         }
         .background(Color(.systemGroupedBackground))
         .ignoresSafeArea(edges: .top)
-        .navigationDestination(item: $selectedDream) { dream in
-            dreamDetail(for: dream)
-        }
-        .navigationDestination(item: $selectedFolder) { folder in
-            folderDetail(for: folder)
-        }
-        .navigationDestination(isPresented: $showProfile) {
-            ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage)
-        }
-        .onAppear { refreshFilters() }
-        .onChange(of: selectedEmotion) { _, newValue in
-            viewModel.selectedEmotion = newValue
-            refreshFilters()
-        }
-        .onChange(of: allDreams) { _, _ in refreshFilters() }
-        .onChange(of: viewModel.searchText) { _, _ in
-            searchDebounceTask?.cancel()
-            searchDebounceTask = Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                guard !Task.isCancelled else { return }
-                refreshFilters()
-            }
-        }
-        .onChange(of: viewModel.selectedTimeRange) { _, _ in refreshFilters() }
-        .onChange(of: isSearchActive) { _, active in
-            if !active { searchQuery = "" }
-        }
-        .onChange(of: selectedDream) { _, newValue in
-            if newValue == nil { isInDetailDreamTab = false }
-        }
-        .alert(String(localized: "folder.newFolder", defaultValue: "New Folder"), isPresented: $showNewFolderAlert) {
-            TextField(String(localized: "folder.folderName", defaultValue: "Folder name"), text: $newFolderName)
-            Button(String(localized: "folder.create", defaultValue: "Create")) { createFolder() }
-            Button(String(localized: "folder.cancel", defaultValue: "Cancel"), role: .cancel) {}
-        }
-        .onChange(of: showNewFolderAlert) { _, newValue in
-            if newValue { newFolderName = "" }
-        }
     }
 
     // MARK: - Dreams Tab
@@ -210,8 +225,12 @@ struct JournalView: View {
                         ForEach(folders, id: \.id) { folder in
                             FolderCard(
                                 folder: folder,
-                                onTap: { selectedFolder = folder },
+                                onTap: {
+                                    AnalyticsService.track(.folderOpened)
+                                    selectedFolder = folder
+                                },
                                 onDelete: {
+                                    AnalyticsService.track(.folderDeleted)
                                     withAnimation(.easeOut(duration: 0.3)) {
                                         modelContext.delete(folder)
                                         try? modelContext.save()
@@ -269,5 +288,6 @@ struct JournalView: View {
         let folder = DreamFolder(name: newFolderName.trimmingCharacters(in: .whitespaces))
         modelContext.insert(folder)
         try? modelContext.save()
+        AnalyticsService.track(.folderCreated)
     }
 }

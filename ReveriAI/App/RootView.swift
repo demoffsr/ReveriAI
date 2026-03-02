@@ -146,19 +146,27 @@ struct RootView: View {
                 isSavingFeelings: showEmotionGrid,
                 canSaveFeelings: !pendingEmotions.isEmpty,
                 onStop: {
+                    AnalyticsService.track(.recordStopped)
                     withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
                         isRecording = false
                         isPaused = false
                     }
                 },
                 onTogglePause: {
+                    if isPaused {
+                        AnalyticsService.track(.recordResumed)
+                    } else {
+                        AnalyticsService.track(.recordPaused)
+                    }
                     isPaused.toggle()
                 },
                 onTogglePreview: {
+                    AnalyticsService.track(.audioPlaybackStarted)
                     audioPlaybackService.stop()
                     audioRecorder.togglePlayback()
                 },
                 onDelete: {
+                    AnalyticsService.track(.recordDeleted)
                     audioRecorder.deleteRecording()
                     speechService.resetTranscription()
                     withAnimation(.spring(duration: 0.35, bounce: 0.15)) {
@@ -166,9 +174,11 @@ struct RootView: View {
                     }
                 },
                 onSkipBack: {
+                    AnalyticsService.track(.audioPlaybackSkip, metadata: ["direction": "back"])
                     audioRecorder.skipBackward()
                 },
                 onSkipForward: {
+                    AnalyticsService.track(.audioPlaybackSkip, metadata: ["direction": "forward"])
                     audioRecorder.skipForward()
                 },
                 onSaveFeelings: {
@@ -204,6 +214,7 @@ struct RootView: View {
         }
         .onChange(of: isRecording) { _, recording in
             if recording {
+                AnalyticsService.track(.recordStarted)
                 audioPlaybackService.stop()
                 dreamReminderManager.end()
                 showEmotionGrid = false
@@ -214,6 +225,7 @@ struct RootView: View {
             }
         }
         .onChange(of: selectedTab) { _, newTab in
+            AnalyticsService.track(.tabSwitched, metadata: ["tab": newTab.rawValue])
             // Mount JournalView immediately on first switch
             if newTab == .journal && !journalMounted {
                 journalMounted = true
@@ -221,6 +233,7 @@ struct RootView: View {
         }
         .task {
             launchLog.info("⏱ RootView .task started")
+            AnalyticsService.setup()
 
             // Load deferred images (not in init to keep launch fast)
             avatarStorage.loadFromDisk()
@@ -238,12 +251,17 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && launchComplete {
+                AnalyticsService.track(.appForeground)
                 Task {
                     await dreamReminderManager.reconnect()
                     if !isRecording && !isReviewing {
                         dreamReminderManager.validateAndAutoStart()
                     }
                 }
+            }
+            if phase == .background {
+                AnalyticsService.track(.appBackground)
+                Task { await AnalyticsService.flush() }
             }
         }
         .onOpenURL { url in
@@ -292,10 +310,12 @@ struct RootView: View {
         guard url.scheme == "reveri" else { return }
         switch url.host {
         case "record":
+            AnalyticsService.track(.deepLinkRecord)
             guard !isRecording && !isReviewing else { return }
             selectedTab = .record
             showDeepLinkRecordConfirmation = true
         case "write":
+            AnalyticsService.track(.deepLinkWrite)
             selectedTab = .record
             startTextModeTrigger.toggle()
         case "stop-recording":
@@ -313,6 +333,11 @@ struct RootView: View {
             pendingEmotions = []
             return
         }
+        let emotionNames = pendingEmotions.map { $0.rawValue }.joined(separator: ",")
+        AnalyticsService.track(.emotionsSelected, metadata: [
+            "emotions": emotionNames,
+            "count": pendingEmotions.count
+        ])
         dream.emotions = Array(pendingEmotions)
         dream.emotionRawValue = pendingEmotions.first?.rawValue
         try? modelContext.save()

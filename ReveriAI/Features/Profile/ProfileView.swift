@@ -171,6 +171,7 @@ struct ProfileView: View {
                 Menu {
                     ForEach(SpeechLocale.allCases) { locale in
                         Button {
+                            AnalyticsService.track(.languageChanged, metadata: ["locale": locale.identifier])
                             selectedLocaleId = locale.identifier
                         } label: {
                             HStack {
@@ -251,6 +252,10 @@ struct ProfileView: View {
                             let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
                             reminderHour = components.hour ?? 7
                             reminderMinute = components.minute ?? 0
+                            AnalyticsService.track(.reminderTimeChanged, metadata: [
+                                "hour": reminderHour,
+                                "minute": reminderMinute
+                            ])
                             reschedule()
                             dreamReminderManager.validateAndAutoStart()
                         }
@@ -309,6 +314,9 @@ struct ProfileView: View {
                     Text(String(localized: "profile.night", defaultValue: "Night")).tag("night")
                 }
                 .pickerStyle(.segmented)
+                .onChange(of: themeOverride) { _, newTheme in
+                    AnalyticsService.track(.themeChanged, metadata: ["theme": newTheme])
+                }
             }
             .frame(minHeight: 52)
         }
@@ -382,11 +390,15 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
                 .frame(height: 52)
+                .simultaneousGesture(TapGesture().onEnded {
+                    AnalyticsService.track(.contactUsTapped)
+                })
 
                 cardDivider
 
                 // Rate app
                 Button {
+                    AnalyticsService.track(.rateAppTapped)
                     requestReview()
                 } label: {
                     settingsRowContent(icon: "star.fill", iconColor: .yellow, title: String(localized: "profile.rateApp", defaultValue: "Rate the App"))
@@ -422,6 +434,7 @@ struct ProfileView: View {
     private var dataCard: some View {
         settingsCard(title: String(localized: "profile.data", defaultValue: "Data")) {
             Button {
+                AnalyticsService.track(.cacheCleared)
                 ImageCache.shared.clearAll()
                 cacheCleared = true
                 Task {
@@ -557,6 +570,7 @@ struct ProfileView: View {
     }
 
     private func handleReminderToggle(_ enabled: Bool) {
+        AnalyticsService.track(.reminderToggled, metadata: ["enabled": enabled])
         if enabled {
             Task {
                 let granted = await notificationService.requestPermission()

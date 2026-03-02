@@ -37,6 +37,13 @@ final class RecordViewModel {
         try? context.save()
         HapticService.notification(.success)
 
+        AnalyticsService.track(.dreamRecorded, metadata: [
+            "mode": "text",
+            "text_length": dream.text.count,
+            "has_emotions": !selectedEmotions.isEmpty,
+            "emotion_count": selectedEmotions.count
+        ])
+
         DreamAIService.generateTitleInBackground(
             dreamID: dream.persistentModelID,
             dreamText: dream.text,
@@ -76,6 +83,13 @@ final class RecordViewModel {
         context.insert(dream)
         try? context.save()
         HapticService.notification(.success)
+
+        AnalyticsService.track(.reviewSavedAudio, metadata: [
+            "has_transcript": !trimmedTranscript.isEmpty,
+            "transcript_length": trimmedTranscript.count,
+            "duration_seconds": duration ?? 0,
+            "has_emotions": !selectedEmotions.isEmpty
+        ])
 
         let locale = SpeechLocale(rawValue: speechLocaleRaw) ?? .russian
 
