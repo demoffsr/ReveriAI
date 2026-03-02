@@ -44,6 +44,9 @@ struct DreamDetailView: View {
     @State private var editableTitle = ""
     @FocusState private var isTitleFieldFocused: Bool
 
+    // Image fallback (when local cache missing, bucket is private)
+    @State private var signedFallbackURL: URL?
+
     // Menu action state
     @State private var showDeleteAlert = false
     @State private var showFolderPicker = false
@@ -127,6 +130,18 @@ struct DreamDetailView: View {
                 case .reRecord: enterReRecordMode()
                 case .renameTitle: enterRenameMode()
                 }
+            }
+        }
+        .task {
+            // Fallback: if local image file is missing, resolve a signed URL from private bucket
+            guard let imagePath = dream.imagePath else { return }
+            let localURL = DreamAIService.imagesDirectory.appendingPathComponent(imagePath)
+            guard !FileManager.default.fileExists(atPath: localURL.path) else { return }
+            if let signedURL = await DreamAIService.createSignedImageURL(path: imagePath) {
+                signedFallbackURL = signedURL
+                detailDreamHasImage = true
+                // Re-cache locally so next open is instant
+                await DreamAIService.downloadImageToDisk(from: signedURL.absoluteString, fileName: imagePath)
             }
         }
         .onDisappear {
@@ -324,18 +339,16 @@ struct DreamDetailView: View {
     }
 
     private var resolvedImageURL: URL? {
-        // Prefer local file
+        // 1. Local file (primary — always available after generation)
         if let imagePath = dream.imagePath {
             let localURL = DreamAIService.imagesDirectory.appendingPathComponent(imagePath)
             if FileManager.default.fileExists(atPath: localURL.path) {
                 return localURL
             }
         }
-        // Fallback to remote URL (old dreams, not yet cached)
-        if let imageURL = dream.imageURL {
-            return URL(string: imageURL)
-        }
-        return nil
+        // 2. Signed URL fallback (resolved async via .task)
+        //    Bucket is private — stored imageURL may be expired signed URL.
+        return signedFallbackURL
     }
 
     @ViewBuilder

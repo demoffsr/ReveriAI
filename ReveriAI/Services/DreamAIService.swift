@@ -1,5 +1,6 @@
 import Foundation
 import Functions
+import Storage
 import Supabase
 import SwiftData
 import os
@@ -661,7 +662,7 @@ extension DreamAIService {
     }()
 
     /// Downloads image from URL and saves to local disk cache.
-    private static func downloadImageToDisk(from urlString: String, fileName: String) async {
+    static func downloadImageToDisk(from urlString: String, fileName: String) async {
         guard let url = URL(string: urlString) else { return }
         do {
             let (data, _) = try await imageSession.data(from: url)
@@ -675,6 +676,20 @@ extension DreamAIService {
             logger.info("Cached image to disk: \(fileName)")
         } catch {
             logger.warning("Failed to cache image to disk: \(error.localizedDescription)")
+        }
+    }
+
+    /// Creates a signed URL for a private storage image (1h validity).
+    /// Used as fallback when local cache is missing. Requires active Supabase Auth session.
+    static func createSignedImageURL(path: String) async -> URL? {
+        do {
+            let url = try await SupabaseService.client.storage
+                .from("dream-images")
+                .createSignedURL(path: path, expiresIn: 3600)
+            return url
+        } catch {
+            logger.warning("Failed to create signed image URL: \(error.localizedDescription)")
+            return nil
         }
     }
 

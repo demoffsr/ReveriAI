@@ -165,11 +165,17 @@ Rules:
       return new Response(JSON.stringify({ error: 'Image storage error', requestId }), { status: 500, headers: corsHeaders })
     }
 
-    const { data: urlData } = supabase.storage
+    // Signed URL (1h validity) — iOS downloads immediately and caches to disk
+    const { data: urlData, error: urlError } = await supabase.storage
       .from('dream-images')
-      .getPublicUrl(fileName)
+      .createSignedUrl(fileName, 3600)
 
-    return new Response(JSON.stringify({ imageURL: urlData.publicUrl, imagePath: fileName }), { headers: corsHeaders })
+    if (urlError || !urlData?.signedUrl) {
+      console.error(`[generate-dream-image][${requestId}] Signed URL error: ${urlError?.message}`)
+      return new Response(JSON.stringify({ error: 'Image storage error', requestId }), { status: 500, headers: corsHeaders })
+    }
+
+    return new Response(JSON.stringify({ imageURL: urlData.signedUrl, imagePath: fileName }), { headers: corsHeaders })
   } catch (err) {
     console.error(`[generate-dream-image][${requestId}] Unhandled error:`, err)
     return new Response(JSON.stringify({ error: 'Internal error', requestId }), { status: 500, headers: corsHeaders })
