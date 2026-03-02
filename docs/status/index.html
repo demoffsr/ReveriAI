@@ -3669,13 +3669,17 @@ async function loadUserList(el) {
 
     const rows = users.map(u => {
       const group = getEventGroup(u.last_event_type || '');
+      const cost = parseFloat(u.total_cost_usd || 0);
+      const costStr = cost > 0 ? '$' + cost.toFixed(3) : '-';
+      const costColor = cost > 1 ? '#ef4444' : cost > 0.1 ? '#f59e0b' : 'var(--text-muted)';
       return `<tr data-uid="${escHtml(u.user_id || '')}" onclick="selectUser('${escHtml(u.user_id)}')">
         <td><span class="user-uid">${escHtml(u.user_id_short || '?')}</span></td>
         <td title="${formatMSK(u.first_seen)}">${u.first_seen ? new Date(u.first_seen).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '-'}</td>
         <td title="${formatMSK(u.last_seen)}">${relativeTime(u.last_seen)}</td>
-        <td>${u.total_events || 0}</td>
-        <td>${u.total_sessions || 0}</td>
-        <td>${u.total_dreams || 0}</td>
+        <td>${u.events || u.total_events || 0}</td>
+        <td>${u.sessions || u.total_sessions || 0}</td>
+        <td>${u.dreams || u.total_dreams || 0}</td>
+        <td style="font-weight:600;color:${costColor};font-size:0.82rem;">${costStr}</td>
         <td><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${group.color};margin-right:4px;vertical-align:middle;"></span><span class="code-cell" style="font-size:0.75rem;">${escHtml(u.last_event_type || '-')}</span></td>
         <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(u.device || '-')}</td>
       </tr>`;
@@ -3685,7 +3689,7 @@ async function loadUserList(el) {
       <div class="section-title" style="margin-bottom:1rem;">All Users <span style="color:var(--text-muted);font-weight:400;font-size:0.82rem;">(${total})</span></div>
       <input class="user-search" type="text" placeholder="Search by user ID..." oninput="onUserSearch(this.value)">
       <div class="table-wrap"><table class="user-table">
-        <thead><tr><th>User ID</th><th>First Seen</th><th>Last Seen</th><th>Events</th><th>Sessions</th><th>Dreams</th><th>Last Event</th><th>Device</th></tr></thead>
+        <thead><tr><th>User ID</th><th>First Seen</th><th>Last Seen</th><th>Events</th><th>Sessions</th><th>Dreams</th><th>AI Cost</th><th>Last Event</th><th>Device</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
       ${totalPages > 1 ? `
@@ -3753,11 +3757,15 @@ async function loadUserDetail(el) {
 
     const evList = Array.isArray(events?.events) ? events.events : [];
     const evTotal = events?.total || 0;
+    const b = profile.basics || {};
+    const ds = profile.dream_stats || {};
     const ai = profile.ai_usage || {};
-    const emotions = Array.isArray(profile.top_emotions) ? profile.top_emotions : [];
+    const costs = profile.costs || {};
+    const emotions = Array.isArray(profile.emotions) ? profile.emotions : (Array.isArray(profile.top_emotions) ? profile.top_emotions : []);
     const dailyData = Array.isArray(profile.events_by_day) ? profile.events_by_day : [];
-    const breakdown = Array.isArray(profile.event_type_breakdown) ? profile.event_type_breakdown : [];
+    const breakdown = Array.isArray(profile.event_types) ? profile.event_types : (Array.isArray(profile.event_type_breakdown) ? profile.event_type_breakdown : []);
     const devices = Array.isArray(profile.devices) ? profile.devices : [];
+    const totalCost = parseFloat(costs.total_cost || 0);
 
     const EMOTION_COLORS = {joyful:'#fbbf24',calm:'#34d399',anxious:'#f97316',scared:'#ef4444',confused:'#a78bfa',angry:'#dc2626',in_love:'#ec4899',sad:'#60a5fa'};
     const maxEmotion = emotions.length > 0 ? Math.max(...emotions.map(e => e.count)) : 1;
@@ -3799,31 +3807,47 @@ async function loadUserDetail(el) {
       <div class="user-profile-grid">
         <div class="user-stat-card">
           <div class="usc-label">First Seen</div>
-          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(profile.first_seen)}</div>
+          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(b.first_seen || profile.first_seen)}</div>
         </div>
         <div class="user-stat-card">
           <div class="usc-label">Last Seen</div>
-          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(profile.last_seen)}</div>
+          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(b.last_seen || profile.last_seen)}</div>
         </div>
         <div class="user-stat-card">
           <div class="usc-label">Total Events</div>
-          <div class="usc-value">${profile.total_events || 0}</div>
-          <div class="usc-sub">${profile.total_sessions || 0} sessions</div>
+          <div class="usc-value">${b.total_events || profile.total_events || 0}</div>
+          <div class="usc-sub">${b.total_sessions || profile.total_sessions || 0} sessions</div>
         </div>
         <div class="user-stat-card">
           <div class="usc-label">Dreams</div>
-          <div class="usc-value">${profile.total_dreams || 0}</div>
-          <div class="usc-sub">🎤 ${profile.voice_dreams || 0} voice · ✏️ ${profile.text_dreams || 0} text</div>
+          <div class="usc-value">${ds.total_dreams || profile.total_dreams || 0}</div>
+          <div class="usc-sub">🎤 ${ds.audio_dreams || profile.voice_dreams || 0} voice · ✏️ ${ds.text_dreams || profile.text_dreams || 0} text</div>
         </div>
         <div class="user-stat-card">
           <div class="usc-label">AI Usage</div>
-          <div class="usc-value">${(ai.titles||0) + (ai.images||0) + (ai.interpretations||0)}</div>
-          <div class="usc-sub">✨ ${ai.titles||0} titles · 🎨 ${ai.images||0} images · 💭 ${ai.interpretations||0} interp</div>
+          <div class="usc-value">${(ai.titles||0) + (ai.images||0) + (ai.interpretations||0) + (ai.transcriptions||0)}</div>
+          <div class="usc-sub">✨ ${ai.titles||0} titles · 🎨 ${ai.images||0} img · 💭 ${ai.interpretations||0} interp · 🎙 ${ai.transcriptions||0} whisper</div>
         </div>
-        <div class="user-stat-card">
-          <div class="usc-label">Most Active Hour</div>
-          <div class="usc-value">${profile.active_hour != null ? String(profile.active_hour).padStart(2,'0') + ':00' : '-'}</div>
-          <div class="usc-sub">${devices.length > 0 ? escHtml(devices[0].device || '') : '-'}</div>
+        <div class="user-stat-card" style="background:${totalCost > 1 ? 'rgba(239,68,68,0.08)' : totalCost > 0.1 ? 'rgba(245,158,11,0.08)' : ''};">
+          <div class="usc-label">💰 AI Cost</div>
+          <div class="usc-value" style="color:${totalCost > 1 ? '#ef4444' : totalCost > 0.1 ? '#f59e0b' : 'var(--text)'};">${totalCost > 0 ? '$' + totalCost.toFixed(3) : '$0.000'}</div>
+          <div class="usc-sub">
+            🖼 $${parseFloat(costs.image_cost||0).toFixed(3)}
+            · ✨ $${parseFloat(costs.title_cost||0).toFixed(4)}
+            · 💭 $${parseFloat(costs.interpretation_cost||0).toFixed(4)}
+            · 🎙 $${parseFloat(costs.transcription_cost||0).toFixed(4)}
+          </div>
+        </div>
+      </div>
+
+      <div class="user-stat-card" style="margin-bottom:1rem;">
+        <div class="usc-label">App Info</div>
+        <div class="usc-sub" style="font-size:0.82rem;">
+          📱 ${escHtml(devices.length > 0 ? devices[0].device || '-' : '-')}
+          · v${escHtml(b.app_version || '-')}
+          · ${escHtml(b.os_version || '-')}
+          · 🌐 ${escHtml(b.locale || '-')}
+          · ⏰ Most active: ${profile.active_hour != null ? String(profile.active_hour).padStart(2,'0') + ':00' : '-'}
         </div>
       </div>
 
