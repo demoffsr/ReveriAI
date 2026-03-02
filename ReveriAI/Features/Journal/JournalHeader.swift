@@ -54,7 +54,7 @@ struct JournalHeader: View {
 
                             ZStack(alignment: .leading) {
                                 Text(String(localized: "journal.search", defaultValue: "Search"))
-                                    .font(.system(size: 17, weight: .medium))
+                                    .font(.system(size: 17))
                                     .foregroundStyle(.white.opacity(0.7))
                                     .opacity(isSearchActive ? 0 : 1)
 
@@ -71,6 +71,7 @@ struct JournalHeader: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         .padding(.leading, 14)
+                        .contentShape(.capsule)
                         .reveriGlass(.capsule)
                         .onTapGesture {
                             if !isSearchActive { onSearchTap() }
