@@ -3673,9 +3673,9 @@ async function loadUserList(el) {
       const costStr = cost > 0 ? '$' + cost.toFixed(3) : '-';
       const costColor = cost > 1 ? '#ef4444' : cost > 0.1 ? '#f59e0b' : 'var(--text-muted)';
       return `<tr data-uid="${escHtml(u.user_id || '')}" onclick="selectUser('${escHtml(u.user_id)}')">
-        <td><span class="user-uid">${escHtml(u.user_id_short || '?')}</span></td>
+        <td><span class="user-uid">${escHtml((u.user_id || '?').slice(0, 8))}</span></td>
         <td title="${formatMSK(u.first_seen)}">${u.first_seen ? new Date(u.first_seen).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '-'}</td>
-        <td title="${formatMSK(u.last_seen)}">${relativeTime(u.last_seen)}</td>
+        <td title="${formatMSK(u.last_event || u.last_seen)}">${relativeTime(u.last_event || u.last_seen)}</td>
         <td>${u.events || u.total_events || 0}</td>
         <td>${u.sessions || u.total_sessions || 0}</td>
         <td>${u.dreams || u.total_dreams || 0}</td>
@@ -3785,7 +3785,7 @@ async function loadUserDetail(el) {
       return `<tr>
         <td style="font-family:var(--mono);font-size:0.75rem;white-space:nowrap;">${formatMSK(ev.created_at)}</td>
         <td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${group.color};margin-right:5px;vertical-align:middle;"></span>${escHtml(ev.event_type)}</td>
-        <td><span class="user-uid" style="cursor:pointer;font-size:0.75rem;" title="View session flow" onclick="event.stopPropagation();goToSessionFlow('${ev.session_id}')">${escHtml(ev.session_id_short || '-')}</span></td>
+        <td><span class="user-uid" style="cursor:pointer;font-size:0.75rem;" title="View session flow" onclick="event.stopPropagation();goToSessionFlow('${ev.session_id}')">${escHtml(ev.session_id ? ev.session_id.slice(0, 8) : '-')}</span></td>
         <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(ev.device || '-')}</td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;color:var(--text-dim);" title="${escHtml(meta)}">${escHtml(meta)}</td>
       </tr>`;
@@ -3796,10 +3796,10 @@ async function loadUserDetail(el) {
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
         <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>
         <div>
-          <div style="font-size:1.1rem;font-weight:700;"><span class="user-uid">${escHtml(profile.user_id_short || '?')}</span></div>
+          <div style="font-size:1.1rem;font-weight:700;"><span class="user-uid">${escHtml((userId || '?').slice(0, 8))}</span></div>
           <div style="font-size:0.75rem;color:var(--text-muted);">
-            Active ${relativeTime(profile.last_seen)}
-            <button id="copy-uid-btn" class="user-copy-btn" onclick="copyUserId('${escHtml(profile.user_id || '')}')">📋 Copy full ID</button>
+            Active ${relativeTime(b.last_seen)}
+            <button id="copy-uid-btn" class="user-copy-btn" onclick="copyUserId('${escHtml(userId)}')">📋 Copy full ID</button>
           </div>
         </div>
       </div>
@@ -3811,7 +3811,7 @@ async function loadUserDetail(el) {
         </div>
         <div class="user-stat-card">
           <div class="usc-label">Last Seen</div>
-          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(b.last_seen || profile.last_seen)}</div>
+          <div class="usc-value" style="font-size:0.9rem;">${formatMSK(b.last_seen)}</div>
         </div>
         <div class="user-stat-card">
           <div class="usc-label">Total Events</div>
@@ -3936,7 +3936,7 @@ async function loadUserEventsPage(offset) {
         return `<tr>
           <td style="font-family:var(--mono);font-size:0.75rem;white-space:nowrap;">${formatMSK(ev.created_at)}</td>
           <td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${group.color};margin-right:5px;vertical-align:middle;"></span>${escHtml(ev.event_type)}</td>
-          <td><span class="user-uid" style="cursor:pointer;font-size:0.75rem;" onclick="event.stopPropagation();goToSessionFlow('${ev.session_id}')">${escHtml(ev.session_id_short || '-')}</span></td>
+          <td><span class="user-uid" style="cursor:pointer;font-size:0.75rem;" onclick="event.stopPropagation();goToSessionFlow('${ev.session_id}')">${escHtml(ev.session_id ? ev.session_id.slice(0, 8) : '-')}</span></td>
           <td style="font-size:0.75rem;color:var(--text-muted);">${escHtml(ev.device || '-')}</td>
           <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.72rem;color:var(--text-dim);" title="${escHtml(meta)}">${escHtml(meta)}</td>
         </tr>`;
