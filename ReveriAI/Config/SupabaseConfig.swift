@@ -18,4 +18,13 @@ enum SupabaseConfig {
         }
         return key
     }()
+
+    static let analyticsAPIKey: String = {
+        guard let key = Bundle.main.infoDictionary?["ANALYTICS_API_KEY"] as? String,
+              !key.isEmpty,
+              !key.hasPrefix("$(") else {
+            fatalError("Missing ANALYTICS_API_KEY. Ensure Secrets.xcconfig exists in project root.")
+        }
+        return key
+    }()
 }

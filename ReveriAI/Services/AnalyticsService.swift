@@ -1,4 +1,5 @@
 import Foundation
+import Functions
 import Supabase
 import os
 
@@ -116,6 +117,17 @@ enum AnalyticsService {
         let count: Int?
     }
 
+    private struct RegisterBody: Encodable {
+        let device: String
+        let os_version: String
+        let app_version: String
+    }
+
+    private struct RegisterResponse: Decodable {
+        let user_id: String
+        let token: String
+    }
+
     // MARK: - State
 
     private static let logger = Logger(subsystem: "com.reveri", category: "Analytics")
@@ -126,6 +138,8 @@ enum AnalyticsService {
     nonisolated(unsafe) private static var _queue: [EventPayload] = []
     nonisolated(unsafe) private static var _flushTask: Task<Void, Never>?
     nonisolated(unsafe) private static var _isSetup = false
+    nonisolated(unsafe) private static var _credentials: AnalyticsKeychain.Credentials?
+    nonisolated(unsafe) private static var _registrationTask: Task<Bool, Never>?
 
     private static let batchSize = 10
     private static let flushInterval: TimeInterval = 10
@@ -160,17 +174,6 @@ enum AnalyticsService {
         Locale.current.identifier
     }()
 
-    /// Persistent user ID — survives app reinstalls via UserDefaults.
-    private static let userId: String = {
-        let key = "analyticsUserId"
-        if let existing = UserDefaults.standard.string(forKey: key) {
-            return existing
-        }
-        let newId = UUID().uuidString
-        UserDefaults.standard.set(newId, forKey: key)
-        return newId
-    }()
-
     // MARK: - Public API
 
     /// Call once from RootView.task to start the flush timer and track session_start.
@@ -181,6 +184,12 @@ enum AnalyticsService {
         _sessionId = UUID().uuidString
         lock.unlock()
 
+        // Load credentials from Keychain
+        let creds = AnalyticsKeychain.load()
+        lock.lock()
+        _credentials = creds
+        lock.unlock()
+
         startFlushTimer()
         track(.sessionStart)
         logger.info("Analytics setup — session \(_sessionId.prefix(8))")
@@ -188,6 +197,10 @@ enum AnalyticsService {
 
     /// Track an event with optional metadata.
     static func track(_ event: EventType, metadata: [String: Any]? = nil) {
+        lock.lock()
+        let userId = _credentials?.userId ?? ""
+        lock.unlock()
+
         let payload = EventPayload(
             event_type: event.rawValue,
             session_id: sessionId,
@@ -212,18 +225,26 @@ enum AnalyticsService {
 
     /// Force-flush all queued events. Call on app background.
     static func flush() async {
-        let events: [EventPayload]
+        // Lazy registration
+        let _ = await ensureRegistered()
+
         lock.lock()
-        events = _queue
+        let events = _queue
         _queue = []
+        let creds = _credentials
         lock.unlock()
 
         guard !events.isEmpty else { return }
 
+        var headers: [String: String] = [:]
+        if let creds {
+            headers["X-Analytics-Token"] = creds.token
+        }
+
         do {
             let _: TrackResponse = try await SupabaseService.client.functions.invoke(
                 "track-event",
-                options: .init(body: BatchBody(events: events))
+                options: .init(headers: headers, body: BatchBody(events: events))
             )
             logger.info("Flushed \(events.count) events")
         } catch {
@@ -236,6 +257,69 @@ enum AnalyticsService {
                 _queue = Array(_queue.suffix(200))
             }
             lock.unlock()
+        }
+    }
+
+    // MARK: - Registration
+
+    private static func ensureRegistered() async -> Bool {
+        lock.lock()
+        if _credentials != nil { lock.unlock(); return true }
+        if let existing = _registrationTask { lock.unlock(); return await existing.value }
+        let task = Task<Bool, Never> { await register() }
+        _registrationTask = task
+        lock.unlock()
+        return await task.value
+    }
+
+    private static func register() async -> Bool {
+        do {
+            let response: RegisterResponse = try await SupabaseService.client.functions.invoke(
+                "register-analytics",
+                options: .init(
+                    headers: ["X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey],
+                    body: RegisterBody(
+                        device: deviceString,
+                        os_version: osVersion,
+                        app_version: appVersion
+                    )
+                )
+            )
+
+            let creds = AnalyticsKeychain.Credentials(
+                userId: response.user_id,
+                token: response.token
+            )
+            guard AnalyticsKeychain.save(creds) else {
+                logger.error("Failed to save credentials to Keychain")
+                lock.lock()
+                _registrationTask = nil
+                lock.unlock()
+                return false
+            }
+
+            lock.lock()
+            _credentials = creds
+            _registrationTask = nil
+            lock.unlock()
+
+            // Migrate: delete old UserDefaults ONLY after Keychain save
+            UserDefaults.standard.removeObject(forKey: "analyticsUserId")
+
+            logger.info("Analytics registered — user \(response.user_id.prefix(8))")
+            return true
+        } catch {
+            lock.lock()
+            _registrationTask = nil
+            lock.unlock()
+            if let functionsError = error as? FunctionsError,
+               case let .httpError(code, data) = functionsError {
+                let body = String(data: data, encoding: .utf8) ?? "empty"
+                logger.error("Registration failed: HTTP \(code) — \(body)")
+            } else {
+                logger.error("Registration failed: \(error.localizedDescription)")
+            }
+            return false
         }
     }
 

@@ -25,6 +25,7 @@ const IP_LIMITS: Record<string, { duration_seconds: number; max_requests: number
   'generate-dream-questions':      [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 40 }],
   'generate-dream-title':          [{ duration_seconds: 60, max_requests: 15 }, { duration_seconds: 3600, max_requests: 60 }],
   'delete-dream-image':            [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 30 }],
+  'register-analytics':            [{ duration_seconds: 3600, max_requests: 10 }, { duration_seconds: 86400, max_requests: 50 }],
 }
 
 function getClientIP(req: Request): string {

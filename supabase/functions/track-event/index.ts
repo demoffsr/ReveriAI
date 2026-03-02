@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { supabaseAdmin } from "../_shared/auth.ts"
+import { validateAnalyticsToken, touchDevice } from "../_shared/analytics-auth.ts"
 
 // Allowed event types (whitelist to prevent garbage data)
 const ALLOWED_EVENTS = new Set([
@@ -122,6 +123,48 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Too many events (max 50)' }), { status: 400, headers: jsonHeaders })
     }
 
+    // --- Authentication ---
+    const requireAuth = Deno.env.get('REQUIRE_AUTH') !== 'false'
+    let isVerified = false
+    let verifiedUserId: string | null = null
+
+    if (requireAuth) {
+      const token = req.headers.get('X-Analytics-Token')
+
+      if (token) {
+        const result = await validateAnalyticsToken(token)
+        if (!result.valid) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid analytics token' }),
+            { status: 401, headers: jsonHeaders },
+          )
+        }
+        isVerified = true
+        verifiedUserId = result.userId
+        // Fire-and-forget last_seen_at update
+        touchDevice(result.userId)
+      } else {
+        // No token — check grace period (fail-closed)
+        const gracePeriodEnd = Deno.env.get('GRACE_PERIOD_END')
+        if (!gracePeriodEnd) {
+          // No grace period configured → fail closed
+          return new Response(
+            JSON.stringify({ error: 'Authentication required' }),
+            { status: 401, headers: jsonHeaders },
+          )
+        }
+        const deadline = new Date(gracePeriodEnd)
+        if (isNaN(deadline.getTime()) || Date.now() > deadline.getTime()) {
+          // Invalid date OR past deadline → fail closed
+          return new Response(
+            JSON.stringify({ error: 'Authentication required' }),
+            { status: 401, headers: jsonHeaders },
+          )
+        }
+        // Valid date, before deadline → accept as unverified
+      }
+    }
+
     // Validate and build rows
     const rows = []
     for (const evt of events) {
@@ -132,11 +175,23 @@ Deno.serve(async (req) => {
         console.warn(`[track-event] Unknown event type: ${evt.event_type}`)
         continue
       }
+
+      // Server-side user_id: use verified ID from token, ignore client-provided
+      const userId = isVerified
+        ? verifiedUserId!
+        : (evt.user_id || '00000000-0000-0000-0000-000000000000')
+
+      // Flag unverified events in metadata
+      let metadata = evt.metadata || null
+      if (!isVerified) {
+        metadata = { ...(metadata || {}), _unverified: true }
+      }
+
       rows.push({
-        user_id: evt.user_id || '00000000-0000-0000-0000-000000000000',
+        user_id: userId,
         event_type: evt.event_type,
         session_id: evt.session_id,
-        metadata: evt.metadata || null,
+        metadata,
         device: evt.device || null,
         app_version: evt.app_version || '1.0',
         os_version: evt.os_version || 'unknown',
