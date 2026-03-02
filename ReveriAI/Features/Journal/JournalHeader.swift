@@ -115,35 +115,38 @@ struct JournalHeader: View {
                 .animation(.spring(duration: 0.4, bounce: 0.1), value: isSearchActive)
 
                 // Bottom row: title + filters/actions (fixed 42pt to match emotion circles)
-                HStack(spacing: 24) {
-                    Text(String(localized: "journal.myDreams", defaultValue: "My Dreams"))
-                        .font(.title.weight(.bold))
-                        .foregroundStyle(.white)
-                        .fixedSize()
-                    if isFoldersTab {
-                        Spacer(minLength: 0)
-                        Button {
-                            showNewFolderAlert = true
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image("FolderAddIcon")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 22, height: 22)
-                                Text(String(localized: "folder.newFolder", defaultValue: "New Folder"))
-                                    .font(.system(size: 15, weight: .medium))
+                if !isSearchActive {
+                    HStack(spacing: 24) {
+                        Text(String(localized: "journal.myDreams", defaultValue: "My Dreams"))
+                            .font(.title.weight(.bold))
+                            .foregroundStyle(.white)
+                            .fixedSize()
+                        if isFoldersTab {
+                            Spacer(minLength: 0)
+                            Button {
+                                showNewFolderAlert = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image("FolderAddIcon")
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(width: 22, height: 22)
+                                    Text(String(localized: "folder.newFolder", defaultValue: "New Folder"))
+                                        .font(.system(size: 15, weight: .medium))
+                                }
+                                .foregroundStyle(.white.opacity(0.9))
+                                .frame(height: 36)
+                                .padding(.horizontal, 14)
+                                .reveriGlass(.capsule)
                             }
-                            .foregroundStyle(.white.opacity(0.9))
-                            .frame(height: 36)
-                            .padding(.horizontal, 14)
-                            .reveriGlass(.capsule)
+                        } else {
+                            EmotionFilterBar(selectedEmotion: $selectedEmotion, emotionOrder: $emotionOrder, isExpanded: $isEmotionsExpanded)
                         }
-                    } else {
-                        EmotionFilterBar(selectedEmotion: $selectedEmotion, emotionOrder: $emotionOrder, isExpanded: $isEmotionsExpanded)
                     }
+                    .frame(height: 42)
+                } else {
+                    Color.clear.frame(height: 42)
                 }
-                .frame(height: 42)
-                .opacity(isSearchActive ? 0 : 1)
             }
         }
         .padding(.horizontal, 20)
@@ -168,6 +171,7 @@ struct JournalHeader: View {
                     .blur(radius: 100)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .clipped()
             .ignoresSafeArea(edges: .top)
             .opacity(isSearchActive ? 0 : 1)
         }
