@@ -38,7 +38,9 @@ final class AudioPlaybackService: NSObject, AVAudioPlayerDelegate {
             isPlaying = true
             startTimer()
         } catch {
+            #if DEBUG
             print("AudioPlaybackService: playback init failed — \(error)")
+            #endif
         }
     }
 

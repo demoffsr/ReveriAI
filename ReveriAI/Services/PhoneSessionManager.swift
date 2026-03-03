@@ -59,7 +59,9 @@ final class PhoneSessionManager: NSObject, WCSessionDelegate {
             )
             try FileManager.default.removeItem(at: file.fileURL)
         } catch {
+            #if DEBUG
             print("Failed to save Watch audio: \(error)")
+            #endif
             return
         }
 
@@ -137,7 +139,9 @@ final class PhoneSessionManager: NSObject, WCSessionDelegate {
             }
             if fixed > 0 {
                 try? context.save()
+                #if DEBUG
                 print("Fixed \(fixed) Watch dream audio path(s)")
+                #endif
             }
         }
     }

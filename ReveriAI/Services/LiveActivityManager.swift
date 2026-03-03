@@ -74,7 +74,9 @@ final class LiveActivityManager {
                 pushType: nil
             )
         } catch {
+            #if DEBUG
             print("LiveActivityManager: start failed — \(error)")
+            #endif
         }
     }
 

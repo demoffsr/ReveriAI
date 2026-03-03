@@ -103,7 +103,9 @@ final class SpeechRecognitionService {
 
         transcriptionTask = Task {
             let engine = await selectEngine(for: locale)
+            #if DEBUG
             print("🎤 SpeechRecognitionService: engine=\(engine.rawValue) locale=\(locale.identifier)")
+            #endif
 
             await MainActor.run {
                 self.currentEngine = engine
@@ -119,7 +121,9 @@ final class SpeechRecognitionService {
                 // TODO: WhisperKit implementation
                 break
             case .none:
+                #if DEBUG
                 print("SpeechRecognitionService: no engine available for \(locale.identifier)")
+                #endif
             }
 
             await MainActor.run {
@@ -216,7 +220,9 @@ final class SpeechRecognitionService {
             ?? supported.first(where: { $0.language.languageCode?.identifier == language })
 
         guard let matchedLocale else {
+            #if DEBUG
             print("SpeechRecognitionService: SpeechTranscriber locale not found, falling back")
+            #endif
             await runSFSpeechRecognizer(locale: locale, audioStream: audioStream)
             return
         }
@@ -233,7 +239,9 @@ final class SpeechRecognitionService {
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: [testTranscriber]
         ) else {
+            #if DEBUG
             print("SpeechRecognitionService: no compatible audio format for SpeechAnalyzer")
+            #endif
             await runSFSpeechRecognizer(locale: locale, audioStream: audioStream)
             return
         }
@@ -394,12 +402,16 @@ final class SpeechRecognitionService {
             }
         }
         guard authorized else {
+            #if DEBUG
             print("SpeechRecognitionService: speech recognition not authorized")
+            #endif
             return
         }
 
         guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
+            #if DEBUG
             print("SpeechRecognitionService: SFSpeechRecognizer not available for \(locale.identifier)")
+            #endif
             return
         }
 
@@ -427,7 +439,9 @@ final class SpeechRecognitionService {
             switch sessionResult {
             case .sessionEnded:
                 // SF session ended (speech pause or time limit) — commit partial and restart
+                #if DEBUG
                 print("🔄 SF session ended, restarting... relay.isActive=\(relay.isActive)")
+                #endif
                 await MainActor.run { self.pauseTranscription() }
                 guard relay.isActive else {
                     audioEnded = true
@@ -526,7 +540,9 @@ final class SpeechRecognitionService {
                         }
                         self.accumulatedFinalText = baseText
                         self.partialText = ""
+                        #if DEBUG
                         print("🟡 SF auto-commit → accumulated=[\(baseText)]")
+                        #endif
                     }
                 }
             }
@@ -550,7 +566,9 @@ final class SpeechRecognitionService {
                     self.stableText = finalText
                     self.latestText = ""
                     self.transcribedText = finalText
+                    #if DEBUG
                     print("🟢 SF FINAL → transcribed=[\(finalText)]")
+                    #endif
                 } else {
                     // Volatile — no punctuation, live captions only
                     let fullText: String

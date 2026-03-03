@@ -109,7 +109,9 @@ enum AudioFileAnalyzer {
         do {
             try audioFile.read(into: buffer)
         } catch {
+            #if DEBUG
             print("AudioFileAnalyzer: read error — \(error)")
+            #endif
             return []
         }
 

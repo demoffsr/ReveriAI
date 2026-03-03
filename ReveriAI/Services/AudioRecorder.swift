@@ -42,7 +42,9 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
         } catch {
+            #if DEBUG
             print("AudioRecorder: failed to configure session — \(error)")
+            #endif
             return AsyncStream { $0.finish() }
         }
 
@@ -68,7 +70,9 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
                 interleaved: inputFormat.isInterleaved
             )
         } catch {
+            #if DEBUG
             print("AudioRecorder: failed to create audio file — \(error)")
+            #endif
             return AsyncStream { $0.finish() }
         }
 
@@ -82,7 +86,9 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
             do {
                 try self.audioFile?.write(from: buffer)
             } catch {
+                #if DEBUG
                 print("AudioRecorder: write error — \(error)")
+                #endif
             }
 
             // Only process speech/metering when not paused
@@ -106,7 +112,9 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
             isRecording = true
             isPaused = false
         } catch {
+            #if DEBUG
             print("AudioRecorder: failed to start engine — \(error)")
+            #endif
             inputNode.removeTap(onBus: 0)
             continuation.finish()
             return AsyncStream { $0.finish() }
@@ -186,7 +194,9 @@ final class AudioRecorder: NSObject, AVAudioPlayerDelegate {
             isPlaying = true
             startPlaybackTimer()
         } catch {
+            #if DEBUG
             print("AudioRecorder: playback failed — \(error)")
+            #endif
         }
     }
 
