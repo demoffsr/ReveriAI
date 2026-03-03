@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "supabase-functions",
+      "runtimeExecutable": "/Users/ddemidov/bin/supabase",
+      "runtimeArgs": ["functions", "serve", "--no-verify-jwt", "--workdir", "/Users/ddemidov/Desktop/ReveriAI"],
+      "port": 54321
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8090", "-d", "/tmp/dashboard-preview"],
+      "port": 8090
+    }
+  ]
+}

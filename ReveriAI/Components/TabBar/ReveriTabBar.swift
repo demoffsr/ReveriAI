@@ -1,0 +1,432 @@
+import SwiftUI
+
+struct ReveriTabBar: View {
+    @Binding var selectedTab: AppTab
+    var emotionFilter: DreamEmotion?
+    @Environment(\.theme) private var theme
+    @State private var expandedTab: AppTab?
+    @State private var collapseTask: Task<Void, Never>?
+    @State private var pauseFlipCount: Int = 0
+    @State private var previewFlipCount: Int = 0
+    @State private var showDeleteConfirmation = false
+    var isRecording: Bool = false
+    var isPaused: Bool = false
+    var isReviewing: Bool = false
+    var isPlayingPreview: Bool = false
+    var isSavingFeelings: Bool = false
+    var canSaveFeelings: Bool = false
+    var onStop: (() -> Void)?
+    var onTogglePause: (() -> Void)?
+    var onTogglePreview: (() -> Void)?
+    var onDelete: (() -> Void)?
+    var onSkipBack: (() -> Void)?
+    var onSkipForward: (() -> Void)?
+    var onSaveFeelings: (() -> Void)?
+    var isInDetailDreamTab: Bool = false
+    var hasGeneratedImage: Bool = false
+    var isGeneratingImage: Bool = false
+    var onGenerateImage: (() -> Void)?
+    var detailState: DetailDreamState?
+
+    var body: some View {
+        Group {
+            if isInDetailDreamTab {
+                detailDreamControls
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            } else {
+                Group {
+                    if isRecording {
+                        recordingControls
+                            .transition(.opacity)
+                    } else if isReviewing {
+                        reviewControls
+                            .transition(.opacity)
+                    } else if isSavingFeelings {
+                        savingFeelingsControls
+                            .transition(.opacity)
+                    } else {
+                        normalTabs
+                            .transition(.opacity)
+                    }
+                }
+                .alert(String(localized: "tabBar.deleteRecording", defaultValue: "Delete recording?"), isPresented: $showDeleteConfirmation) {
+                    Button(String(localized: "tabBar.delete", defaultValue: "Delete"), role: .destructive) { HapticService.notification(.warning); onDelete?() }
+                    Button(String(localized: "tabBar.cancel", defaultValue: "Cancel"), role: .cancel) { }
+                } message: {
+                    Text(String(localized: "tabBar.cannotBeUndone", defaultValue: "This action cannot be undone"))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
+                .reveriGlass(.capsule, interactive: false)
+                .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
+                .padding(.bottom, 8)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isInDetailDreamTab)
+    }
+
+    private var normalTabs: some View {
+        HStack(spacing: 4) {
+            ForEach(AppTab.allCases) { tab in
+                let isJournalFiltered = tab == .journal && emotionFilter != nil && selectedTab == .journal
+                let label: String = if let emotion = emotionFilter, tab == .journal, selectedTab == .journal {
+                    emotion.displayName
+                } else {
+                    tab.label
+                }
+                let color: Color = if let emotion = emotionFilter, tab == .journal, selectedTab == .journal {
+                    emotion.color
+                } else {
+                    theme.accent
+                }
+                let activeIcon: String = if let emotion = emotionFilter, tab == .journal, selectedTab == .journal {
+                    emotion.journalIcon
+                } else {
+                    tab.activeIcon
+                }
+                TabBarItem(
+                    activeIcon: activeIcon,
+                    inactiveIcon: tab.inactiveIcon,
+                    label: label,
+                    isSelected: selectedTab == tab,
+                    isExpanded: expandedTab == tab || isJournalFiltered,
+                    accentColor: color
+                ) {
+                    handleTap(tab)
+                }
+            }
+        }
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: emotionFilter)
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: selectedTab)
+    }
+
+    private var recordingControls: some View {
+        let stopColor = Color(hex: "FF3F42")
+
+        // Icons NEVER change positions: Stop is always left, Pause/Play is always right.
+        // Only the labels migrate: recording → "Stop" on left; paused → "Resume" on right.
+        return HStack(spacing: 4) {
+            // Left: Stop button — labeled when recording, icon-only when paused
+            Button {
+                HapticService.impact(.medium)
+                onStop?()
+            } label: {
+                HStack(spacing: 6) {
+                    Image("StopIcon")
+                        .renderingMode(.original)
+                        .frame(width: 22, height: 22)
+                    if !isPaused {
+                        Text(String(localized: "tabBar.stop", defaultValue: "Stop"))
+                            .font(.system(size: 13, weight: .medium))
+                            .tracking(-0.08)
+                            .foregroundStyle(stopColor)
+                            .transition(.opacity)
+                    }
+                }
+                .padding(.horizontal, isPaused ? 12 : 16)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(isPaused ? .clear : stopColor.opacity(0.1))
+                )
+            }
+            .buttonStyle(.plain)
+
+            // Right: Pause/Resume button — icon-only when recording, labeled when paused
+            Button {
+                HapticService.impact(.light)
+                withAnimation(.spring(duration: 0.5, bounce: 0.15)) {
+                    onTogglePause?()
+                    pauseFlipCount += 1
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(isPaused ? "PlayIcon" : "PauseIcon")
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(theme.accent)
+                        .rotation3DEffect(
+                            .degrees(Double(pauseFlipCount) * 360),
+                            axis: (x: 0, y: 1, z: 0),
+                            perspective: 0.4
+                        )
+                    if isPaused {
+                        Text(String(localized: "tabBar.resume", defaultValue: "Resume"))
+                            .font(.system(size: 13, weight: .medium))
+                            .tracking(-0.08)
+                            .foregroundStyle(theme.accent)
+                            .transition(.opacity)
+                    }
+                }
+                .padding(.horizontal, isPaused ? 16 : 12)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(isPaused ? theme.accent.opacity(0.1) : .clear)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .animation(.spring(duration: 0.4, bounce: 0.15), value: isPaused)
+    }
+
+    private var reviewControls: some View {
+        Group {
+            if isPlayingPreview {
+                playbackControls
+                    .transition(.opacity)
+            } else {
+                reviewIdleControls
+                    .transition(.opacity)
+            }
+        }
+        .animation(.spring(duration: 0.4, bounce: 0.15), value: isPlayingPreview)
+    }
+
+    private var reviewIdleControls: some View {
+        HStack(spacing: 4) {
+            // Preview/Play button
+            Button {
+                HapticService.impact(.light)
+                withAnimation(.spring(duration: 0.7, bounce: 0.1)) {
+                    onTogglePreview?()
+                    previewFlipCount += 1
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image("PlayIcon")
+                        .renderingMode(.template)
+                        .resizable()
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(theme.accent)
+                        .rotation3DEffect(
+                            .degrees(Double(previewFlipCount) * 360),
+                            axis: (x: 0, y: 1, z: 0),
+                            perspective: 0.4
+                        )
+                    Text(String(localized: "tabBar.play", defaultValue: "Play"))
+                        .font(.system(size: 13, weight: .medium))
+                        .tracking(-0.08)
+                        .foregroundStyle(theme.accent)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(theme.accent.opacity(0.1))
+                )
+            }
+            .buttonStyle(.plain)
+
+            // Delete button — icon only
+            Button {
+                showDeleteConfirmation = true
+            } label: {
+                Image("DeleteIcon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var playbackControls: some View {
+        HStack(spacing: 16) {
+            // Skip back 5s
+            Button {
+                HapticService.impact(.light)
+                onSkipBack?()
+            } label: {
+                Image("SkipBack5Icon")
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
+                    .padding(8)
+            }
+            .buttonStyle(.plain)
+
+            // Large pause/play button
+            Button {
+                HapticService.impact(.light)
+                withAnimation(.spring(duration: 0.7, bounce: 0.1)) {
+                    onTogglePreview?()
+                    previewFlipCount += 1
+                }
+            } label: {
+                Image(isPlayingPreview ? "PauseIcon" : "PlayIcon")
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
+                    .rotation3DEffect(
+                        .degrees(Double(previewFlipCount) * 360),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.4
+                    )
+                    .frame(width: 56, height: 56)
+                    .background(
+                        Circle()
+                            .fill(theme.accent.opacity(0.15))
+                    )
+            }
+            .buttonStyle(.plain)
+
+            // Skip forward 5s
+            Button {
+                HapticService.impact(.light)
+                onSkipForward?()
+            } label: {
+                Image("SkipForward5Icon")
+                    .renderingMode(.template)
+                    .resizable()
+                    .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
+                    .padding(8)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var detailDreamControls: some View {
+        DetailDreamControlsView(
+            detailState: detailState,
+            isGeneratingImage: isGeneratingImage,
+            onGenerateImage: onGenerateImage
+        )
+    }
+
+    private var savingFeelingsControls: some View {
+        // Save feelings button only — no journal icon during emotion selection
+        Button {
+            HapticService.notification(.success)
+            onSaveFeelings?()
+        } label: {
+            HStack(spacing: 6) {
+                Image("CheckmarkBigIcon")
+                    .renderingMode(.original)
+                    .frame(width: 22, height: 22)
+                Text(String(localized: "tabBar.saveFeelings", defaultValue: "Save feelings"))
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(-0.08)
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(canSaveFeelings ? theme.accent.opacity(0.1) : .clear)
+                )
+            .opacity(canSaveFeelings ? 1.0 : 0.4)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSaveFeelings)
+    }
+
+    private func handleTap(_ tab: AppTab) {
+        HapticService.selection()
+        collapseTask?.cancel()
+
+        if expandedTab == tab {
+            expandedTab = nil
+        }
+
+        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+            selectedTab = tab
+            expandedTab = tab
+        }
+
+        collapseTask = Task {
+            try? await Task.sleep(for: .seconds(0.8))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                expandedTab = nil
+            }
+        }
+    }
+}
+
+// MARK: - Detail Dream Controls Wrapper
+
+/// Isolates DetailDreamState observation to prevent ReveriTabBar rebuilds
+/// when unrelated properties (interpretationError, hasInterpretation) change.
+/// Pattern: same as LiveWaveformView for audioRecorder.currentLevel isolation.
+private struct DetailDreamControlsView: View {
+    var detailState: DetailDreamState?
+    var isGeneratingImage: Bool
+    var onGenerateImage: (() -> Void)?
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        let mode = detailState?.tabBarMode ?? .generateImage
+        let isGenerating = isGeneratingImage || (detailState?.isGeneratingInterpretation ?? false)
+        return Group {
+            switch mode {
+            case .generateImage, .generateImageAgain:
+                Button {
+                    onGenerateImage?()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isGeneratingImage {
+                            ProgressView()
+                                .tint(theme.accent)
+                                .scaleEffect(0.9)
+                        } else {
+                            Image("GenerateImageIcon")
+                                .renderingMode(.template)
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundStyle(theme.accent)
+                        }
+                        Text(mode == .generateImageAgain ? String(localized: "tabBar.generateAgain", defaultValue: "Generate Again") : String(localized: "tabBar.generateImage", defaultValue: "Generate Image"))
+                            .font(.subheadline.weight(.medium))
+                            .tracking(-0.23)
+                            .foregroundStyle(theme.accent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .reveriGlass(.capsule)
+                .disabled(isGeneratingImage)
+                .opacity(isGeneratingImage ? 0.6 : 1.0)
+            case .interpretDream:
+                Button {
+                    detailState?.interpretTrigger.toggle()
+                } label: {
+                    HStack(spacing: 8) {
+                        if detailState?.isGeneratingInterpretation == true {
+                            ProgressView()
+                                .tint(theme.accent)
+                                .scaleEffect(0.9)
+                        } else {
+                            Image("InterpretIcon")
+                                .renderingMode(.template)
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundStyle(theme.accent)
+                        }
+                        Text(String(localized: "tabBar.interpretDream", defaultValue: "Interpret Dream"))
+                            .font(.subheadline.weight(.medium))
+                            .tracking(-0.23)
+                            .foregroundStyle(theme.accent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                .reveriGlass(.capsule)
+                .disabled(isGenerating)
+                .opacity(isGenerating ? 0.6 : 1.0)
+            case .none:
+                EmptyView()
+            }
+        }
+    }
+}

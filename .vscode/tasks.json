@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "sweetpad",
+            "action": "launch",
+            "label": "SweetPad: Launch",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "sweetpad",
+            "action": "build",
+            "label": "SweetPad: Build"
+        },
+        {
+            "type": "sweetpad",
+            "action": "clean",
+            "label": "SweetPad: Clean"
+        }
+    ]
+}
