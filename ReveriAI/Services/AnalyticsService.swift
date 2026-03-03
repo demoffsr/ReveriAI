@@ -121,6 +121,7 @@ enum AnalyticsService {
         let device: String
         let os_version: String
         let app_version: String
+        let auth_user_id: String?
     }
 
     private struct RegisterResponse: Decodable {
@@ -240,6 +241,9 @@ enum AnalyticsService {
         if let creds {
             headers["X-Analytics-Token"] = creds.token
         }
+        if let authUserId = AuthService.currentUserId {
+            headers["X-Auth-User-Id"] = authUserId
+        }
 
         do {
             let _: TrackResponse = try await SupabaseService.client.functions.invoke(
@@ -281,7 +285,8 @@ enum AnalyticsService {
                     body: RegisterBody(
                         device: deviceString,
                         os_version: osVersion,
-                        app_version: appVersion
+                        app_version: appVersion,
+                        auth_user_id: AuthService.currentUserId
                     )
                 )
             )

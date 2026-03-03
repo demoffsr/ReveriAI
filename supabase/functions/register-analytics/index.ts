@@ -7,6 +7,7 @@ interface RegisterBody {
   device?: string
   os_version?: string
   app_version?: string
+  auth_user_id?: string
 }
 
 function truncate(s: string | undefined, max: number): string | null {
@@ -58,6 +59,11 @@ Deno.serve(async (req) => {
     const clientIP = getClientIP(req)
     const ipHash = clientIP !== 'unknown' ? await hashIP(clientIP) : null
 
+    // Validate auth_user_id format (UUID string) if provided
+    const authUserId = body.auth_user_id && /^[0-9a-f-]{36}$/i.test(body.auth_user_id)
+      ? body.auth_user_id
+      : null
+
     // Insert device record
     const { error } = await supabaseAdmin
       .from('analytics_devices')
@@ -68,6 +74,7 @@ Deno.serve(async (req) => {
         os_version: truncate(body.os_version, 50),
         app_version: truncate(body.app_version, 20),
         ip_hash: ipHash,
+        auth_user_id: authUserId,
       })
 
     if (error) {

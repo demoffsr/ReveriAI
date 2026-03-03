@@ -143,6 +143,18 @@ Deno.serve(async (req) => {
         verifiedUserId = result.userId
         // Fire-and-forget last_seen_at update
         touchDevice(result.userId)
+
+        // Lazy-link auth_user_id for existing devices (fire-and-forget)
+        const authUserId = req.headers.get('X-Auth-User-Id')
+        if (authUserId && /^[0-9a-f-]{36}$/i.test(authUserId)) {
+          supabaseAdmin
+            .from('analytics_devices')
+            .update({ auth_user_id: authUserId })
+            .eq('user_id', result.userId)
+            .is('auth_user_id', null)
+            .then(() => {})
+            .catch(() => {})
+        }
       } else {
         // No token — check grace period (fail-closed)
         const gracePeriodEnd = Deno.env.get('GRACE_PERIOD_END')
