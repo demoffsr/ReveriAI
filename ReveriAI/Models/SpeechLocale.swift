@@ -28,6 +28,24 @@ enum SpeechLocale: String, CaseIterable, Identifiable {
         return locale.localizedString(forIdentifier: rawValue) ?? rawValue
     }
 
+    var shortDisplayName: String {
+        switch self {
+        case .russian: "Русский"
+        case .english: "English"
+        case .spanish: "Español"
+        case .german: "Deutsch"
+        case .french: "Français"
+        case .italian: "Italiano"
+        case .portuguese: "Português"
+        case .japanese: "日本語"
+        case .korean: "한국어"
+        case .chinese: "中文"
+        case .arabic: "العربية"
+        case .turkish: "Türkçe"
+        case .hindi: "हिन्दी"
+        }
+    }
+
     static var defaultLocale: SpeechLocale {
         let deviceLanguage = Locale.current.language.languageCode?.identifier ?? "en"
         return allCases.first { $0.rawValue.hasPrefix(deviceLanguage) } ?? .english
