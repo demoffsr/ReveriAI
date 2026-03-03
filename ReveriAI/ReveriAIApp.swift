@@ -92,6 +92,9 @@ struct ReveriAIApp: App {
                 // Ensure anonymous auth session before any Edge Function calls
                 await AuthService.ensureAuthenticated()
 
+                // Backfill userId for existing dreams/folders (one-time after update)
+                backfillUserIds(container: container)
+
                 // One-time: fix hallucinated Whisper transcripts & re-transcribe
                 DreamAIService.cleanupHallucinatedTranscripts(modelContainer: container)
 
@@ -112,6 +115,29 @@ struct ReveriAIApp: App {
                 loaderRemoved = true
                 launchLog.info("⏱ Total launch: \(Int((CFAbsoluteTimeGetCurrent() - t0) * 1000))ms")
             }
+        }
+    }
+
+    /// One-time backfill: tags existing dreams/folders with the current userId.
+    /// Runs synchronously on main context — fast for small local datasets.
+    private func backfillUserIds(container: ModelContainer) {
+        guard let userId = AuthService.currentUserId else { return }
+        let context = container.mainContext
+
+        if let dreams = try? context.fetch(FetchDescriptor<Dream>(
+            predicate: #Predicate<Dream> { $0.userId == nil }
+        )), !dreams.isEmpty {
+            for dream in dreams { dream.userId = userId }
+            try? context.save()
+            launchLog.info("Backfilled userId for \(dreams.count) dreams")
+        }
+
+        if let folders = try? context.fetch(FetchDescriptor<DreamFolder>(
+            predicate: #Predicate<DreamFolder> { $0.userId == nil }
+        )), !folders.isEmpty {
+            for folder in folders { folder.userId = userId }
+            try? context.save()
+            launchLog.info("Backfilled userId for \(folders.count) folders")
         }
     }
 }

@@ -5,7 +5,11 @@ import SwiftData
 final class Dream {
     #Index<Dream>([\.createdAt])
 
+    /// Set by AuthService at app launch. Auto-tags new records with owner.
+    nonisolated(unsafe) static var defaultUserId: String?
+
     var id: UUID
+    var userId: String?
     var title: String = ""
     var text: String
     // Legacy — keep for backwards compatibility
@@ -81,6 +85,7 @@ final class Dream {
         audioDuration: TimeInterval? = nil
     ) {
         self.id = UUID()
+        self.userId = Self.defaultUserId
         self.title = title
         self.text = text
         self.emotionValues = emotions.map(\.rawValue)
