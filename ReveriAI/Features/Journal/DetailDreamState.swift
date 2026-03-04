@@ -15,5 +15,5 @@ class DetailDreamState {
     var interpretationError: String?
     var tabBarMode: DetailTabBarMode = .none
     var interpretTrigger = false
-    var showRateLimitToast = false
+    var showRateLimitAlert = false
 }

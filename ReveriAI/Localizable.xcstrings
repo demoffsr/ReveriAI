@@ -807,6 +807,54 @@
         }
       }
     },
+    "rateLimit.alert.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily Limit Reached"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дневной лимит исчерпан"
+          }
+        }
+      }
+    },
+    "rateLimit.alert.message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've used up today's AI features. Try again tomorrow!"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы исчерпали лимит AI-функций на сегодня. Попробуйте снова завтра!"
+          }
+        }
+      }
+    },
+    "rateLimit.alert.ok" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Понятно"
+          }
+        }
+      }
+    },
     "folder.addDreamsHint" : {
       "localizations" : {
         "en" : {

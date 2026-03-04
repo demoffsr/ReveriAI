@@ -181,7 +181,11 @@ struct DreamDetailView: View {
             fullscreenImageView
         }
         .toast(isPresented: $showImageError, message: String(localized: "detail.failedToGenerateImage", defaultValue: "Failed to generate image"), icon: "xmark.circle.fill", style: .error, duration: 3.0)
-        .toast(isPresented: Binding(get: { detailState.showRateLimitToast }, set: { detailState.showRateLimitToast = $0 }), message: String(localized: "error.rateLimited"), icon: "clock.badge.exclamationmark", style: .error, duration: 3.0)
+        .alert(String(localized: "rateLimit.alert.title"), isPresented: Binding(get: { detailState.showRateLimitAlert }, set: { detailState.showRateLimitAlert = $0 })) {
+            Button(String(localized: "rateLimit.alert.ok"), role: .cancel) {}
+        } message: {
+            Text("rateLimit.alert.message")
+        }
         .sheet(isPresented: $showQuestionsSheet) {
             questionsSheet
         }
@@ -1165,7 +1169,7 @@ struct DreamDetailView: View {
                 await MainActor.run {
                     isLoadingQuestions = false
                     showQuestionsSheet = false
-                    detailState.showRateLimitToast = true
+                    detailState.showRateLimitAlert = true
                 }
             } catch {
                 await MainActor.run {
@@ -1192,7 +1196,7 @@ struct DreamDetailView: View {
         ) { imageURL in
             isGenerating = false
             detailDreamHasImage = imageURL != nil
-            if imageURL == nil && !detailState.showRateLimitToast {
+            if imageURL == nil && !detailState.showRateLimitAlert {
                 showImageError = true
             }
         }

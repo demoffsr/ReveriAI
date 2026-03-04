@@ -532,7 +532,7 @@ extension DreamAIService {
             } catch Error.rateLimited {
                 logger.warning("Image generation rate limited")
                 AnalyticsService.track(.aiImageFailed, metadata: ["error": "rate_limited"])
-                detailState?.showRateLimitToast = true
+                detailState?.showRateLimitAlert = true
                 onComplete?(nil)
             } catch {
                 logger.error("Failed to generate dream image: \(error.localizedDescription)")
@@ -609,7 +609,7 @@ extension DreamAIService {
             } catch Error.rateLimited {
                 logger.warning("Interpretation rate limited")
                 AnalyticsService.track(.aiInterpretationFailed, metadata: ["error": "rate_limited"])
-                detailState.interpretationError = String(localized: "error.rateLimited")
+                detailState.showRateLimitAlert = true
                 detailState.isGeneratingInterpretation = false
             } catch {
                 logger.error("Failed to generate interpretation: \(error.localizedDescription)")
