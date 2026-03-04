@@ -113,10 +113,12 @@ extension DreamAIService {
 
         let response: ResponseBody
         do {
-            response = try await SupabaseService.client.functions.invoke(
-                "generate-dream-title",
-                options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
-            )
+            response = try await SupabaseService.withRetry {
+                try await SupabaseService.client.functions.invoke(
+                    "generate-dream-title",
+                    options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
+                )
+            }
         } catch {
             throw translateError(error)
         }
@@ -138,7 +140,9 @@ extension DreamAIService {
         }
 
         let boundary = UUID().uuidString
-        let url = URL(string: "\(SupabaseConfig.projectURL)/functions/v1/transcribe-audio")!
+        guard let url = URL(string: "\(SupabaseConfig.projectURL)/functions/v1/transcribe-audio") else {
+            throw Error.networkError(URLError(.badURL))
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         let accessToken: String
@@ -206,7 +210,7 @@ extension DreamAIService {
         }
 
         if isHallucination(decoded.transcript) {
-            logger.warning("🚨 Whisper hallucination detected: \(decoded.transcript.prefix(100))")
+            logger.warning("🚨 Whisper hallucination detected (\(decoded.transcript.count) chars)")
             throw Error.hallucination
         }
 
@@ -356,7 +360,7 @@ extension DreamAIService {
                     let transcript = try await AITaskQueue.shared.enqueue {
                         try await transcribeAudio(fileURL: fileURL, locale: locale)
                     }
-                    logger.info("✅ Whisper: got transcript (\(transcript.count) chars): \(transcript.prefix(80))")
+                    logger.info("✅ Whisper: got transcript (\(transcript.count) chars)")
                     let context = modelContainer.mainContext
                     guard let dream = context.model(for: dreamID) as? Dream else {
                         logger.warning("Dream not found for Whisper update")
@@ -435,10 +439,12 @@ extension DreamAIService {
 
         let response: ResponseBody
         do {
-            response = try await SupabaseService.client.functions.invoke(
-                "generate-dream-questions",
-                options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
-            )
+            response = try await SupabaseService.withRetry {
+                try await SupabaseService.client.functions.invoke(
+                    "generate-dream-questions",
+                    options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue))
+                )
+            }
         } catch {
             throw translateError(error)
         }
@@ -472,10 +478,12 @@ extension DreamAIService {
 
         let response: ResponseBody
         do {
-            response = try await SupabaseService.client.functions.invoke(
-                "generate-dream-image",
-                options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue, answers: answers))
-            )
+            response = try await SupabaseService.withRetry {
+                try await SupabaseService.client.functions.invoke(
+                    "generate-dream-image",
+                    options: .init(body: RequestBody(dreamText: dreamText, locale: locale.rawValue, answers: answers))
+                )
+            }
         } catch {
             throw translateError(error)
         }
@@ -562,14 +570,16 @@ extension DreamAIService {
 
         let response: ResponseBody
         do {
-            response = try await SupabaseService.client.functions.invoke(
-                "generate-dream-interpretation",
-                options: .init(body: RequestBody(
-                    dreamText: dreamText,
-                    locale: locale.rawValue,
-                    emotions: emotions.map(\.rawValue)
-                ))
-            )
+            response = try await SupabaseService.withRetry {
+                try await SupabaseService.client.functions.invoke(
+                    "generate-dream-interpretation",
+                    options: .init(body: RequestBody(
+                        dreamText: dreamText,
+                        locale: locale.rawValue,
+                        emotions: emotions.map(\.rawValue)
+                    ))
+                )
+            }
         } catch {
             throw translateError(error)
         }

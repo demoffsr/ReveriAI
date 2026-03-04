@@ -31,6 +31,7 @@ struct DreamDetailView: View {
     @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
     @State private var cachedParsedSections: [ParsedSection] = []
     @State private var showImageError = false
+    @State private var showAIError = false
     @State private var sheetDismissTask: Task<Void, Never>?
     @State private var showingOriginal = false
     @State private var cachedAudioURL: URL?
@@ -181,6 +182,7 @@ struct DreamDetailView: View {
             fullscreenImageView
         }
         .toast(isPresented: $showImageError, message: String(localized: "detail.failedToGenerateImage", defaultValue: "Failed to generate image"), icon: "xmark.circle.fill", style: .error, duration: 3.0)
+        .toast(isPresented: $showAIError, message: String(localized: "detail.aiError", defaultValue: "Something went wrong. Try again later."), icon: "xmark.circle.fill", style: .error, duration: 3.0)
         .alert(String(localized: "rateLimit.alert.title"), isPresented: Binding(get: { detailState.showRateLimitAlert }, set: { detailState.showRateLimitAlert = $0 })) {
             Button(String(localized: "rateLimit.alert.ok"), role: .cancel) {}
         } message: {
@@ -1143,6 +1145,7 @@ struct DreamDetailView: View {
 
     private func generateInterpretation() {
         guard !detailState.isGeneratingInterpretation else { return }
+        detailState.isGeneratingInterpretation = true
         detailState.tabBarMode = .none
         DreamAIService.generateInterpretationInBackground(
             dreamID: dream.persistentModelID,
@@ -1155,6 +1158,7 @@ struct DreamDetailView: View {
     }
 
     private func loadQuestions() {
+        guard !isLoadingQuestions else { return }
         isLoadingQuestions = true
         showQuestionsSheet = true
         Task {
@@ -1175,6 +1179,7 @@ struct DreamDetailView: View {
                 await MainActor.run {
                     isLoadingQuestions = false
                     showQuestionsSheet = false
+                    showAIError = true
                 }
             }
         }

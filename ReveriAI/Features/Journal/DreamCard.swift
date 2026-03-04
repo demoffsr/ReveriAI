@@ -27,8 +27,8 @@ struct DreamCard: View {
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "MMM d, yyyy, hh:mma"
-        f.locale = Locale(identifier: "en_US")
+        f.dateStyle = .medium
+        f.timeStyle = .short
         return f
     }()
 

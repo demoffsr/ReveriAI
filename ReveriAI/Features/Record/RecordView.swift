@@ -20,6 +20,8 @@ struct RecordView: View {
     @State private var waveformState = WaveformState()
     @State private var reviewText: String = ""
     @State private var headerContentVisible: Bool = true
+    @State private var showMicPermissionAlert: Bool = false
+    @State private var showSaveError: Bool = false
     var audioRecorder: AudioRecorder
     var speechService: SpeechRecognitionService
     var isVisible: Bool = true
@@ -156,6 +158,20 @@ struct RecordView: View {
             viewModel.mode = .text
             isTextFocused = true
         }
+        .alert(
+            String(localized: "record.micPermission.title", defaultValue: "Microphone Access"),
+            isPresented: $showMicPermissionAlert
+        ) {
+            Button(String(localized: "record.micPermission.settings", defaultValue: "Settings")) {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button(String(localized: "record.micPermission.cancel", defaultValue: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "record.micPermission.message", defaultValue: "To record dreams, allow microphone access in Settings."))
+        }
+        .toast(isPresented: $showSaveError, message: String(localized: "record.saveError", defaultValue: "Failed to save dream. Try again."), icon: "xmark.circle.fill", style: .error, duration: 3.0)
     }
 
     // MARK: - Closing Clouds (slides down from top to cover header)
@@ -227,8 +243,11 @@ struct RecordView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if viewModel.mode == .text && viewModel.canSave {
                     SaveDreamButton {
-                        viewModel.saveDream(context: modelContext)
-                        isTextFocused = false
+                        if viewModel.saveDream(context: modelContext) {
+                            isTextFocused = false
+                        } else {
+                            showSaveError = true
+                        }
                     }
                     .padding(.leading, 16)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -417,7 +436,10 @@ struct RecordView: View {
     private func requestMicAndRecord() {
         AVAudioApplication.requestRecordPermission { granted in
             Task { @MainActor in
-                guard granted else { return }
+                guard granted else {
+                    showMicPermissionAlert = true
+                    return
+                }
                 waveformState.reset()
                 DreamAIService.warmUp()
                 let audioStream = audioRecorder.startRecording()
@@ -488,7 +510,10 @@ struct RecordView: View {
         guard let url = audioRecorder.recordedFileURL else { return }
         let relativePath = url.lastPathComponent
         let transcript = reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
-        viewModel.saveAudioDream(audioPath: relativePath, transcript: transcript, context: modelContext)
+        guard viewModel.saveAudioDream(audioPath: relativePath, transcript: transcript, context: modelContext) else {
+            showSaveError = true
+            return
+        }
 
         // Reset review state
         reviewText = ""
@@ -572,7 +597,13 @@ private struct LiveCaptionsView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                if speechService.transcribedText.isEmpty {
+                if speechService.engineUnavailable {
+                    Text(String(localized: "record.speechUnavailable", defaultValue: "Speech recognition is not available for this language. Your recording will be transcribed automatically after saving."))
+                        .font(.system(size: 15))
+                        .tracking(-0.23)
+                        .foregroundStyle(.black.opacity(0.4))
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                } else if speechService.transcribedText.isEmpty {
                     Text(String(localized: "record.liveCaptions", defaultValue: "Live Captions will appear here"))
                         .font(.system(size: 15))
                         .tracking(-0.23)

@@ -30,11 +30,19 @@ final class RecordViewModel {
         !dreamText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    func saveDream(context: ModelContext) {
-        guard canSave else { return }
+    @discardableResult
+    func saveDream(context: ModelContext) -> Bool {
+        guard canSave else { return false }
         let dream = Dream(text: dreamText.trimmingCharacters(in: .whitespacesAndNewlines), emotions: selectedEmotions)
         context.insert(dream)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            Self.logger.error("Failed to save text dream: \(error.localizedDescription)")
+            context.rollback()
+            HapticService.notification(.error)
+            return false
+        }
         HapticService.notification(.success)
 
         AnalyticsService.track(.dreamRecorded, metadata: [
@@ -57,6 +65,7 @@ final class RecordViewModel {
         state = .saved
         NotificationService.removeDeliveredNotifications()
         onShowHowDidItFeel?()
+        return true
     }
 
     private static let recordingsDirectory: URL = {
@@ -64,7 +73,8 @@ final class RecordViewModel {
             .appendingPathComponent("recordings")
     }()
 
-    func saveAudioDream(audioPath: String, transcript: String = "", context: ModelContext) {
+    @discardableResult
+    func saveAudioDream(audioPath: String, transcript: String = "", context: ModelContext) -> Bool {
         let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
 
         var duration: TimeInterval?
@@ -81,7 +91,14 @@ final class RecordViewModel {
             audioDuration: duration
         )
         context.insert(dream)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            Self.logger.error("Failed to save audio dream: \(error.localizedDescription)")
+            context.rollback()
+            HapticService.notification(.error)
+            return false
+        }
         HapticService.notification(.success)
 
         AnalyticsService.track(.reviewSavedAudio, metadata: [
@@ -104,7 +121,7 @@ final class RecordViewModel {
         }
 
         // Whisper transcription in background
-        Self.logger.info("🎙️ saveAudioDream: audioPath=\(audioPath), transcript=\(trimmedTranscript.prefix(50)), originalTranscript=\(dream.originalTranscript ?? "nil")")
+        Self.logger.info("🎙️ saveAudioDream: audioPath=\(audioPath), transcriptLength=\(trimmedTranscript.count), hasOriginalTranscript=\(dream.originalTranscript != nil)")
         DreamAIService.transcribeAudioInBackground(
             dreamID: dream.persistentModelID,
             audioFileName: audioPath,
@@ -117,6 +134,7 @@ final class RecordViewModel {
         state = .saved
         NotificationService.removeDeliveredNotifications()
         onShowHowDidItFeel?()
+        return true
     }
 
     func reset() {

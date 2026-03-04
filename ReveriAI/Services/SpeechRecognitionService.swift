@@ -46,6 +46,8 @@ final class SpeechRecognitionService {
     private(set) var latestText: String = ""
     private(set) var isTranscribing: Bool = false
     private(set) var currentEngine: SpeechEngine = .none
+    /// True when transcription was requested but no engine supports the locale.
+    private(set) var engineUnavailable: Bool = false
 
     // MARK: - Private State
 
@@ -110,6 +112,7 @@ final class SpeechRecognitionService {
             await MainActor.run {
                 self.currentEngine = engine
                 self.isTranscribing = engine != .none
+                self.engineUnavailable = engine == .none
             }
 
             switch engine {
@@ -155,6 +158,7 @@ final class SpeechRecognitionService {
         transcribedText = ""
         partialText = ""
         accumulatedFinalText = ""
+        engineUnavailable = false
     }
 
     // MARK: - Pause Support
