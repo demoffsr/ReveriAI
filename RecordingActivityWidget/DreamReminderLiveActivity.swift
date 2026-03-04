@@ -3,18 +3,6 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-// MARK: - Celestial Decoration
-
-private struct CelestialDecoration: View {
-    let palette: WidgetPalette
-
-    var body: some View {
-        Image(palette.isNight ? "MoonLock" : "SunLock")
-            .resizable()
-            .scaledToFit()
-    }
-}
-
 // MARK: - Content View (iPhone / Watch branching)
 
 private struct DreamReminderContentView: View {
@@ -78,7 +66,7 @@ private struct iPhoneDreamReminderView: View {
             // Top row: title + subtitle
             VStack(alignment: .leading, spacing: 2) {
                 Text(String(localized: "widget.didYouSleepWell", defaultValue: "Did you sleep well?"))
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white)
 
                 Text(String(localized: "widget.tellUsAboutIt", defaultValue: "Tell us about it"))
@@ -87,40 +75,44 @@ private struct iPhoneDreamReminderView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Bottom row: Record + Write buttons
-            HStack(spacing: 8) {
-                Button(intent: StartDreamRecordingIntent()) {
-                    Text(String(localized: "widget.record", defaultValue: "Record"))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(palette.accent, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .shadow(color: palette.accentGlow.opacity(0.5), radius: 11.2)
-
-                Link(destination: URL(string: "reveri://write")!) {
-                    Image("WriteIconLock")
+            // Record button
+            Button(intent: StartDreamRecordingIntent()) {
+                HStack(spacing: 8) {
+                    Image("MicrophoneIcon")
+                        .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 22, height: 22)
-                        .frame(width: 44, height: 44)
-                        .background(.white.opacity(0.35), in: Circle())
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.5), .white.opacity(0.05)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
+                    Text(String(localized: "widget.record", defaultValue: "Record"))
+                        .font(.system(size: 16, weight: .semibold))
                 }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(palette.accent, in: Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(0.6),
+                                    .white.opacity(0.0),
+                                    palette.accentGlow.opacity(0.4),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(.white.opacity(0.15), lineWidth: 0.5)
+                        .padding(1)
+                )
             }
+            .buttonStyle(.plain)
+            .shadow(color: palette.accentGlow.opacity(0.5), radius: 11.2)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
@@ -137,11 +129,6 @@ private struct iPhoneDreamReminderView: View {
                     .opacity(0.5)
                     .blendMode(.hardLight)
             }
-        }
-        .overlay(alignment: .topTrailing) {
-            CelestialDecoration(palette: palette)
-                .frame(width: 101, height: 102)
-                .allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
@@ -170,52 +157,67 @@ struct DreamReminderLiveActivity: Widget {
         let palette = WidgetPalette.current
 
         return DynamicIsland {
-            DynamicIslandExpandedRegion(.leading) {
-                Image(systemName: palette.isNight ? "moon.fill" : "sun.max.fill")
-                    .foregroundStyle(palette.accent)
-            }
             DynamicIslandExpandedRegion(.center) {
-                Text(String(localized: "widget.recordYourDream", defaultValue: "Record your dream"))
-                    .font(.headline)
-            }
-            DynamicIslandExpandedRegion(.trailing) {
-                Button(intent: StartDreamRecordingIntent()) {
-                    Image(systemName: "mic.fill")
-                        .foregroundStyle(palette.accent)
-                }
-                .buttonStyle(.plain)
+                Text(String(localized: "widget.didYouSleepWell", defaultValue: "Did you sleep well?"))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
             }
             DynamicIslandExpandedRegion(.bottom) {
-                HStack(spacing: 8) {
-                    Button(intent: StartDreamRecordingIntent()) {
+                Button(intent: StartDreamRecordingIntent()) {
+                    HStack(spacing: 8) {
+                        Image("MicrophoneIcon")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
                         Text(String(localized: "widget.record", defaultValue: "Record"))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 40)
-                            .background(palette.accent, in: Capsule())
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                    .buttonStyle(.plain)
-                    .shadow(color: palette.accentGlow.opacity(0.4), radius: 8)
-
-                    Link(destination: URL(string: "reveri://write")!) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.white)
-                            .frame(width: 40, height: 40)
-                            .background(.white.opacity(0.15), in: Circle())
-                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(palette.accent, in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0.6),
+                                        .white.opacity(0.0),
+                                        palette.accentGlow.opacity(0.4),
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(.white.opacity(0.15), lineWidth: 0.5)
+                            .padding(1)
+                    )
                 }
+                .buttonStyle(.plain)
+                .shadow(color: palette.accentGlow.opacity(0.5), radius: 11.2)
             }
         } compactLeading: {
-            Image(systemName: palette.isNight ? "moon.fill" : "sun.max.fill")
+            Image("MicrophoneIcon")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 16, height: 16)
                 .foregroundStyle(palette.accent)
         } compactTrailing: {
-            Text(String(localized: "widget.dream", defaultValue: "Dream"))
-                .font(.system(.caption, design: .rounded))
+            Text(String(localized: "widget.record", defaultValue: "Record"))
+                .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(palette.accent)
         } minimal: {
-            Image(systemName: palette.isNight ? "moon.fill" : "sun.max.fill")
+            Image("MicrophoneIcon")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 16, height: 16)
                 .foregroundStyle(palette.accent)
         }
     }
