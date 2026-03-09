@@ -254,7 +254,19 @@ enum AnalyticsService {
             )
             logger.info("Flushed \(events.count) events")
         } catch {
-            logger.error("Flush failed: \(error.localizedDescription) — re-queuing \(events.count) events")
+            // Check if 401 — stale token, force re-registration
+            var is401 = false
+            if let functionsError = error as? FunctionsError,
+               case let .httpError(code, _) = functionsError, code == 401 {
+                is401 = true
+                logger.warning("Token rejected (401) — clearing credentials for re-registration")
+                AnalyticsKeychain.delete()
+                lock.lock()
+                _credentials = nil
+                lock.unlock()
+            }
+
+            logger.error("Flush failed: \(error.localizedDescription) — re-queuing \(events.count) events\(is401 ? " (will re-register)" : "")")
             // Re-queue failed events
             lock.lock()
             _queue.insert(contentsOf: events, at: 0)
