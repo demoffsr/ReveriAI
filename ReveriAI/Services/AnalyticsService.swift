@@ -226,21 +226,23 @@ enum AnalyticsService {
 
     /// Force-flush all queued events. Call on app background.
     static func flush() async {
-        // Lazy registration
-        let _ = await ensureRegistered()
+        // Lazy registration — don't send events without credentials
+        let registered = await ensureRegistered()
 
         lock.lock()
+        let creds = _credentials
+        guard registered, let creds else {
+            // Keep events in queue for next attempt
+            lock.unlock()
+            return
+        }
         let events = _queue
         _queue = []
-        let creds = _credentials
         lock.unlock()
 
         guard !events.isEmpty else { return }
 
-        var headers: [String: String] = [:]
-        if let creds {
-            headers["X-Analytics-Token"] = creds.token
-        }
+        var headers: [String: String] = ["X-Analytics-Token": creds.token]
         if let authUserId = AuthService.currentUserId {
             headers["X-Auth-User-Id"] = authUserId
         }
@@ -277,55 +279,63 @@ enum AnalyticsService {
     }
 
     private static func register() async -> Bool {
-        do {
-            let response: RegisterResponse = try await SupabaseService.client.functions.invoke(
-                "register-analytics",
-                options: .init(
-                    headers: ["X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey],
-                    body: RegisterBody(
-                        device: deviceString,
-                        os_version: osVersion,
-                        app_version: appVersion,
-                        auth_user_id: AuthService.currentUserId
+        let maxAttempts = 3
+        for attempt in 1...maxAttempts {
+            do {
+                let response: RegisterResponse = try await SupabaseService.client.functions.invoke(
+                    "register-analytics",
+                    options: .init(
+                        headers: ["X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey],
+                        body: RegisterBody(
+                            device: deviceString,
+                            os_version: osVersion,
+                            app_version: appVersion,
+                            auth_user_id: AuthService.currentUserId
+                        )
                     )
                 )
-            )
 
-            let creds = AnalyticsKeychain.Credentials(
-                userId: response.user_id,
-                token: response.token
-            )
-            guard AnalyticsKeychain.save(creds) else {
-                logger.error("Failed to save credentials to Keychain")
+                let creds = AnalyticsKeychain.Credentials(
+                    userId: response.user_id,
+                    token: response.token
+                )
+                guard AnalyticsKeychain.save(creds) else {
+                    logger.error("Failed to save credentials to Keychain")
+                    lock.lock()
+                    _registrationTask = nil
+                    lock.unlock()
+                    return false
+                }
+
                 lock.lock()
+                _credentials = creds
                 _registrationTask = nil
                 lock.unlock()
-                return false
+
+                // Migrate: delete old UserDefaults ONLY after Keychain save
+                UserDefaults.standard.removeObject(forKey: "analyticsUserId")
+
+                logger.info("Analytics registered — user \(response.user_id.prefix(8))")
+                return true
+            } catch {
+                if let functionsError = error as? FunctionsError,
+                   case let .httpError(code, data) = functionsError {
+                    let body = String(data: data, encoding: .utf8) ?? "empty"
+                    logger.error("Registration attempt \(attempt)/\(maxAttempts) failed: HTTP \(code) — \(body)")
+                } else {
+                    logger.error("Registration attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
+                }
+                if attempt < maxAttempts {
+                    try? await Task.sleep(for: .seconds(Double(1 << attempt))) // 2s, 4s
+                }
             }
-
-            lock.lock()
-            _credentials = creds
-            _registrationTask = nil
-            lock.unlock()
-
-            // Migrate: delete old UserDefaults ONLY after Keychain save
-            UserDefaults.standard.removeObject(forKey: "analyticsUserId")
-
-            logger.info("Analytics registered — user \(response.user_id.prefix(8))")
-            return true
-        } catch {
-            lock.lock()
-            _registrationTask = nil
-            lock.unlock()
-            if let functionsError = error as? FunctionsError,
-               case let .httpError(code, data) = functionsError {
-                let body = String(data: data, encoding: .utf8) ?? "empty"
-                logger.error("Registration failed: HTTP \(code) — \(body)")
-            } else {
-                logger.error("Registration failed: \(error.localizedDescription)")
-            }
-            return false
         }
+
+        lock.lock()
+        _registrationTask = nil
+        lock.unlock()
+        logger.error("Registration failed after \(maxAttempts) attempts — events will queue until next flush")
+        return false
     }
 
     // MARK: - Private
