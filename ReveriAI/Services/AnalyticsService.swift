@@ -1,6 +1,4 @@
 import Foundation
-import Functions
-import Supabase
 import os
 
 /// Lightweight analytics service that tracks user events to the `app_events` table
@@ -142,6 +140,13 @@ enum AnalyticsService {
     nonisolated(unsafe) private static var _credentials: AnalyticsKeychain.Credentials?
     nonisolated(unsafe) private static var _registrationTask: Task<Bool, Never>?
 
+    // Direct URLSession for edge functions — bypasses SDK's expired JWT injection
+    private static let urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        return URLSession(configuration: config)
+    }()
+
     private static let batchSize = 10
     private static let flushInterval: TimeInterval = 10
 
@@ -242,25 +247,20 @@ enum AnalyticsService {
 
         guard !events.isEmpty else { return }
 
-        var headers: [String: String] = [
-            "Authorization": "Bearer \(SupabaseConfig.anonKey)",
-            "X-Analytics-Token": creds.token,
-        ]
+        var headers: [String: String] = ["X-Analytics-Token": creds.token]
         if let authUserId = AuthService.currentUserId {
             headers["X-Auth-User-Id"] = authUserId
         }
 
         do {
-            let _: TrackResponse = try await SupabaseService.client.functions.invoke(
-                "track-event",
-                options: .init(headers: headers, body: BatchBody(events: events))
+            let _: TrackResponse = try await callEdgeFunction(
+                "track-event", headers: headers, body: BatchBody(events: events)
             )
             logger.info("Flushed \(events.count) events")
         } catch {
             // Check if 401 — stale token, force re-registration
             var is401 = false
-            if let functionsError = error as? FunctionsError,
-               case let .httpError(code, _) = functionsError, code == 401 {
+            if let error = error as? EdgeFunctionError, error.statusCode == 401 {
                 is401 = true
                 logger.warning("Token rejected (401) — clearing credentials for re-registration")
                 AnalyticsKeychain.delete()
@@ -297,19 +297,14 @@ enum AnalyticsService {
         let maxAttempts = 3
         for attempt in 1...maxAttempts {
             do {
-                let response: RegisterResponse = try await SupabaseService.client.functions.invoke(
+                let response: RegisterResponse = try await callEdgeFunction(
                     "register-analytics",
-                    options: .init(
-                        headers: [
-                            "Authorization": "Bearer \(SupabaseConfig.anonKey)",
-                            "X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey,
-                        ],
-                        body: RegisterBody(
-                            device: deviceString,
-                            os_version: osVersion,
-                            app_version: appVersion,
-                            auth_user_id: AuthService.currentUserId
-                        )
+                    headers: ["X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey],
+                    body: RegisterBody(
+                        device: deviceString,
+                        os_version: osVersion,
+                        app_version: appVersion,
+                        auth_user_id: AuthService.currentUserId
                     )
                 )
 
@@ -336,13 +331,7 @@ enum AnalyticsService {
                 logger.info("Analytics registered — user \(response.user_id.prefix(8))")
                 return true
             } catch {
-                if let functionsError = error as? FunctionsError,
-                   case let .httpError(code, data) = functionsError {
-                    let body = String(data: data, encoding: .utf8) ?? "empty"
-                    logger.error("Registration attempt \(attempt)/\(maxAttempts) failed: HTTP \(code) — \(body)")
-                } else {
-                    logger.error("Registration attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
-                }
+                logger.error("Registration attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
                 if attempt < maxAttempts {
                     try? await Task.sleep(for: .seconds(Double(1 << attempt))) // 2s, 4s
                 }
@@ -362,6 +351,55 @@ enum AnalyticsService {
         lock.lock()
         defer { lock.unlock() }
         return _sessionId
+    }
+
+    /// Direct edge function call bypassing Supabase SDK (avoids expired JWT injection).
+    private static func callEdgeFunction<T: Decodable>(
+        _ name: String,
+        headers: [String: String],
+        body: some Encodable
+    ) async throws -> T {
+        let base = SupabaseConfig.projectURL
+        guard let url = URL(string: "\(base)/functions/v1/\(name)") else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await urlSession.data(for: request)
+        let httpResponse = response as? HTTPURLResponse
+        let statusCode = httpResponse?.statusCode ?? 0
+
+        guard (200..<300).contains(statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            throw EdgeFunctionError.httpError(statusCode, body)
+        }
+
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    enum EdgeFunctionError: LocalizedError {
+        case httpError(Int, String)
+
+        var errorDescription: String? {
+            switch self {
+            case let .httpError(code, body):
+                return "Edge Function HTTP \(code): \(body)"
+            }
+        }
+
+        var statusCode: Int {
+            switch self {
+            case let .httpError(code, _): return code
+            }
+        }
     }
 
     private static func startFlushTimer() {
