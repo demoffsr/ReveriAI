@@ -242,7 +242,10 @@ enum AnalyticsService {
 
         guard !events.isEmpty else { return }
 
-        var headers: [String: String] = ["X-Analytics-Token": creds.token]
+        var headers: [String: String] = [
+            "Authorization": "Bearer \(SupabaseConfig.anonKey)",
+            "X-Analytics-Token": creds.token,
+        ]
         if let authUserId = AuthService.currentUserId {
             headers["X-Auth-User-Id"] = authUserId
         }
@@ -297,7 +300,10 @@ enum AnalyticsService {
                 let response: RegisterResponse = try await SupabaseService.client.functions.invoke(
                     "register-analytics",
                     options: .init(
-                        headers: ["X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey],
+                        headers: [
+                            "Authorization": "Bearer \(SupabaseConfig.anonKey)",
+                            "X-Analytics-API-Key": SupabaseConfig.analyticsAPIKey,
+                        ],
                         body: RegisterBody(
                             device: deviceString,
                             os_version: osVersion,
