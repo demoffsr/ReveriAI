@@ -1,3 +1,4 @@
+import Auth
 import Foundation
 import Supabase
 import os
@@ -11,23 +12,18 @@ enum AuthService {
     /// Whether authentication completed successfully.
     private(set) static var isAuthenticated: Bool = false
 
+    /// Prevents infinite re-auth loops (handleAuthFailure → ensureAuthenticated → 401 → handleAuthFailure).
+    private static var isReAuthenticating = false
+
     /// Ensures a valid anonymous session exists.
-    /// Call once at app launch. supabase-swift auto-persists the session
-    /// in Keychain across launches. On subsequent launches, the existing
-    /// session is restored automatically.
-    /// Retries up to 3 times with exponential backoff on failure.
+    /// Force-clears stored session and creates fresh to avoid corrupted Keychain state.
     static func ensureAuthenticated() async {
         let client = SupabaseService.client
 
-        // Try restoring existing session first
-        do {
-            let session = try await client.auth.session
-            setUserId(session.user.id.uuidString)
-            logger.info("Existing session: \(session.user.id)")
-            return
-        } catch {
-            logger.info("No session, signing in anonymously")
-        }
+        // TEMPORARY: Force fresh session to debug 401 issues.
+        // Clear any stored session (may be corrupted from refresh token experiments).
+        logger.info("Force-clearing stored session for fresh sign-in")
+        try? await client.auth.signOut()
 
         // Anonymous sign-in with retry
         let maxRetries = 3
@@ -35,7 +31,8 @@ enum AuthService {
             do {
                 let session = try await client.auth.signInAnonymously()
                 setUserId(session.user.id.uuidString)
-                logger.info("Anonymous sign-in OK: \(session.user.id)")
+                let tokenPrefix = String(session.accessToken.prefix(20))
+                logger.info("Fresh anonymous sign-in OK: \(session.user.id) token=\(tokenPrefix)...")
                 return
             } catch {
                 logger.error("Anonymous sign-in attempt \(attempt)/\(maxRetries) failed: \(error.localizedDescription)")
@@ -46,6 +43,32 @@ enum AuthService {
             }
         }
         logger.error("Anonymous sign-in failed after \(maxRetries) attempts — AI features will be unavailable")
+    }
+
+    /// Returns a fresh access token from the SDK (auto-refreshes if expired).
+    /// Falls back to anon key if no session available.
+    static func getValidToken() async -> String {
+        do {
+            let session = try await SupabaseService.client.auth.session
+            return session.accessToken
+        } catch {
+            logger.warning("getValidToken failed: \(error.localizedDescription)")
+            return SupabaseConfig.anonKey
+        }
+    }
+
+    /// Called on 401 — session is corrupted on server, sign out and create fresh.
+    /// Don't try refreshSession() — it returns tokens the gateway still rejects.
+    static func handleAuthFailure() async {
+        guard !isReAuthenticating else {
+            logger.warning("Already re-authenticating, skipping")
+            return
+        }
+        isReAuthenticating = true
+        defer { isReAuthenticating = false }
+        logger.info("Auth failure (401) — signing out and creating fresh anonymous session")
+        try? await SupabaseService.client.auth.signOut()
+        await ensureAuthenticated()
     }
 
     private static func setUserId(_ id: String) {
