@@ -595,7 +595,6 @@ extension DreamAIService {
         modelContainer: ModelContainer,
         detailState: DetailDreamState
     ) {
-        guard !detailState.isGeneratingInterpretation else { return }
         Task { @MainActor in
             AnalyticsService.track(.aiInterpretationStarted)
             detailState.isGeneratingInterpretation = true

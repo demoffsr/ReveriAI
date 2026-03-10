@@ -11,9 +11,9 @@ const EXPENSIVE_FUNCTIONS = new Set([
 // TESTFLIGHT LIMITS — originals commented for rollback:
 // image: 2/min, 8/hr, 30/day | interp: 3/min, 15/hr, 50/day | questions: 3/min, 15/hr, 50/day | transcribe: 3/min, 15/hr, 50/day
 const USER_LIMITS: Record<string, { duration_seconds: number; max_requests: number }[]> = {
-  'generate-dream-image':          [{ duration_seconds: 60, max_requests: 1 },  { duration_seconds: 3600, max_requests: 3 },  { duration_seconds: 86400, max_requests: 3 }],
+  'generate-dream-image':          [{ duration_seconds: 60, max_requests: 1 },  { duration_seconds: 3600, max_requests: 3 },  { duration_seconds: 86400, max_requests: 1 }],
   'transcribe-audio':              [{ duration_seconds: 60, max_requests: 2 },  { duration_seconds: 3600, max_requests: 5 }, { duration_seconds: 86400, max_requests: 10 }],
-  'generate-dream-interpretation': [{ duration_seconds: 60, max_requests: 2 },  { duration_seconds: 3600, max_requests: 5 }, { duration_seconds: 86400, max_requests: 5 }],
+  'generate-dream-interpretation': [{ duration_seconds: 60, max_requests: 2 },  { duration_seconds: 3600, max_requests: 5 }, { duration_seconds: 86400, max_requests: 1 }],
   'generate-dream-questions':      [{ duration_seconds: 60, max_requests: 2 },  { duration_seconds: 3600, max_requests: 5 }, { duration_seconds: 86400, max_requests: 5 }],
   'generate-dream-title':          [{ duration_seconds: 60, max_requests: 5 },  { duration_seconds: 3600, max_requests: 20 }, { duration_seconds: 86400, max_requests: 100 }],
   'delete-dream-image':            [{ duration_seconds: 60, max_requests: 10 }, { duration_seconds: 3600, max_requests: 30 }],

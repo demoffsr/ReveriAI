@@ -16,16 +16,25 @@ enum AuthService {
     private static var isReAuthenticating = false
 
     /// Ensures a valid anonymous session exists.
-    /// Force-clears stored session and creates fresh to avoid corrupted Keychain state.
+    /// Restores persisted session on relaunch; only creates new anonymous user on first launch.
     static func ensureAuthenticated() async {
         let client = SupabaseService.client
 
-        // TEMPORARY: Force fresh session to debug 401 issues.
-        // Clear any stored session (may be corrupted from refresh token experiments).
-        logger.info("Force-clearing stored session for fresh sign-in")
-        try? await client.auth.signOut()
+        // Try to restore existing session from Keychain, then verify it's still valid on server
+        do {
+            let session = try await client.auth.session
+            // Verify user still exists on server (catches deleted users, revoked sessions)
+            _ = try await client.auth.user()
+            setUserId(session.user.id.uuidString)
+            let tokenPrefix = String(session.accessToken.prefix(20))
+            logger.info("Restored existing session: \(session.user.id) token=\(tokenPrefix)...")
+            return
+        } catch {
+            logger.info("No valid session found, creating fresh anonymous sign-in")
+            try? await client.auth.signOut()
+        }
 
-        // Anonymous sign-in with retry
+        // First launch or after auth failure — create new anonymous user
         let maxRetries = 3
         for attempt in 1...maxRetries {
             do {
