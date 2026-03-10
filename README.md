@@ -321,7 +321,7 @@ xcodebuild -scheme ReveriAI \
   build
 ```
 
-Requires Xcode with iOS 26 SDK. Secrets are managed via a git-ignored `Secrets.xcconfig` — see `CLAUDE.md` for setup.
+Requires Xcode with iOS 26 SDK.
 
 <br>
 
