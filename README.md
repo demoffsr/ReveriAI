@@ -321,20 +321,7 @@ xcodebuild -scheme ReveriAI \
   build
 ```
 
-<details>
-<summary><b>Secrets setup</b></summary>
-
-Create `Secrets.xcconfig` in the project root (git-ignored):
-
-```ini
-SLASH = /
-SUPABASE_PROJECT_URL = https:$(SLASH)$(SLASH)<your-project>.supabase.co
-SUPABASE_ANON_KEY = <your-anon-key>
-```
-
-The `SLASH` trick exists because `//` is parsed as a comment mid-line in xcconfig.
-
-</details>
+Requires Xcode with iOS 26 SDK. Secrets are managed via a git-ignored `Secrets.xcconfig` — see `CLAUDE.md` for setup.
 
 <br>
 
