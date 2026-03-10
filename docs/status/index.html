@@ -1027,6 +1027,45 @@ tr:hover td { background: rgba(167,139,250,0.03); }
 }
 .user-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ===== User Nicknames ===== */
+.user-nickname {
+  font-weight: 600; font-size: 0.82rem; color: var(--text);
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.user-nickname-sub {
+  font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim);
+}
+.user-nickname-edit {
+  display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer;
+  padding: 0.15rem 0.4rem; border-radius: var(--radius-xs);
+  transition: background var(--transition);
+}
+.user-nickname-edit:hover { background: var(--card-elevated); }
+.user-nickname-input {
+  background: var(--card); border: 1px solid var(--accent); color: var(--text);
+  font-size: 0.82rem; font-family: var(--sans); padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-xs); outline: none; width: 120px;
+}
+.user-nickname-badge {
+  font-size: 1.1rem; font-weight: 700; color: var(--text);
+}
+.user-nickname-badge-edit {
+  display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;
+  padding: 0.2rem 0.5rem; border-radius: var(--radius-xs);
+  transition: background var(--transition);
+}
+.user-nickname-badge-edit:hover { background: var(--card-elevated); }
+.user-nickname-input-lg {
+  background: var(--card); border: 1px solid var(--accent); color: var(--text);
+  font-size: 1.1rem; font-weight: 700; font-family: var(--sans);
+  padding: 0.25rem 0.6rem; border-radius: var(--radius-xs); outline: none; width: 180px;
+}
+.user-nickname-pencil {
+  font-size: 0.65rem; opacity: 0.4; transition: opacity var(--transition);
+}
+.user-nickname-edit:hover .user-nickname-pencil,
+.user-nickname-badge-edit:hover .user-nickname-pencil { opacity: 1; }
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .top-nav-inner { gap: 0.75rem; }
@@ -1229,6 +1268,70 @@ const S = {
   usersOffset: 0,
   usersCache: [],
 };
+
+/* ================================================================
+   User Nicknames (localStorage-based)
+   ================================================================ */
+
+const NICKNAMES_KEY = 'reveri_user_nicknames';
+
+function getUserNicknames() {
+  try { return JSON.parse(localStorage.getItem(NICKNAMES_KEY) || '{}'); } catch { return {}; }
+}
+
+function setUserNickname(userId, name) {
+  const nicks = getUserNicknames();
+  nicks[userId] = name;
+  localStorage.setItem(NICKNAMES_KEY, JSON.stringify(nicks));
+}
+
+function removeUserNickname(userId) {
+  const nicks = getUserNicknames();
+  delete nicks[userId];
+  localStorage.setItem(NICKNAMES_KEY, JSON.stringify(nicks));
+}
+
+/** Returns nickname or auto-assigns "User N" based on order of first appearance */
+function getUserDisplayName(userId, allUsers) {
+  const nicks = getUserNicknames();
+  if (nicks[userId]) return nicks[userId];
+  // Auto-assign sequential number based on position in user list (sorted by first_seen)
+  const sorted = [...allUsers].sort((a, b) => new Date(a.first_seen || 0) - new Date(b.first_seen || 0));
+  const idx = sorted.findIndex(u => u.user_id === userId);
+  const autoName = 'User ' + (idx >= 0 ? idx + 1 : '?');
+  return autoName;
+}
+
+function startNicknameEdit(userId, currentName, inputClass, onSave) {
+  const el = document.getElementById('nickname-display-' + userId.slice(0, 8));
+  if (!el) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = inputClass;
+  input.value = currentName;
+  input.setAttribute('data-uid', userId);
+
+  function save() {
+    const val = input.value.trim();
+    if (val && val !== currentName) {
+      setUserNickname(userId, val);
+    } else if (!val) {
+      removeUserNickname(userId);
+    }
+    if (onSave) onSave(); else loadUsers();
+  }
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = currentName; input.blur(); }
+  });
+
+  el.innerHTML = '';
+  el.appendChild(input);
+  input.focus();
+  input.select();
+}
 
 /* ================================================================
    Session & Auth Management
@@ -3672,8 +3775,16 @@ async function loadUserList(el) {
       const cost = parseFloat(u.total_cost_usd || 0);
       const costStr = cost > 0 ? '$' + cost.toFixed(3) : '-';
       const costColor = cost > 1 ? '#ef4444' : cost > 0.1 ? '#f59e0b' : 'var(--text-muted)';
-      return `<tr data-uid="${escHtml(u.user_id || '')}" onclick="selectUser('${escHtml(u.user_id)}')">
-        <td><span class="user-uid">${escHtml((u.user_id || '?').slice(0, 8))}</span></td>
+      const displayName = getUserDisplayName(u.user_id, users);
+      const shortId = (u.user_id || '?').slice(0, 8);
+      return `<tr data-uid="${escHtml(u.user_id || '')}" data-nickname="${escHtml(displayName.toLowerCase())}" onclick="selectUser('${escHtml(u.user_id)}')">
+        <td>
+          <span id="nickname-display-${escHtml(shortId)}" class="user-nickname-edit" onclick="event.stopPropagation();startNicknameEdit('${escHtml(u.user_id)}','${escHtml(displayName)}','user-nickname-input')">
+            <span class="user-nickname">${escHtml(displayName)}</span>
+            <span class="user-nickname-pencil">✏️</span>
+          </span>
+          <div class="user-nickname-sub">${escHtml(shortId)}</div>
+        </td>
         <td title="${formatMSK(u.first_seen)}">${u.first_seen ? new Date(u.first_seen).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '-'}</td>
         <td title="${formatMSK(u.last_event || u.last_seen)}">${relativeTime(u.last_event || u.last_seen)}</td>
         <td>${u.events || u.total_events || 0}</td>
@@ -3687,9 +3798,9 @@ async function loadUserList(el) {
 
     el.innerHTML = `
       <div class="section-title" style="margin-bottom:1rem;">All Users <span style="color:var(--text-muted);font-weight:400;font-size:0.82rem;">(${total})</span></div>
-      <input class="user-search" type="text" placeholder="Search by user ID..." oninput="onUserSearch(this.value)">
+      <input class="user-search" type="text" placeholder="Search by name or user ID..." oninput="onUserSearch(this.value)">
       <div class="table-wrap"><table class="user-table">
-        <thead><tr><th>User ID</th><th>First Seen</th><th>Last Seen</th><th>Events</th><th>Sessions</th><th>Dreams</th><th>AI Cost</th><th>Last Event</th><th>Device</th></tr></thead>
+        <thead><tr><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Events</th><th>Sessions</th><th>Dreams</th><th>AI Cost</th><th>Last Event</th><th>Device</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
       ${totalPages > 1 ? `
@@ -3717,7 +3828,8 @@ function onUserSearch(query) {
     const q = query.toLowerCase().trim();
     document.querySelectorAll('.user-table tbody tr').forEach(row => {
       const uid = (row.dataset.uid || '').toLowerCase();
-      row.style.display = (!q || uid.includes(q)) ? '' : 'none';
+      const nick = (row.dataset.nickname || '').toLowerCase();
+      row.style.display = (!q || uid.includes(q) || nick.includes(q)) ? '' : 'none';
     });
   }, 150);
 }
@@ -3791,14 +3903,20 @@ async function loadUserDetail(el) {
       </tr>`;
     }).join('');
 
+    const detailDisplayName = getUserDisplayName(userId, S.usersCache.length > 0 ? S.usersCache : [{ user_id: userId, first_seen: b.first_seen }]);
+    const detailShortId = (userId || '?').slice(0, 8);
+
     el.innerHTML = `
       <button class="user-back-btn" onclick="backToUserList()">← Back to Users</button>
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
         <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>
         <div>
-          <div style="font-size:1.1rem;font-weight:700;"><span class="user-uid">${escHtml((userId || '?').slice(0, 8))}</span></div>
+          <div id="nickname-display-${escHtml(detailShortId)}" class="user-nickname-badge-edit" onclick="startNicknameEdit('${escHtml(userId)}','${escHtml(detailDisplayName)}','user-nickname-input-lg',function(){loadUserDetail(document.getElementById('view-users'))})">
+            <span class="user-nickname-badge">${escHtml(detailDisplayName)}</span>
+            <span class="user-nickname-pencil">✏️</span>
+          </div>
           <div style="font-size:0.75rem;color:var(--text-muted);">
-            Active ${relativeTime(b.last_seen)}
+            <span class="user-uid">${escHtml(detailShortId)}</span> · Active ${relativeTime(b.last_seen)}
             <button id="copy-uid-btn" class="user-copy-btn" onclick="copyUserId('${escHtml(userId)}')">📋 Copy full ID</button>
           </div>
         </div>
