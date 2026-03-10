@@ -39,6 +39,7 @@ struct ReveriAIApp: App {
                 }
             }
             .background(Color(hex: theme.isDayTime ? "FFAA00" : "0E0E1A").ignoresSafeArea())
+            .preferredColorScheme(.light)
             .environment(\.theme, theme)
             .task {
                 let t0 = CFAbsoluteTimeGetCurrent()
