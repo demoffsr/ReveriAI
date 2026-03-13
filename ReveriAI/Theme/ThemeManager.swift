@@ -101,9 +101,21 @@ final class ThemeManager {
 
     // MARK: - Clouds
 
-    var cloudBack: Color { isDayTime ? .cloudBackDay : .cloudBackNight }
-    var cloudMid: Color { isDayTime ? .cloudMidDay : .cloudMidNight }
-    var cloudFront: Color { .cloudFront }
+    var cloudBack: Color { isDayTime ? .cloudBackDay : .cloudBackNightDark }
+    var cloudMid: Color { isDayTime ? .cloudMidDay : .cloudMidNightDark }
+    var cloudFront: Color { isDayTime ? .cloudFront : .cloudFrontNight }
+
+    // MARK: - Text
+
+    var textPrimary: Color { isDayTime ? .black : .white }
+    var textSecondary: Color { isDayTime ? .black.opacity(0.5) : .white.opacity(0.5) }
+    var textTertiary: Color { isDayTime ? .black.opacity(0.3) : .white.opacity(0.3) }
+
+    // MARK: - Cards
+
+    var cardBackground: Color { isDayTime ? .white : .darkCard }
+    var cardStroke: Color { isDayTime ? .black.opacity(0.1) : .white.opacity(0.1) }
+    var dividerColor: Color { isDayTime ? .black.opacity(0.15) : .white.opacity(0.15) }
 
     // MARK: - Celestial
 

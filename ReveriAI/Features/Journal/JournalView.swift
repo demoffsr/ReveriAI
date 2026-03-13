@@ -65,7 +65,7 @@ struct JournalView: View {
                     .ignoresSafeArea(edges: .top)
                     .zIndex(2)
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background((theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground).ignoresSafeArea())
         }
     }
 
@@ -176,7 +176,7 @@ struct JournalView: View {
 
             Spacer(minLength: 0)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground)
         .ignoresSafeArea(edges: .top)
     }
 

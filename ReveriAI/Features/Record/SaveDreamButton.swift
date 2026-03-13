@@ -22,7 +22,7 @@ struct SaveDreamButton: View {
             )
             .overlay(
                 Capsule()
-                    .stroke(.white.opacity(0.7), lineWidth: 1)
+                    .stroke(.white.opacity(theme.isDayTime ? 0.7 : 0.15), lineWidth: 1)
             )
             .glassEffect(.clear.interactive(), in: .capsule)
         }

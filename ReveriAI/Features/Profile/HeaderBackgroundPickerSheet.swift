@@ -26,7 +26,7 @@ struct HeaderBackgroundPickerSheet: View {
                     pickerView
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground)
             .toolbar(.hidden, for: .navigationBar)
             .enableSwipeBack()
             .onChange(of: selectedPhoto) { _, item in
@@ -51,11 +51,11 @@ struct HeaderBackgroundPickerSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 160)
-                .background(.white)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(.black.opacity(0.1), lineWidth: 1)
+                        .stroke(theme.cardStroke, lineWidth: 1)
                 )
                 .padding(.horizontal, 20)
             }

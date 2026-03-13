@@ -38,7 +38,7 @@ struct DreamCard: View {
             HStack {
                 Text(cachedDisplayTitle)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(theme.textPrimary)
                     .lineLimit(1...2)
 
                 Spacer()
@@ -110,8 +110,10 @@ struct DreamCard: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16))
-                        .foregroundStyle(.black.opacity(0.4))
+                        .foregroundStyle(theme.textPrimary.opacity(0.7))
                         .frame(width: 34, height: 34)
+                        .background(theme.isDayTime ? .clear : Color(white: 0.25))
+                        .clipShape(Circle())
                         .contentShape(Circle().size(width: 44, height: 44))
                         .reveriGlass(.circle)
                 }
@@ -155,12 +157,12 @@ struct DreamCard: View {
             if !dream.text.isEmpty {
                 Text(dream.text)
                     .font(.system(size: 13))
-                    .foregroundStyle(.black.opacity(0.5))
+                    .foregroundStyle(theme.textSecondary)
                     .lineLimit(2)
             } else if dream.isTranscribingAudio {
                 Text(String(localized: "dreamCard.processing", defaultValue: "Processing recording..."))
                     .font(.system(size: 13).italic())
-                    .foregroundStyle(.black.opacity(0.35))
+                    .foregroundStyle(theme.textTertiary)
                     .phaseAnimator([false, true]) { content, phase in
                         content.opacity(phase ? 0.4 : 1.0)
                     } animation: { _ in
@@ -170,13 +172,14 @@ struct DreamCard: View {
 
             // Divider
             Rectangle()
-                .fill(.black.opacity(0.15))
+                .fill(theme.dividerColor)
                 .frame(height: 0.5)
 
             // Date row
             HStack(spacing: 4) {
                 Image("CalendarSmallIcon")
                     .resizable()
+                    .renderingMode(.template)
                     .frame(width: 16, height: 16)
                 Text(Self.dateFormatter.string(from: dream.createdAt))
                     .font(.system(size: 13))
@@ -186,18 +189,19 @@ struct DreamCard: View {
                         .frame(width: 8)
                     Image("ClockSmallIcon")
                         .resizable()
+                        .renderingMode(.template)
                         .frame(width: 16, height: 16)
                     Text(Self.formatDuration(cachedDuration))
                         .font(.system(size: 13))
                 }
             }
-            .foregroundStyle(.black.opacity(0.35))
+            .foregroundStyle(theme.textSecondary)
         }
         .padding(14)
-        .background(.white, in: RoundedRectangle(cornerRadius: 24))
+        .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 24))
         .overlay(
             RoundedRectangle(cornerRadius: 24)
-                .stroke(.black.opacity(0.1), lineWidth: 1)
+                .stroke(theme.cardStroke, lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 24))
         .onTapGesture {
@@ -220,7 +224,7 @@ struct DreamCard: View {
                     .padding(.horizontal, 20)
 
                 Rectangle()
-                    .fill(.black.opacity(0.1))
+                    .fill(theme.cardStroke)
                     .frame(height: 1)
 
                 EmotionPickerGrid(selectedEmotions: $editingEmotions)

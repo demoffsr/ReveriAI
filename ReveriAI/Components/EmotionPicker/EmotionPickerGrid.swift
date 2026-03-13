@@ -59,7 +59,7 @@ struct EmotionPickerGrid: View {
                 Text(emotion.displayName)
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
-                    .foregroundStyle(.black.opacity(isSelected ? 0.7 : 0.3))
+                    .foregroundStyle(.primary.opacity(isSelected ? 0.7 : 0.3))
             }
             .frame(width: 56)
         }

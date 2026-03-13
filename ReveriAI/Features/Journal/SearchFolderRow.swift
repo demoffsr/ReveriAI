@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchFolderRow: View {
     let folder: DreamFolder
     var onTap: () -> Void
+    @Environment(\.theme) private var theme
 
     var body: some View {
         Button(action: onTap) {
@@ -12,22 +13,22 @@ struct SearchFolderRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(folder.name)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(theme.textPrimary)
                         .lineLimit(1)
                     Text(String(localized: "\(folder.dreams.count) Dreams"))
                         .font(.system(size: 12))
-                        .foregroundStyle(.black.opacity(0.4))
+                        .foregroundStyle(theme.textSecondary)
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(.white)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(.black.opacity(0.08), lineWidth: 1)
+                    .stroke(theme.cardStroke, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

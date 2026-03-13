@@ -27,7 +27,7 @@ struct HowDidItFeelCard: View {
                     Text(String(localized: "record.howDidItFeel", defaultValue: "How did it feel?"))
                         .font(.subheadline.weight(.medium))
                         .tracking(-0.23)
-                        .foregroundStyle(Color.black.opacity(0.6))
+                        .foregroundStyle(theme.textPrimary.opacity(0.6))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                 }
@@ -38,7 +38,7 @@ struct HowDidItFeelCard: View {
                 // Close button
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.6))
+                    .foregroundStyle(theme.textPrimary.opacity(0.6))
                     .frame(width: 36, height: 36)
                     .contentShape(Circle())
                     .reveriGlass(.circle, interactive: false)

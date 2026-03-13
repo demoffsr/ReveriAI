@@ -7,6 +7,7 @@ struct FolderCard: View {
     var onRename: () -> Void = {}
     var onDelete: () -> Void = {}
 
+    @Environment(\.theme) private var theme
     @State private var cachedEmotions: [DreamEmotion] = []
 
     private static func computeTopEmotions(from dreams: [Dream]) -> [DreamEmotion] {
@@ -27,7 +28,7 @@ struct FolderCard: View {
             if folder.dreams.isEmpty {
                 Text(String(localized: "folder.addDreamsHint", defaultValue: "Add dreams"))
                     .font(.system(size: 13).italic())
-                    .foregroundStyle(.black.opacity(0.3))
+                    .foregroundStyle(theme.textTertiary)
                     .frame(height: 32, alignment: .center)
             } else {
                 emotionIcons
@@ -40,11 +41,11 @@ struct FolderCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(folder.name)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(theme.textPrimary)
                         .lineLimit(1)
                     Text(String(localized: "\(folder.dreams.count) Dreams"))
                         .font(.system(size: 13))
-                        .foregroundStyle(.black.opacity(0.5))
+                        .foregroundStyle(theme.textSecondary)
                 }
 
                 Spacer()
@@ -64,8 +65,10 @@ struct FolderCard: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16))
-                        .foregroundStyle(.black.opacity(0.4))
+                        .foregroundStyle(theme.textPrimary.opacity(0.7))
                         .frame(width: 34, height: 34)
+                        .background(theme.isDayTime ? .clear : Color(white: 0.25))
+                        .clipShape(Circle())
                         .contentShape(Circle().size(width: 44, height: 44))
                         .reveriGlass(.circle)
                 }
@@ -73,11 +76,11 @@ struct FolderCard: View {
         }
         .padding(14)
         .frame(minHeight: 117)
-        .background(.white)
+        .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(.black.opacity(0.1), lineWidth: 1)
+                .stroke(theme.cardStroke, lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: 20))
         .onTapGesture {

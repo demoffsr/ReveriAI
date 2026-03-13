@@ -5,6 +5,7 @@ struct FolderPickerSheet: View {
     let dream: Dream
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.theme) private var theme
     @Query(sort: \DreamFolder.createdAt, order: .reverse) private var folders: [DreamFolder]
     @State private var searchText = ""
     @State private var showNewFolderAlert = false
@@ -54,7 +55,7 @@ struct FolderPickerSheet: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground)
             .navigationTitle(String(localized: "folder.addToFolder", defaultValue: "Add to Folder"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

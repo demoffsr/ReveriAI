@@ -97,7 +97,7 @@ struct DreamDetailView: View {
                 normalContent
             }
         }
-        .background(Color(uiColor: .systemGroupedBackground))
+        .background(theme.isDayTime ? Color(uiColor: .systemGroupedBackground) : .darkBackground)
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
         .onAppear {
@@ -287,6 +287,7 @@ struct DreamDetailView: View {
                 HStack(spacing: 4) {
                     Image("CalendarSmallIcon")
                         .resizable()
+                        .renderingMode(.template)
                         .frame(width: 18, height: 18)
                     Text(dream.createdAt.dreamFormatted)
                         .font(.system(size: 13, weight: .medium))
@@ -296,12 +297,13 @@ struct DreamDetailView: View {
                             .frame(width: 8)
                         Image("ClockSmallIcon")
                             .resizable()
+                            .renderingMode(.template)
                             .frame(width: 16, height: 16)
                         Text(Self.formatDuration(cachedDuration))
                             .font(.system(size: 13, weight: .medium))
                     }
                 }
-                .foregroundStyle(.black.opacity(0.35))
+                .foregroundStyle(theme.textSecondary)
                 .padding(.top, dream.emotions.isEmpty ? 8 : 12)
 
                 // Segmented control
@@ -363,7 +365,7 @@ struct DreamDetailView: View {
             if isGenerating {
                 // Shimmer placeholder
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.black.opacity(0.05))
+                    .fill(theme.textPrimary.opacity(0.05))
                     .frame(width: 74, height: 74)
                     .overlay {
                         ProgressView()
@@ -389,15 +391,15 @@ struct DreamDetailView: View {
                             }
                     case .failure:
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(.black.opacity(0.05))
+                            .fill(theme.textPrimary.opacity(0.05))
                             .frame(width: 74, height: 74)
                             .overlay {
                                 Image(systemName: "exclamationmark.triangle")
-                                    .foregroundStyle(.black.opacity(0.3))
+                                    .foregroundStyle(theme.textTertiary)
                             }
                     case .empty:
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(.black.opacity(0.05))
+                            .fill(theme.textPrimary.opacity(0.05))
                             .frame(width: 74, height: 74)
                             .overlay {
                                 ProgressView()
@@ -435,7 +437,7 @@ struct DreamDetailView: View {
                     .font(.system(size: 15))
                     .lineSpacing(4)
                     .tracking(-0.23)
-                    .foregroundStyle(.black.opacity(0.8))
+                    .foregroundStyle(theme.textPrimary.opacity(0.8))
 
                 if dream.hasTranscriptToggle {
                     Button {
@@ -506,7 +508,7 @@ struct DreamDetailView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(theme.textPrimary.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
             .reveriGlass(.circle)
@@ -516,12 +518,12 @@ struct DreamDetailView: View {
             VStack(spacing: 2) {
                 Text(String(localized: "detail.navTitle", defaultValue: "Dream"))
                     .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(theme.textPrimary)
 
                 if let folder = dream.folder?.name {
                     Text(folder)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.5))
+                        .foregroundStyle(theme.textSecondary)
                 }
             }
 
@@ -588,7 +590,7 @@ struct DreamDetailView: View {
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(theme.textPrimary.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
             .tint(theme.accent)
@@ -602,7 +604,7 @@ struct DreamDetailView: View {
             Button { cancelTextEdit() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(theme.textPrimary.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
             .reveriGlass(.circle)
@@ -611,7 +613,7 @@ struct DreamDetailView: View {
 
             Text(String(localized: "detail.editing", defaultValue: "Editing"))
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.black)
+                .foregroundStyle(theme.textPrimary)
 
             Spacer()
 
@@ -631,7 +633,7 @@ struct DreamDetailView: View {
             Button { cancelRename() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(theme.textPrimary.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
             .reveriGlass(.circle)
@@ -640,7 +642,7 @@ struct DreamDetailView: View {
 
             Text(String(localized: "detail.renaming", defaultValue: "Renaming"))
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.black)
+                .foregroundStyle(theme.textPrimary)
 
             Spacer()
 
@@ -660,7 +662,7 @@ struct DreamDetailView: View {
             Button { cancelReRecording() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(theme.textPrimary.opacity(0.7))
                     .frame(width: 44, height: 44)
             }
             .reveriGlass(.circle)
@@ -669,7 +671,7 @@ struct DreamDetailView: View {
 
             Text(String(localized: "detail.reRecording", defaultValue: "Re-recording"))
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.black)
+                .foregroundStyle(theme.textPrimary)
 
             Spacer()
 
@@ -689,7 +691,7 @@ struct DreamDetailView: View {
             centeredPlaceholder {
                 Text(String(localized: "detail.addTextForInterpretation", defaultValue: "Add a text description of your dream for interpretation"))
                     .font(.system(size: 15))
-                    .foregroundStyle(.black.opacity(0.4))
+                    .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
             }
         } else if detailState.isGeneratingInterpretation {
@@ -703,7 +705,7 @@ struct DreamDetailView: View {
             centeredPlaceholder {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 32))
-                    .foregroundStyle(.black.opacity(0.3))
+                    .foregroundStyle(theme.textTertiary)
                 Text(error)
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
@@ -750,7 +752,7 @@ struct DreamDetailView: View {
                     if let title = section.title {
                         Text(title)
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(theme.textPrimary)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
@@ -758,7 +760,7 @@ struct DreamDetailView: View {
                                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                                     Text("•")
                                         .font(.subheadline)
-                                        .foregroundStyle(.black.opacity(0.8))
+                                        .foregroundStyle(theme.textPrimary.opacity(0.8))
                                     renderSegments(line.segments)
                                 }
                             } else {
@@ -774,8 +776,8 @@ struct DreamDetailView: View {
     private func renderSegments(_ segments: [TextSegment]) -> Text {
         segments.reduce(Text("")) { accumulated, segment in
             let segmentText = segment.isBold
-                ? Text(segment.text).font(.system(size: 15, weight: .semibold)).foregroundStyle(.black)
-                : Text(segment.text).font(.subheadline).foregroundStyle(.black.opacity(0.8))
+                ? Text(segment.text).font(.system(size: 15, weight: .semibold)).foregroundStyle(theme.textPrimary)
+                : Text(segment.text).font(.subheadline).foregroundStyle(theme.textPrimary.opacity(0.8))
             return Text("\(accumulated)\(segmentText)")
         }
     }
@@ -1009,7 +1011,7 @@ struct DreamDetailView: View {
                     let s = elapsed % 60
                     Text(String(format: "%d:%02d", m, s))
                         .font(.system(size: 48, weight: .light).monospacedDigit())
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(theme.textPrimary.opacity(0.6))
                 }
                 .padding(.top, 24)
             }
@@ -1214,7 +1216,7 @@ struct DreamDetailView: View {
                 .padding(.horizontal, 20)
 
             Rectangle()
-                .fill(.black.opacity(0.1))
+                .fill(theme.cardStroke)
                 .frame(height: 1)
 
             EmotionPickerGrid(selectedEmotions: $editingEmotions)

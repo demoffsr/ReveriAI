@@ -52,7 +52,7 @@ struct ProfileView: View {
             navBar
             scrollContent
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background((theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
         .onAppear { syncDateFromStorage() }
@@ -245,9 +245,9 @@ struct ProfileView: View {
                 }
             }
         }
-        .background(.white)
+        .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.black.opacity(0.1), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.cardStroke, lineWidth: 1))
         .sheet(isPresented: $showBackgroundPicker) {
             HeaderBackgroundPickerSheet(headerBackgroundStorage: headerBackgroundStorage)
         }
@@ -564,9 +564,9 @@ struct ProfileView: View {
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(spacing: 0) { content() }
             .padding(.horizontal, 14)
-            .background(.white)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(.black.opacity(0.1), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.cardStroke, lineWidth: 1))
     }
 
     private var rowDivider: some View {

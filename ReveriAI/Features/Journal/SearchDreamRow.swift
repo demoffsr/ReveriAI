@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchDreamRow: View {
     let dream: Dream
     var onTap: () -> Void
+    @Environment(\.theme) private var theme
     @State private var isEmotionScrolled = false
 
     private static let dateFormatter: DateFormatter = {
@@ -18,7 +19,7 @@ struct SearchDreamRow: View {
                 // Title
                 Text(displayTitle)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(theme.textPrimary)
                     .lineLimit(1)
 
                 // Emotion pins
@@ -52,25 +53,26 @@ struct SearchDreamRow: View {
 
                 // Divider
                 Rectangle()
-                    .fill(.black.opacity(0.15))
+                    .fill(theme.dividerColor)
                     .frame(height: 0.5)
 
                 // Date row
                 HStack(spacing: 4) {
                     Image("CalendarSmallIcon")
                         .resizable()
+                        .renderingMode(.template)
                         .frame(width: 16, height: 16)
                     Text(Self.dateFormatter.string(from: dream.createdAt))
                         .font(.system(size: 13))
                 }
-                .foregroundStyle(.black.opacity(0.35))
+                .foregroundStyle(theme.textSecondary)
             }
             .padding(14)
-            .background(.white)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 24))
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(.black.opacity(0.1), lineWidth: 1)
+                    .stroke(theme.cardStroke, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

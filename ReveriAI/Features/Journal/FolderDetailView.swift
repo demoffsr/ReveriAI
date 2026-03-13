@@ -45,7 +45,7 @@ struct FolderDetailView: View {
                 dreamsList
             }
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background((theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
         .onAppear {
@@ -80,7 +80,7 @@ struct FolderDetailView: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.black.opacity(0.7))
+                        .foregroundStyle(theme.textPrimary.opacity(0.7))
                         .frame(width: 44, height: 44)
                 }
                 .reveriGlass(.circle)
@@ -89,7 +89,7 @@ struct FolderDetailView: View {
 
                 Text(folder.name)
                     .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(theme.textPrimary)
 
                 Spacer()
 
@@ -178,7 +178,7 @@ struct AddDreamsToFolderSheet: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground)
             .navigationTitle(String(localized: "folder.addDreamsTitle", defaultValue: "Add Dreams"))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -219,11 +219,11 @@ struct AddDreamsToFolderSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(dream.title.isEmpty ? String(dream.text.prefix(30)) : dream.title)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(theme.textPrimary)
                         .lineLimit(1)
                     Text(dream.createdAt.dreamFormatted)
                         .font(.system(size: 12))
-                        .foregroundStyle(.black.opacity(0.4))
+                        .foregroundStyle(theme.textSecondary)
                 }
 
                 Spacer()
@@ -241,15 +241,15 @@ struct AddDreamsToFolderSheet: View {
                         .renderingMode(.template)
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 24, height: 24)
-                        .foregroundStyle(.black.opacity(0.15))
+                        .foregroundStyle(theme.dividerColor)
                 }
             }
             .padding(14)
-            .background(added ? accent.opacity(0.05) : .white)
+            .background(added ? accent.opacity(0.05) : theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(added ? accent.opacity(0.2) : .black.opacity(0.08), lineWidth: 1)
+                    .stroke(added ? accent.opacity(0.2) : theme.cardStroke, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

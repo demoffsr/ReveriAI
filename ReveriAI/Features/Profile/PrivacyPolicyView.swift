@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PrivacyPolicyView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,7 +15,7 @@ struct PrivacyPolicyView: View {
                     .padding(.bottom, 40)
             }
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background((theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground).ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .enableSwipeBack()
     }

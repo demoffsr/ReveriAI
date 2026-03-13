@@ -59,7 +59,7 @@ struct ReveriTabBar: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
-                .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
+                .overlay(Capsule().stroke(theme.isDayTime ? .white.opacity(0.7) : .white.opacity(0.15), lineWidth: 1))
                 .reveriGlass(.capsule, interactive: false)
                 .shadow(color: .black.opacity(0.05), radius: 10.9, x: 0, y: 2)
                 .padding(.bottom, 8)
@@ -310,8 +310,9 @@ struct ReveriTabBar: View {
         } label: {
             HStack(spacing: 6) {
                 Image("CheckmarkBigIcon")
-                    .renderingMode(.original)
+                    .renderingMode(.template)
                     .frame(width: 22, height: 22)
+                    .foregroundStyle(theme.accent)
                 Text(String(localized: "tabBar.saveFeelings", defaultValue: "Save feelings"))
                     .font(.system(size: 13, weight: .medium))
                     .tracking(-0.08)

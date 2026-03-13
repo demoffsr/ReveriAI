@@ -11,24 +11,47 @@ struct EmotionTagBadge: View {
     var fontSize: CGFloat = 12
     var style: Style = .card
 
+    @Environment(\.theme) private var theme
+
     private var gradientEdge: Color {
-        switch style {
-        case .card: Color(red: 0.98, green: 0.98, blue: 0.98)
-        case .detail: Color(red: 0.95, green: 0.95, blue: 0.95)
+        if theme.isDayTime {
+            switch style {
+            case .card: return Color(red: 0.98, green: 0.98, blue: 0.98)
+            case .detail: return Color(red: 0.95, green: 0.95, blue: 0.95)
+            }
+        } else {
+            switch style {
+            case .card: return Color(red: 0.17, green: 0.17, blue: 0.17)
+            case .detail: return Color(red: 0.20, green: 0.20, blue: 0.20)
+            }
         }
     }
 
     private var gradientCenter: Color {
-        switch style {
-        case .card: .white
-        case .detail: Color(red: 0.99, green: 0.99, blue: 0.99)
+        if theme.isDayTime {
+            switch style {
+            case .card: return .white
+            case .detail: return Color(red: 0.99, green: 0.99, blue: 0.99)
+            }
+        } else {
+            switch style {
+            case .card: return Color(red: 0.20, green: 0.20, blue: 0.20)
+            case .detail: return Color(red: 0.22, green: 0.22, blue: 0.22)
+            }
         }
     }
 
     private var strokeColor: Color {
-        switch style {
-        case .card: Color(red: 0.95, green: 0.95, blue: 0.95)
-        case .detail: .white
+        if theme.isDayTime {
+            switch style {
+            case .card: return Color(red: 0.95, green: 0.95, blue: 0.95)
+            case .detail: return .white
+            }
+        } else {
+            switch style {
+            case .card: return Color(red: 0.25, green: 0.25, blue: 0.25)
+            case .detail: return Color(red: 0.30, green: 0.30, blue: 0.30)
+            }
         }
     }
 

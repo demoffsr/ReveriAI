@@ -17,6 +17,13 @@ extension Color {
     static let cloudBackNight = Color(hex: "A1AECE")
     static let cloudMidNight = Color(hex: "B6BDCF")
     static let cloudFront = Color(hex: "F2F2F2")
+
+    // Dark theme
+    static let darkBackground = Color(hex: "171717")
+    static let darkCard = Color(hex: "2C2C2C")
+    static let cloudFrontNight = Color(hex: "222222")
+    static let cloudMidNightDark = Color(hex: "3C3C3C")
+    static let cloudBackNightDark = Color(hex: "4A4A5A")
 }
 
 extension LinearGradient {

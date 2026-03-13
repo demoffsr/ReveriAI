@@ -18,7 +18,7 @@ struct ReveriAIApp: App {
         if hour >= 5 && hour < 21 {
             UIWindow.appearance().backgroundColor = UIColor(red: 1.0, green: 0.667, blue: 0.0, alpha: 1)
         } else {
-            UIWindow.appearance().backgroundColor = UIColor(red: 0.055, green: 0.055, blue: 0.102, alpha: 1)
+            UIWindow.appearance().backgroundColor = UIColor(red: 0.133, green: 0.133, blue: 0.133, alpha: 1)
         }
         launchLog.info("⏱ App.init done (no ModelContainer)")
     }
@@ -39,7 +39,7 @@ struct ReveriAIApp: App {
                 }
             }
             .background(Color(hex: theme.isDayTime ? "FFAA00" : "0E0E1A").ignoresSafeArea())
-            .preferredColorScheme(.light)
+            .preferredColorScheme(theme.isDayTime ? .light : .dark)
             .environment(\.theme, theme)
             .task {
                 let t0 = CFAbsoluteTimeGetCurrent()

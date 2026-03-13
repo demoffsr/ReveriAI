@@ -322,7 +322,7 @@ struct RecordView: View {
             .padding(.vertical, 8)
             .overlay(
                 Capsule()
-                    .stroke(.white.opacity(0.7), lineWidth: 1)
+                    .stroke(.white.opacity(theme.isDayTime ? 0.7 : 0.15), lineWidth: 1)
             )
             .glassEffect(.clear.interactive(), in: .capsule)
         }
@@ -338,7 +338,7 @@ struct RecordView: View {
 
         return Text(String(format: "%02d:%02d:%02d", h, m, s))
             .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.black.opacity(0.3))
+            .foregroundStyle(theme.textTertiary)
     }
 
     // MARK: - Review Timer Text
@@ -406,7 +406,7 @@ struct RecordView: View {
                             Text(String(localized: "record.addDreamDescription", defaultValue: "Add dream description..."))
                                 .font(.system(size: 15))
                                 .tracking(-0.23)
-                                .foregroundStyle(.black.opacity(0.3))
+                                .foregroundStyle(theme.textTertiary)
                                 .padding(.top, 8)
                                 .padding(.leading, 5)
                                 .allowsHitTesting(false)
@@ -584,7 +584,7 @@ private struct LiveReviewTimerView: View {
 
         Text(String(format: "%02d:%02d:%02d — %02d:%02d:%02d", ch, cm, cs, th, tm, ts))
             .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.black.opacity(0.3))
+            .foregroundStyle(.primary.opacity(0.3))
     }
 }
 
@@ -601,13 +601,13 @@ private struct LiveCaptionsView: View {
                     Text(String(localized: "record.speechUnavailable", defaultValue: "Speech recognition is not available for this language. Your recording will be transcribed automatically after saving."))
                         .font(.system(size: 15))
                         .tracking(-0.23)
-                        .foregroundStyle(.black.opacity(0.4))
+                        .foregroundStyle(.primary.opacity(0.4))
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                 } else if speechService.transcribedText.isEmpty {
                     Text(String(localized: "record.liveCaptions", defaultValue: "Live Captions will appear here"))
                         .font(.system(size: 15))
                         .tracking(-0.23)
-                        .foregroundStyle(.black.opacity(0.3))
+                        .foregroundStyle(.primary.opacity(0.3))
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                 } else {
                     captionsText
