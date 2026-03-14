@@ -7,6 +7,11 @@ struct ProfileView: View {
     var dreamReminderManager: DreamReminderManager
     var avatarStorage: AvatarStorage
     var headerBackgroundStorage: HeaderBackgroundStorage
+    @Binding var isInDetailDreamTab: Bool
+    @Binding var detailDreamHasImage: Bool
+    @Binding var detailDreamIsGenerating: Bool
+    @Binding var detailDreamGenerateTrigger: Bool
+    var detailState: DetailDreamState
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.requestReview) private var requestReview
@@ -28,6 +33,7 @@ struct ProfileView: View {
     @State private var showAvatarDialog = false
     @State private var showAvatarPhotoPicker = false
     @State private var dayPreset: DayPreset = .weekdays
+    @State private var showArchive = false
     @State private var showHeaderPhotoDialog = false
 
     private var selectedLocale: SpeechLocale {
@@ -59,6 +65,15 @@ struct ProfileView: View {
         .task { notificationService.checkAuthorizationStatus() }
         .onChange(of: selectedPhoto) { _, item in
             loadPhoto(item)
+        }
+        .navigationDestination(isPresented: $showArchive) {
+            ArchiveView(
+                isInDetailDreamTab: $isInDetailDreamTab,
+                detailDreamHasImage: $detailDreamHasImage,
+                detailDreamIsGenerating: $detailDreamIsGenerating,
+                detailDreamGenerateTrigger: $detailDreamGenerateTrigger,
+                detailState: detailState
+            )
         }
         .navigationDestination(isPresented: $showPrivacyPolicy) {
             PrivacyPolicyView()
@@ -100,6 +115,7 @@ struct ProfileView: View {
                 avatarSection
                 headerPhotoCard
                 mainSettingsCard
+                archiveCard
                 supportCardSection
                 dataAndAboutCard
             }
@@ -435,6 +451,29 @@ struct ProfileView: View {
         .animation(.spring(duration: 0.3, bounce: 0.15), value: reminderEnabled)
         .animation(.spring(duration: 0.3, bounce: 0.15), value: dayPreset)
         .onAppear { dayPreset = computeDayPreset() }
+    }
+
+    // MARK: - Archive Card
+
+    private var archiveCard: some View {
+        card {
+            Button {
+                showArchive = true
+            } label: {
+                HStack(spacing: 12) {
+                    iconBadge("BoxIcon", color: .primary)
+                    Text(String(localized: "profile.archive", defaultValue: "Archive"))
+                        .font(.system(size: 16))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 48)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - Support Card

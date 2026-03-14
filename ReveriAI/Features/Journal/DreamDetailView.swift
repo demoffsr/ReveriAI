@@ -580,12 +580,30 @@ struct DreamDetailView: View {
                     }
                 }
                 Section {
-                    Button(role: .destructive) {
-                        showDeleteAlert = true
-                    } label: {
-                        Label(String(localized: "detail.delete", defaultValue: "Delete"), image: "TrashIcon")
+                    if dream.isArchived {
+                        Button {
+                            HapticService.notification(.success)
+                            DreamCleanupService.restoreDream(dream, context: modelContext)
+                            dismiss()
+                        } label: {
+                            Label(String(localized: "detail.restore", defaultValue: "Restore"), image: "RestartIcon")
+                        }
+                        Button(role: .destructive) {
+                            showDeleteAlert = true
+                        } label: {
+                            Label(String(localized: "detail.delete", defaultValue: "Delete"), image: "TrashIcon")
+                        }
+                        .tint(.red)
+                    } else {
+                        Button(role: .destructive) {
+                            HapticService.notification(.warning)
+                            DreamCleanupService.archiveDream(dream, context: modelContext)
+                            dismiss()
+                        } label: {
+                            Label(String(localized: "detail.archive", defaultValue: "Archive"), image: "BoxIcon")
+                        }
+                        .tint(.red)
                     }
-                    .tint(.red)
                 }
             } label: {
                 Image(systemName: "ellipsis")

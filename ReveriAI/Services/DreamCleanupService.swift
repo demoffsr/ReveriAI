@@ -10,6 +10,28 @@ enum DreamCleanupService {
             .appendingPathComponent("recordings")
     }()
 
+    /// Archives a dream (soft delete). Removes from folder.
+    static func archiveDream(_ dream: Dream, context: ModelContext) {
+        AnalyticsService.track(.dreamArchived, metadata: [
+            "had_audio": dream.audioFilePath != nil,
+            "had_image": dream.imagePath != nil
+        ])
+        withAnimation(.easeOut(duration: 0.3)) {
+            dream.isArchived = true
+            dream.folder = nil
+            try? context.save()
+        }
+    }
+
+    /// Restores a dream from archive.
+    static func restoreDream(_ dream: Dream, context: ModelContext) {
+        AnalyticsService.track(.dreamRestored)
+        withAnimation(.easeOut(duration: 0.3)) {
+            dream.isArchived = false
+            try? context.save()
+        }
+    }
+
     /// Deletes a Dream and all associated files (local image, local audio, remote image).
     static func deleteDream(_ dream: Dream, context: ModelContext, animated: Bool = true) {
         AnalyticsService.track(.dreamDeleted, metadata: [

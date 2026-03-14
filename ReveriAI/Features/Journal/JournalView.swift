@@ -141,7 +141,7 @@ struct JournalView: View {
                 folderDetail(for: folder)
             }
             .navigationDestination(isPresented: $showProfile) {
-                ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage)
+                ProfileView(notificationService: notificationService, dreamReminderManager: dreamReminderManager, avatarStorage: avatarStorage, headerBackgroundStorage: headerBackgroundStorage, isInDetailDreamTab: $isInDetailDreamTab, detailDreamHasImage: $detailDreamHasImage, detailDreamIsGenerating: $detailDreamIsGenerating, detailDreamGenerateTrigger: $detailDreamGenerateTrigger, detailState: detailDreamState)
             }
             .onAppear { refreshFilters() }
             .onChange(of: selectedEmotion) { _, newValue in

@@ -24,6 +24,7 @@ final class Dream {
     var originalTranscript: String?
     var isTranslated: Bool
     var audioDuration: TimeInterval?
+    var isArchived: Bool = false
     var folder: DreamFolder?
 
     @Transient private var _cachedEmotions: [DreamEmotion]?

@@ -28,6 +28,9 @@ final class JournalViewModel {
     }
 
     private func matches(_ dream: Dream) -> Bool {
+        // Exclude archived dreams
+        guard !dream.isArchived else { return false }
+
         // Time range filter
         let passesTime: Bool = switch selectedTimeRange {
         case .today: dream.createdAt.isToday

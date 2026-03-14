@@ -140,11 +140,11 @@ struct AddDreamsToFolderSheet: View {
     @State private var searchDebounceTask: Task<Void, Never>?
 
     private func updateFilteredDreams() {
-        // allDreams is already sorted by @Query(sort: \Dream.createdAt, order: .reverse)
+        let active = allDreams.filter { !$0.isArchived }
         if searchText.isEmpty {
-            cachedFilteredDreams = allDreams
+            cachedFilteredDreams = active
         } else {
-            cachedFilteredDreams = allDreams.filter {
+            cachedFilteredDreams = active.filter {
                 $0.text.localizedCaseInsensitiveContains(searchText) ||
                 $0.title.localizedCaseInsensitiveContains(searchText)
             }

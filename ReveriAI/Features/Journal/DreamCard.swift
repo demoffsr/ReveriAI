@@ -4,6 +4,7 @@ import AVFoundation
 
 struct DreamCard: View {
     let dream: Dream
+    var isArchiveMode: Bool = false
     var onTap: () -> Void = {}
     var onEditAction: ((DreamDetailView.EditAction) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
@@ -100,12 +101,28 @@ struct DreamCard: View {
                         }
                     }
                     Section {
-                        Button(role: .destructive) {
-                            showDeleteConfirmation = true
-                        } label: {
-                            Label(String(localized: "dreamCard.delete", defaultValue: "Delete"), image: "TrashIcon")
+                        if isArchiveMode {
+                            Button {
+                                HapticService.notification(.success)
+                                DreamCleanupService.restoreDream(dream, context: modelContext)
+                            } label: {
+                                Label(String(localized: "dreamCard.restore", defaultValue: "Restore"), image: "RestartIcon")
+                            }
+                            Button(role: .destructive) {
+                                showDeleteConfirmation = true
+                            } label: {
+                                Label(String(localized: "dreamCard.delete", defaultValue: "Delete"), image: "TrashIcon")
+                            }
+                            .tint(.red)
+                        } else {
+                            Button(role: .destructive) {
+                                HapticService.notification(.warning)
+                                DreamCleanupService.archiveDream(dream, context: modelContext)
+                            } label: {
+                                Label(String(localized: "dreamCard.archive", defaultValue: "Archive"), image: "BoxIcon")
+                            }
+                            .tint(.red)
                         }
-                        .tint(.red)
                     }
                 } label: {
                     Image(systemName: "ellipsis")

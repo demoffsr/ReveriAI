@@ -72,6 +72,8 @@ enum AnalyticsService {
         case folderOpened = "folder_opened"
         case dreamMovedToFolder = "dream_moved_to_folder"
         case dreamDeleted = "dream_deleted"
+        case dreamArchived = "dream_archived"
+        case dreamRestored = "dream_restored"
         case dreamShared = "dream_shared"
         case dreamEdited = "dream_edited"
         case dreamEmotionsChanged = "dream_emotions_changed"
