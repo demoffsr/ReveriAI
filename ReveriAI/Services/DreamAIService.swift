@@ -614,19 +614,33 @@ extension DreamAIService {
                 detailState.hasInterpretation = true
                 detailState.isGeneratingInterpretation = false
                 logger.info("Dream interpretation generated")
-                AnalyticsService.track(.aiInterpretationCompleted, metadata: ["cost_usd": 0.003])
+                AnalyticsService.track(.aiInterpretationCompleted, metadata: ["cost_usd": 0.014, "version": 2])
             } catch Error.rateLimited {
                 logger.warning("Interpretation rate limited")
                 AnalyticsService.track(.aiInterpretationFailed, metadata: ["error": "rate_limited"])
                 detailState.showRateLimitAlert = true
                 detailState.isGeneratingInterpretation = false
             } catch {
+                // Handle expired/invalid auth — refresh session so "Try again" works
+                if isAuthError(error) {
+                    logger.warning("Interpretation auth failed (401), refreshing session")
+                    await AuthService.handleAuthFailure()
+                }
                 logger.error("Failed to generate interpretation: \(error.localizedDescription)")
                 AnalyticsService.track(.aiInterpretationFailed, metadata: ["error": error.localizedDescription])
                 detailState.interpretationError = error.localizedDescription
                 detailState.isGeneratingInterpretation = false
             }
         }
+    }
+
+    /// Checks if a Supabase FunctionsError is a 401 auth failure.
+    private static func isAuthError(_ error: Swift.Error) -> Bool {
+        guard let functionsError = error as? FunctionsError,
+              case .httpError(401, _) = functionsError else {
+            return false
+        }
+        return true
     }
 
     static func generateTitleInBackground(

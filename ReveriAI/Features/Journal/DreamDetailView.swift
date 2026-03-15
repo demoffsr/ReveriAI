@@ -30,6 +30,8 @@ struct DreamDetailView: View {
     @State private var isLoadingQuestions = false
     @AppStorage("speechRecognitionLocale") private var speechLocale: SpeechLocale = .russian
     @State private var cachedParsedSections: [ParsedSection] = []
+    @State private var interpretationData: InterpretationData?
+    @State private var expandedFrameworks: Set<String> = []
     @State private var showImageError = false
     @State private var showAIError = false
     @State private var sheetDismissTask: Task<Void, Never>?
@@ -121,9 +123,7 @@ struct DreamDetailView: View {
                     cachedDuration = player.duration
                 }
             }
-            if let text = dream.interpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
+            parseInterpretationContent(dream.interpretation)
             updateTabBarMode()
             if let action = initialEditAction {
                 switch action {
@@ -166,15 +166,11 @@ struct DreamDetailView: View {
             generateInterpretation()
         }
         .onChange(of: detailState.hasInterpretation) {
-            if let text = dream.interpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
+            parseInterpretationContent(dream.interpretation)
             updateTabBarMode()
         }
         .onChange(of: dream.interpretation) { _, newInterpretation in
-            if let text = newInterpretation {
-                cachedParsedSections = parseAndStyleSections(text)
-            }
+            parseInterpretationContent(newInterpretation)
             detailState.hasInterpretation = newInterpretation != nil
             updateTabBarMode()
         }
@@ -565,6 +561,11 @@ struct DreamDetailView: View {
                     ShareLink(item: dream.text) {
                         Label(String(localized: "detail.shareDream", defaultValue: "Share Dream"), image: "ShareDreamIcon")
                     }
+                    if let interpretation = dream.interpretation, !interpretation.isEmpty {
+                        ShareLink(item: formatInterpretationForShare(interpretation)) {
+                            Label(String(localized: "detail.shareMeaning", defaultValue: "Share Meaning"), image: "ShareInterpretationIcon")
+                        }
+                    }
                     if cachedAudioURL != nil {
                         Button {
                             convertAndShareAudio()
@@ -737,6 +738,8 @@ struct DreamDetailView: View {
                         .foregroundStyle(theme.accent)
                 }
             }
+        } else if let data = interpretationData, data.isV2 {
+            interpretationContentV2(data)
         } else if dream.interpretation != nil, !cachedParsedSections.isEmpty {
             interpretationSectionsView
         } else {
@@ -913,6 +916,206 @@ struct DreamDetailView: View {
         return sections
     }
 
+    // MARK: - Interpretation Parsing
+
+    private func parseInterpretationContent(_ text: String?) {
+        guard let text else {
+            interpretationData = nil
+            cachedParsedSections = []
+            return
+        }
+        if let data = InterpretationData.parse(from: text), data.isV2 {
+            interpretationData = data
+            cachedParsedSections = []
+        } else if let data = InterpretationData.parse(from: text), let fallbackText = data.text {
+            interpretationData = nil
+            cachedParsedSections = parseAndStyleSections(fallbackText)
+        } else {
+            interpretationData = nil
+            cachedParsedSections = parseAndStyleSections(text)
+        }
+    }
+
+    // MARK: - Interpretation V2 UI
+
+    private func interpretationContentV2(_ data: InterpretationData) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Emotional Core — hero card
+            if let core = data.emotionalCore {
+                emotionalCoreCard(core)
+            }
+
+            // Framework Cards
+            if let frameworks = data.frameworks {
+                ForEach(frameworks, id: \.id) { framework in
+                    frameworkCard(framework)
+                }
+            }
+
+            // Symbols
+            if let symbols = data.symbols, !symbols.isEmpty {
+                symbolsSection(symbols)
+            }
+
+            // Reflection Questions
+            if let questions = data.reflection, !questions.isEmpty {
+                reflectionCard(questions)
+            }
+
+            // Synthesis
+            if let synthesis = data.synthesis, !synthesis.isEmpty {
+                Text(synthesis)
+                    .font(.system(size: 15))
+                    .foregroundStyle(theme.textPrimary.opacity(0.85))
+                    .lineSpacing(4)
+            }
+        }
+    }
+
+    private func emotionalCoreCard(_ core: InterpretationData.EmotionalCore) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(core.title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(theme.accent)
+            Text(core.body)
+                .font(.system(size: 15))
+                .foregroundStyle(theme.textPrimary.opacity(0.85))
+                .lineSpacing(4)
+        }
+        .padding(14)
+        .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(theme.cardStroke, lineWidth: 1)
+        )
+    }
+
+    private func frameworkCard(_ framework: InterpretationData.FrameworkAnalysis) -> some View {
+        let isExpanded = expandedFrameworks.contains(framework.id)
+        return VStack(alignment: .leading, spacing: 0) {
+            // Header
+            Button {
+                withAnimation(.smooth(duration: 0.3)) {
+                    if isExpanded {
+                        expandedFrameworks.remove(framework.id)
+                    } else {
+                        expandedFrameworks.insert(framework.id)
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(framework.title)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(theme.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(theme.textTertiary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+            }
+            .buttonStyle(.plain)
+
+            // Body — smooth height reveal
+            Text(framework.body)
+                .font(.system(size: 14))
+                .foregroundStyle(theme.textPrimary.opacity(0.8))
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, isExpanded ? 10 : 0)
+                .frame(maxHeight: isExpanded ? 500 : 0, alignment: .top)
+                .clipped()
+                .opacity(isExpanded ? 1 : 0)
+        }
+        .padding(14)
+        .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(theme.cardStroke, lineWidth: 1)
+        )
+    }
+
+    private func symbolsSection(_ symbols: [InterpretationData.SymbolAnalysis]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(symbols, id: \.symbol) { item in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Circle()
+                        .fill(theme.accent)
+                        .frame(width: 6, height: 6)
+                        .offset(y: 2)
+                    Text("\(Text(item.symbol).font(.system(size: 14, weight: .semibold))) — \(item.meaning)")
+                        .font(.system(size: 14))
+                        .foregroundStyle(theme.textPrimary.opacity(0.85))
+                        .lineSpacing(2)
+                }
+            }
+        }
+        .padding(14)
+        .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(theme.cardStroke, lineWidth: 1)
+        )
+    }
+
+    private func reflectionCard(_ questions: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(String(localized: "detail.reflectionQuestions", defaultValue: "Вопросы для размышления"))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(theme.textSecondary)
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(questions.enumerated()), id: \.offset) { _, question in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Circle()
+                            .fill(theme.accent.opacity(0.5))
+                            .frame(width: 5, height: 5)
+                            .offset(y: 2)
+                        Text(question)
+                            .font(.system(size: 14))
+                            .foregroundStyle(theme.textPrimary.opacity(0.8))
+                            .lineSpacing(2)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(theme.cardBackground, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(theme.cardStroke, lineWidth: 1)
+        )
+    }
+
+    // MARK: - Share Interpretation
+
+    private func formatInterpretationForShare(_ text: String) -> String {
+        guard let data = InterpretationData.parse(from: text), data.isV2 else {
+            return text
+        }
+        var parts: [String] = []
+        if let core = data.emotionalCore {
+            parts.append("\(core.title)\n\(core.body)")
+        }
+        if let frameworks = data.frameworks {
+            for fw in frameworks {
+                parts.append("\(fw.title)\n\(fw.body)")
+            }
+        }
+        if let symbols = data.symbols, !symbols.isEmpty {
+            let symbolLines = symbols.map { "\u{2022} \($0.symbol) — \($0.meaning)" }
+            parts.append(symbolLines.joined(separator: "\n"))
+        }
+        if let questions = data.reflection, !questions.isEmpty {
+            let questionLines = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }
+            parts.append(questionLines.joined(separator: "\n"))
+        }
+        if let synthesis = data.synthesis {
+            parts.append(synthesis)
+        }
+        return parts.joined(separator: "\n\n")
+    }
+
     // MARK: - Text Edit Mode
 
     private var textEditContent: some View {
@@ -969,6 +1172,8 @@ struct DreamDetailView: View {
 
         detailDreamHasImage = false
         cachedParsedSections = []
+        interpretationData = nil
+        expandedFrameworks = []
         updateTabBarMode()
 
         withAnimation(.easeInOut(duration: 0.2)) {
@@ -1102,6 +1307,8 @@ struct DreamDetailView: View {
         cachedAudioURL = Self.recordingsDirectory.appendingPathComponent(newFilename)
         detailDreamHasImage = false
         cachedParsedSections = []
+        interpretationData = nil
+        expandedFrameworks = []
 
         // Transcribe new audio (includes title generation)
         DreamAIService.transcribeAudioInBackground(
