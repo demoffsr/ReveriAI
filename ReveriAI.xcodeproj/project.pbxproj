@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03B84412E43E38107E6E700D /* CaptionHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCF05FF20733DB8A9E3EEEE8 /* CaptionHelpersTests.swift */; };
+		0C9927B2DEF53372E288B1B3 /* PunctuationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0475FADEABD21F64ED14038F /* PunctuationTests.swift */; };
+		3990AA931B11230A681E17C4 /* JournalFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D1143A3B6FF76329420980A /* JournalFilterTests.swift */; };
+		5834149C6EBB1E6588D91155 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6D106827706C8616AFA49CCC /* Foundation.framework */; };
 		AA0000000000000000000D /* RecordingActivityWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001 /* RecordingActivityWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D81345BD2F4116840055480B /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = F5957BCD1AF2452D80A2EF02 /* Functions */; };
 		D81345BE2F4116840055480B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B9C80B2D210B4F7F88088751 /* Supabase */; };
@@ -21,6 +25,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA00000000000000000005;
 			remoteInfo = RecordingActivityWidgetExtension;
+		};
+		AAB90CE649B569D07130841E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D83221832F3BC14C009A1692 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D832218A2F3BC14C009A1692;
+			remoteInfo = ReveriAI;
 		};
 		D889BC402F4D0F0700132B25 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -57,8 +68,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0475FADEABD21F64ED14038F /* PunctuationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PunctuationTests.swift; sourceTree = "<group>"; };
+		6D106827706C8616AFA49CCC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		6F7A417D53F4FABD01282147 /* ReveriAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReveriAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9D1143A3B6FF76329420980A /* JournalFilterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JournalFilterTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000001 /* RecordingActivityWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RecordingActivityWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AABB00112F5000000055480B /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		BCF05FF20733DB8A9E3EEEE8 /* CaptionHelpersTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptionHelpersTests.swift; sourceTree = "<group>"; };
 		D832218B2F3BC14C009A1692 /* ReveriAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReveriAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D889BC382F4D0F0600132B25 /* Reveri Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Reveri Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -111,12 +127,22 @@
 		};
 		D889BC392F4D0F0600132B25 /* Reveri Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Reveri Watch App";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		6398FF23D1708118DACB2A5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5834149C6EBB1E6588D91155 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA00000000000000000003 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -144,6 +170,33 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		26EE6ED9C74948A52A5722C8 /* ReveriAITests */ = {
+			isa = PBXGroup;
+			children = (
+				0475FADEABD21F64ED14038F /* PunctuationTests.swift */,
+				BCF05FF20733DB8A9E3EEEE8 /* CaptionHelpersTests.swift */,
+				9D1143A3B6FF76329420980A /* JournalFilterTests.swift */,
+			);
+			name = ReveriAITests;
+			path = ReveriAITests;
+			sourceTree = "<group>";
+		};
+		9442B2A83EE8A72C7F008E95 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BB057709C829C8CA187F4CF4 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BB057709C829C8CA187F4CF4 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				6D106827706C8616AFA49CCC /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		D83221822F3BC14C009A1692 = {
 			isa = PBXGroup;
 			children = (
@@ -152,6 +205,8 @@
 				AA00000000000000000009 /* RecordingActivityWidget */,
 				D889BC392F4D0F0600132B25 /* Reveri Watch App */,
 				D832218C2F3BC14C009A1692 /* Products */,
+				9442B2A83EE8A72C7F008E95 /* Frameworks */,
+				26EE6ED9C74948A52A5722C8 /* ReveriAITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -161,6 +216,7 @@
 				D832218B2F3BC14C009A1692 /* ReveriAI.app */,
 				AA00000000000000000001 /* RecordingActivityWidgetExtension.appex */,
 				D889BC382F4D0F0600132B25 /* Reveri Watch App.app */,
+				6F7A417D53F4FABD01282147 /* ReveriAITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -233,11 +289,27 @@
 				D889BC392F4D0F0600132B25 /* Reveri Watch App */,
 			);
 			name = "Reveri Watch App";
-			packageProductDependencies = (
-			);
 			productName = "Reveri Watch App";
 			productReference = D889BC382F4D0F0600132B25 /* Reveri Watch App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		FB23B2BDF863E93D0D7D34CB /* ReveriAITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 93F8A1CC01322845228173D6 /* Build configuration list for PBXNativeTarget "ReveriAITests" */;
+			buildPhases = (
+				912DA68930BD546C4847CD3B /* Sources */,
+				6398FF23D1708118DACB2A5D /* Frameworks */,
+				72CCE95BC842A3209927FFC0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5B7E624F3389D657D7CEA0A0 /* PBXTargetDependency */,
+			);
+			name = ReveriAITests;
+			productName = ReveriAITests;
+			productReference = 6F7A417D53F4FABD01282147 /* ReveriAITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -282,11 +354,19 @@
 				D832218A2F3BC14C009A1692 /* ReveriAI */,
 				AA00000000000000000005 /* RecordingActivityWidgetExtension */,
 				D889BC372F4D0F0600132B25 /* Reveri Watch App */,
+				FB23B2BDF863E93D0D7D34CB /* ReveriAITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		72CCE95BC842A3209927FFC0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA00000000000000000004 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -311,6 +391,16 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		912DA68930BD546C4847CD3B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0C9927B2DEF53372E288B1B3 /* PunctuationTests.swift in Sources */,
+				03B84412E43E38107E6E700D /* CaptionHelpersTests.swift in Sources */,
+				3990AA931B11230A681E17C4 /* JournalFilterTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AA00000000000000000002 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -335,6 +425,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		5B7E624F3389D657D7CEA0A0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ReveriAI;
+			target = D832218A2F3BC14C009A1692 /* ReveriAI */;
+			targetProxy = AAB90CE649B569D07130841E /* PBXContainerItemProxy */;
+		};
 		AA0000000000000000000B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = AA00000000000000000005 /* RecordingActivityWidgetExtension */;
@@ -348,6 +444,22 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		1F9A58AE988935106BCB4441 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reveri.ReveriAITests;
+				PRODUCT_NAME = ReveriAITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ReveriAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ReveriAI";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		AA00000000000000000007 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -667,9 +779,33 @@
 			};
 			name = Release;
 		};
+		FCB0A5A26A3D590F7EA12AFD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.reveri.ReveriAITests;
+				PRODUCT_NAME = ReveriAITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ReveriAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ReveriAI";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		93F8A1CC01322845228173D6 /* Build configuration list for PBXNativeTarget "ReveriAITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1F9A58AE988935106BCB4441 /* Release */,
+				FCB0A5A26A3D590F7EA12AFD /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AA00000000000000000006 /* Build configuration list for PBXNativeTarget "RecordingActivityWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

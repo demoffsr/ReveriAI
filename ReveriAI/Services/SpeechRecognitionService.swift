@@ -602,13 +602,13 @@ final class SpeechRecognitionService {
     // MARK: - Live Captions Helpers
 
     /// Lowercase the first character of a string (for natural flow after auto-commit).
-    private static func lowercaseFirst(_ text: String) -> String {
+    static func lowercaseFirst(_ text: String) -> String {
         guard let first = text.first, first.isUppercase else { return text }
         return text.prefix(1).lowercased() + text.dropFirst()
     }
 
     /// Whether the next segment should keep its capital letter (previous text ends with sentence punctuation).
-    private static func endsWithSentencePunctuation(_ text: String) -> Bool {
+    static func endsWithSentencePunctuation(_ text: String) -> Bool {
         guard let last = text.last else { return false }
         return ".?!".contains(last)
     }
@@ -616,7 +616,7 @@ final class SpeechRecognitionService {
     /// Adds ending punctuation to a committed speech segment.
     /// Skips Russian filler words to find the first meaningful word, then checks for question patterns.
     /// No-op if text already ends with punctuation (e.g. English with addsPunctuation).
-    private static func punctuateSegment(_ text: String) -> String {
+    static func punctuateSegment(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 else { return text }
 
