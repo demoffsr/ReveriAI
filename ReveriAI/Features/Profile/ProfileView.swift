@@ -149,6 +149,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 56)
+                .contentShape(Rectangle())
                 .padding(.horizontal, 14)
             }
             .tint(.primary)
@@ -194,6 +195,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
                 .padding(.horizontal, 14)
             }
             .buttonStyle(.plain)
@@ -362,6 +364,7 @@ struct ProfileView: View {
                         .foregroundStyle(.primary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .tint(.primary)
 
@@ -390,6 +393,7 @@ struct ProfileView: View {
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .tint(.primary)
 
@@ -435,6 +439,7 @@ struct ProfileView: View {
                             .rotationEffect(.degrees(showTimePicker ? 90 : 0))
                     }
                     .frame(height: 56)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
@@ -512,6 +517,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
@@ -533,6 +539,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .simultaneousGesture(TapGesture().onEnded {
@@ -556,6 +563,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -575,6 +583,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -594,6 +603,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }

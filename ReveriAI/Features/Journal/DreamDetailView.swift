@@ -1013,6 +1013,7 @@ struct DreamDetailView: View {
                         .foregroundStyle(theme.textTertiary)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
