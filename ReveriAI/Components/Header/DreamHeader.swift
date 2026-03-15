@@ -26,39 +26,48 @@ struct DreamHeader: View {
     @Environment(\.theme) private var theme
 
     private var hasCustomBackground: Bool {
-        headerBackgroundStorage?.backgroundImage != nil
+        headerBackgroundStorage?.backgroundImage != nil ||
+        (headerBackgroundStorage?.selectedPreset != nil && headerBackgroundStorage?.selectedPreset?.isDefault != true)
+    }
+
+    private var showsDefaultBackground: Bool {
+        let preset = headerBackgroundStorage?.selectedPreset
+        return headerBackgroundStorage?.backgroundImage == nil && (preset == nil || preset?.isDefault == true)
     }
 
     var body: some View {
         ZStack {
-            // Background image
+            // Background: custom photo → gradient preset → default image
             if let bg = headerBackgroundStorage?.backgroundImage {
                 Image(uiImage: bg)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+
+                // Extra darkening for custom photos
+                Color.black.opacity(0.45)
+            } else if let preset = headerBackgroundStorage?.selectedPreset, !preset.isDefault {
+                preset.gradient
             } else {
                 Image("BackgroundDaylight")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             }
 
-            // Extra darkening for custom photos
-            if hasCustomBackground {
-                Color.black.opacity(0.45)
-            }
-
             // Darkening gradient overlay for text readability
             LinearGradient(
                 stops: [
-                    Gradient.Stop(color: .black, location: 0.00),
+                    Gradient.Stop(color: .black.opacity(0.95), location: 0.00),
+                    Gradient.Stop(color: .black.opacity(0.45), location: 0.50),
                     Gradient.Stop(color: .black.opacity(0), location: 1.00),
                 ],
                 startPoint: UnitPoint(x: 0.5, y: -0.36),
                 endPoint: UnitPoint(x: 0.5, y: 1)
             )
 
-            // Stars
-            StarsCanvas()
+            // Stars for default background
+            if showsDefaultBackground {
+                StarsCanvas()
+            }
         }
         .drawingGroup()
     }

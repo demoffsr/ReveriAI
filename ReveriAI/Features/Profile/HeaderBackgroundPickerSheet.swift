@@ -3,76 +3,50 @@ import PhotosUI
 
 struct HeaderBackgroundPickerSheet: View {
     var headerBackgroundStorage: HeaderBackgroundStorage
+    var initialImage: UIImage?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
 
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var sourceImage: UIImage?
-    @State private var scale: CGFloat = 1.0
-    @State private var offset: CGSize = .zero
-    @GestureState private var magnifyBy: CGFloat = 1.0
-    @GestureState private var dragOffset: CGSize = .zero
+    @State private var fullResImage: UIImage?
 
-    private let previewHeight: CGFloat = 257 // baseHeaderHeight(220) + cloudOverhang(44.5) - 8
+    // Gesture state — committed values
+    @State private var committedScale: CGFloat = 1.0
+    @State private var committedOffset: CGSize = .zero
+    // Gesture state — live delta
+    @State private var gestureScale: CGFloat = 1.0
+    @State private var gestureOffset: CGSize = .zero
+
+    // The crop zone dimensions (what actually gets saved)
+    private let cropHeight: CGFloat = 257 // baseHeaderHeight(220) + cloudOverhang(44.5) - 8
     private let minScale: CGFloat = 1.0
     private let maxScale: CGFloat = 4.0
 
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if let sourceImage {
-                    cropView(sourceImage)
-                } else {
-                    pickerView
-                }
-            }
-            .background(theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground)
-            .toolbar(.hidden, for: .navigationBar)
-            .enableSwipeBack()
-            .onChange(of: selectedPhoto) { _, item in
-                loadPhoto(item)
-            }
-        }
+    private var currentScale: CGFloat {
+        min(max(committedScale * gestureScale, minScale), maxScale)
     }
 
-    // MARK: - Picker
+    private var currentOffset: CGSize {
+        CGSize(
+            width: committedOffset.width + gestureOffset.width,
+            height: committedOffset.height + gestureOffset.height
+        )
+    }
 
-    private var pickerView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                VStack(spacing: 12) {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 40))
-                        .foregroundStyle(theme.accent)
-                    Text(String(localized: "profile.choosePhoto", defaultValue: "Choose Photo"))
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 160)
-                .background(theme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(theme.cardStroke, lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
+    var body: some View {
+        VStack(spacing: 0) {
+            if let sourceImage {
+                cropView(sourceImage)
+            } else {
+                Color.clear
             }
-            Spacer()
         }
-        .overlay(alignment: .topLeading) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 36, height: 36)
-                    .reveriGlass(.circle)
+        .background(Color.black.ignoresSafeArea())
+        .onAppear {
+            if let initialImage {
+                fullResImage = initialImage
+                sourceImage = downsample(initialImage, maxWidth: 1200)
             }
-            .padding(.leading, 16)
-            .padding(.top, 12)
         }
     }
 
@@ -82,173 +56,218 @@ struct HeaderBackgroundPickerSheet: View {
         VStack(spacing: 0) {
             // Nav bar
             HStack {
-                Button(String(localized: "profile.cancel", defaultValue: "Cancel")) {
-                    sourceImage = nil
-                    selectedPhoto = nil
-                    scale = 1.0
-                    offset = .zero
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .reveriGlass(.circle)
                 }
-                .foregroundStyle(.primary)
 
                 Spacer()
 
                 Text(String(localized: "profile.positionAndScale", defaultValue: "Position & Scale"))
                     .font(.headline)
+                    .foregroundStyle(.white)
 
                 Spacer()
 
-                Button(String(localized: "profile.save", defaultValue: "Save")) {
-                    saveCroppedImage(image)
+                Button {
+                    saveCroppedImage()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(theme.accent)
+                        .frame(width: 44, height: 44)
+                        .reveriGlass(.circle)
                 }
-                .fontWeight(.semibold)
-                .foregroundStyle(theme.accent)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
 
-            Spacer()
-
-            // Preview area
+            // Full-bleed image canvas with crop guide
             GeometryReader { geo in
-                imagePreview(image: image, previewWidth: geo.size.width)
+                let canvasWidth = geo.size.width
+                let canvasHeight = geo.size.height
+                let cropWidth = canvasWidth
+                // Crop zone centered vertically
+                let cropY = (canvasHeight - cropHeight) / 2
+
+                ZStack {
+                    // Image layer — fills canvas, not clipped
+                    imageLayer(image: image, cropWidth: cropWidth, canvasSize: geo.size, cropY: cropY)
+
+                    // Dark overlay with crop cutout
+                    cropGuideOverlay(canvasSize: geo.size, cropWidth: cropWidth, cropY: cropY)
+                }
+                .frame(width: canvasWidth, height: canvasHeight)
+                .contentShape(Rectangle())
+                .gesture(dragGesture(image: image, cropWidth: cropWidth))
+                .gesture(magnifyGesture(image: image, cropWidth: cropWidth))
             }
-            .frame(height: previewHeight)
-            .clipShape(RoundedRectangle(cornerRadius: 0))
-            .overlay(
-                RoundedRectangle(cornerRadius: 0)
-                    .stroke(.white.opacity(0.3), lineWidth: 1)
-            )
 
-            Spacer()
-
+            // Hint
             Text(String(localized: "profile.pinchToZoom", defaultValue: "Pinch to zoom, drag to reposition"))
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 40)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.white.opacity(0.12))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+                .padding(.vertical, 14)
         }
     }
 
-    // MARK: - Image Preview
+    // MARK: - Image Layer
 
-    private func fillSize(for image: UIImage, previewWidth: CGFloat) -> CGSize {
-        let imageAspect = image.size.width / image.size.height
-        let previewAspect = previewWidth / previewHeight
-        if imageAspect > previewAspect {
-            let h = previewHeight
-            return CGSize(width: h * imageAspect, height: h)
-        } else {
-            let w = previewWidth
-            return CGSize(width: w, height: w / imageAspect)
-        }
-    }
-
-    private func imagePreview(image: UIImage, previewWidth: CGFloat) -> some View {
-        let fill = fillSize(for: image, previewWidth: previewWidth)
-        let currentScale = scale * magnifyBy
-        let clampedScale = min(max(currentScale, minScale), maxScale)
-        let scaledW = fill.width * clampedScale
-        let scaledH = fill.height * clampedScale
-        let combined = CGSize(
-            width: offset.width + dragOffset.width,
-            height: offset.height + dragOffset.height
-        )
+    private func imageLayer(image: UIImage, cropWidth: CGFloat, canvasSize: CGSize, cropY: CGFloat) -> some View {
+        let fill = fillSize(for: image, cropWidth: cropWidth)
         let clamped = clampOffset(
-            combined,
-            scaledSize: CGSize(width: scaledW, height: scaledH),
-            previewSize: CGSize(width: previewWidth, height: previewHeight)
+            currentOffset,
+            scaledSize: CGSize(width: fill.width * currentScale, height: fill.height * currentScale),
+            cropSize: CGSize(width: cropWidth, height: cropHeight)
         )
+        // Image is positioned relative to the crop zone center
+        let cropCenterY = cropY + cropHeight / 2
 
         return Image(uiImage: image)
             .resizable()
             .aspectRatio(contentMode: .fill)
             .frame(width: fill.width, height: fill.height)
-            .scaleEffect(clampedScale)
-            .offset(clamped)
-            .frame(width: previewWidth, height: previewHeight)
-            .clipped()
-            .gesture(
-                DragGesture()
-                    .updating($dragOffset) { value, state, _ in
-                        state = value.translation
-                    }
-                    .onEnded { value in
-                        let cs = min(max(scale, minScale), maxScale)
-                        let f = fillSize(for: image, previewWidth: previewWidth)
-                        let newOffset = CGSize(
-                            width: offset.width + value.translation.width,
-                            height: offset.height + value.translation.height
-                        )
-                        withAnimation(.spring(duration: 0.3)) {
-                            offset = clampOffset(
-                                newOffset,
-                                scaledSize: CGSize(width: f.width * cs, height: f.height * cs),
-                                previewSize: CGSize(width: previewWidth, height: previewHeight)
-                            )
-                        }
-                    }
+            .scaleEffect(currentScale)
+            .position(
+                x: canvasSize.width / 2 + clamped.width,
+                y: cropCenterY + clamped.height
             )
-            .gesture(
-                MagnifyGesture()
-                    .updating($magnifyBy) { value, state, _ in
-                        state = value.magnification
-                    }
-                    .onEnded { value in
-                        let newScale = min(max(scale * value.magnification, minScale), maxScale)
-                        let f = fillSize(for: image, previewWidth: previewWidth)
-                        withAnimation(.spring(duration: 0.3)) {
-                            scale = newScale
-                            offset = clampOffset(
-                                offset,
-                                scaledSize: CGSize(width: f.width * newScale, height: f.height * newScale),
-                                previewSize: CGSize(width: previewWidth, height: previewHeight)
-                            )
-                        }
-                    }
-            )
+            .drawingGroup()
+    }
+
+    // MARK: - Crop Guide Overlay
+
+    private func cropGuideOverlay(canvasSize: CGSize, cropWidth: CGFloat, cropY: CGFloat) -> some View {
+        let headerGuideHeight: CGFloat = 220.0
+
+        return ZStack {
+            // Top dark zone
+            VStack(spacing: 0) {
+                Color.black.opacity(0.55)
+                    .frame(height: cropY)
+                Spacer()
+            }
+
+            // Bottom dark zone
+            VStack(spacing: 0) {
+                Spacer()
+                Color.black.opacity(0.55)
+                    .frame(height: canvasSize.height - cropY - cropHeight)
+            }
+
+            // Crop zone border
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(.white.opacity(0.4), lineWidth: 1)
+                .frame(width: cropWidth, height: cropHeight)
+                .position(x: canvasSize.width / 2, y: cropY + cropHeight / 2)
+
+            // Header guide line inside crop zone (shows where clouds start)
+            Rectangle()
+                .fill(.white.opacity(0.3))
+                .frame(width: cropWidth - 32, height: 1)
+                .position(x: canvasSize.width / 2, y: cropY + headerGuideHeight)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Gestures
+
+    private func dragGesture(image: UIImage, cropWidth: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 2)
+            .onChanged { value in
+                gestureOffset = value.translation
+            }
+            .onEnded { value in
+                let fill = fillSize(for: image, cropWidth: cropWidth)
+                let newOffset = CGSize(
+                    width: committedOffset.width + value.translation.width,
+                    height: committedOffset.height + value.translation.height
+                )
+                committedOffset = clampOffset(
+                    newOffset,
+                    scaledSize: CGSize(width: fill.width * currentScale, height: fill.height * currentScale),
+                    cropSize: CGSize(width: cropWidth, height: cropHeight)
+                )
+                gestureOffset = .zero
+            }
+    }
+
+    private func magnifyGesture(image: UIImage, cropWidth: CGFloat) -> some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                gestureScale = value.magnification
+            }
+            .onEnded { value in
+                let newScale = min(max(committedScale * value.magnification, minScale), maxScale)
+                committedScale = newScale
+                gestureScale = 1.0
+                let fill = fillSize(for: image, cropWidth: cropWidth)
+                committedOffset = clampOffset(
+                    committedOffset,
+                    scaledSize: CGSize(width: fill.width * newScale, height: fill.height * newScale),
+                    cropSize: CGSize(width: cropWidth, height: cropHeight)
+                )
+            }
     }
 
     // MARK: - Helpers
 
-    private func clampOffset(_ offset: CGSize, scaledSize: CGSize, previewSize: CGSize) -> CGSize {
-        let maxX = max((scaledSize.width - previewSize.width) / 2, 0)
-        let maxY = max((scaledSize.height - previewSize.height) / 2, 0)
+    private func fillSize(for image: UIImage, cropWidth: CGFloat) -> CGSize {
+        let imageAspect = image.size.width / image.size.height
+        let cropAspect = cropWidth / cropHeight
+        if imageAspect > cropAspect {
+            return CGSize(width: cropHeight * imageAspect, height: cropHeight)
+        } else {
+            return CGSize(width: cropWidth, height: cropWidth / imageAspect)
+        }
+    }
+
+    private func clampOffset(_ offset: CGSize, scaledSize: CGSize, cropSize: CGSize) -> CGSize {
+        let maxX = max((scaledSize.width - cropSize.width) / 2, 0)
+        let maxY = max((scaledSize.height - cropSize.height) / 2, 0)
         return CGSize(
             width: min(max(offset.width, -maxX), maxX),
             height: min(max(offset.height, -maxY), maxY)
         )
     }
 
-    private func loadPhoto(_ item: PhotosPickerItem?) {
-        guard let item else { return }
-        Task {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let uiImage = UIImage(data: data) {
-                sourceImage = uiImage
-                scale = 1.0
-                offset = .zero
-            }
+    private func downsample(_ image: UIImage, maxWidth: CGFloat) -> UIImage {
+        guard image.size.width > maxWidth else { return image }
+        let ratio = maxWidth / image.size.width
+        let newSize = CGSize(width: image.size.width * ratio, height: image.size.height * ratio)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 
-    private func saveCroppedImage(_ image: UIImage) {
-        let screenScale: CGFloat = 3.0 // Retina
-        let screenWidth: CGFloat = 393 // iPhone Pro width
+    private func saveCroppedImage() {
+        guard let image = fullResImage ?? sourceImage else { return }
+        let screenScale: CGFloat = 3.0
+        let screenWidth: CGFloat = 393
         let targetSize = CGSize(
             width: screenWidth * screenScale,
-            height: previewHeight * screenScale
+            height: cropHeight * screenScale
         )
 
-        let previewWidth = screenWidth
-        let fill = fillSize(for: image, previewWidth: previewWidth)
-
-        let clampedScale = min(max(scale, minScale), maxScale)
-        let scaledWidth = fill.width * clampedScale
-        let scaledHeight = fill.height * clampedScale
+        let cropWidth = screenWidth
+        let fill = fillSize(for: sourceImage ?? image, cropWidth: cropWidth)
+        let clampedScale = min(max(committedScale, minScale), maxScale)
 
         let clampedOffset = clampOffset(
-            offset,
-            scaledSize: CGSize(width: scaledWidth, height: scaledHeight),
-            previewSize: CGSize(width: previewWidth, height: previewHeight)
+            committedOffset,
+            scaledSize: CGSize(width: fill.width * clampedScale, height: fill.height * clampedScale),
+            cropSize: CGSize(width: cropWidth, height: cropHeight)
         )
 
         let renderer = UIGraphicsImageRenderer(size: targetSize)
@@ -261,6 +280,7 @@ struct HeaderBackgroundPickerSheet: View {
         }
 
         headerBackgroundStorage.save(uiImage: cropped)
+        AnalyticsService.track(.wallpaperChanged, metadata: ["type": "custom_photo"])
         dismiss()
     }
 }

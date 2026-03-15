@@ -92,6 +92,8 @@ enum AnalyticsService {
         case cacheCleared = "cache_cleared"
         case rateAppTapped = "rate_app_tapped"
         case contactUsTapped = "contact_us_tapped"
+        case wallpaperChanged = "wallpaper_changed"
+        case avatarChanged = "avatar_changed"
     }
 
     // MARK: - Internal Types

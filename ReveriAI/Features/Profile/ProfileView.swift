@@ -20,21 +20,21 @@ struct ProfileView: View {
     @AppStorage("reminderHour") private var reminderHour = 7
     @AppStorage("reminderMinute") private var reminderMinute = 0
     @AppStorage("reminderDays") private var reminderDays = "2,3,4,5,6"
-    @AppStorage("userName") private var userName = ""
     @AppStorage("themeOverride") private var themeOverride = "auto"
 
     @State private var reminderDate = Date()
     @State private var selectedPhoto: PhotosPickerItem?
-    @State private var isEditingName = false
     @State private var showTimePicker = false
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
     @State private var showBackgroundPicker = false
-    @State private var showAvatarDialog = false
     @State private var showAvatarPhotoPicker = false
+    @State private var showGalleryPicker = false
+    @State private var galleryPhotoItem: PhotosPickerItem?
+    @State private var galleryImage: UIImage?
     @State private var dayPreset: DayPreset = .weekdays
     @State private var showArchive = false
-    @State private var showHeaderPhotoDialog = false
+    @State private var showWallpaperSheet = false
 
     private var selectedLocale: SpeechLocale {
         SpeechLocale(rawValue: selectedLocaleId) ?? .defaultLocale
@@ -112,8 +112,7 @@ struct ProfileView: View {
     private var scrollContent: some View {
         ScrollView {
             VStack(spacing: 20) {
-                avatarSection
-                headerPhotoCard
+                profilePhotoAndHeaderCard
                 mainSettingsCard
                 archiveCard
                 supportCardSection
@@ -125,46 +124,12 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Avatar Section
+    // MARK: - Profile Photo & Header Card
 
-    private var avatarSection: some View {
-        VStack(spacing: 12) {
-            Button {
-                showAvatarDialog = true
-            } label: {
-                ZStack(alignment: .bottomTrailing) {
-                    if let image = avatarStorage.avatarImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 96, height: 96)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(.white, lineWidth: 2))
-                    } else {
-                        Circle()
-                            .fill(theme.accent.opacity(0.12))
-                            .frame(width: 96, height: 96)
-                            .overlay {
-                                Image(systemName: "person.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundStyle(theme.accent.opacity(0.5))
-                            }
-                            .overlay(Circle().stroke(.white, lineWidth: 2))
-                    }
-
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .frame(width: 24, height: 24)
-                        .reveriGlass(.circle, interactive: false)
-                        .offset(x: -2, y: -2)
-                }
-            }
-            .confirmationDialog(
-                String(localized: "profile.avatarOptions", defaultValue: "Profile Photo"),
-                isPresented: $showAvatarDialog,
-                titleVisibility: .visible
-            ) {
+    private var profilePhotoAndHeaderCard: some View {
+        VStack(spacing: 0) {
+            // Profile Photo row
+            Menu {
                 Button(String(localized: "profile.chooseFromLibrary", defaultValue: "Choose from Library")) {
                     showAvatarPhotoPicker = true
                 }
@@ -173,64 +138,50 @@ struct ProfileView: View {
                         avatarStorage.delete()
                     }
                 }
+            } label: {
+                HStack(spacing: 12) {
+                    avatarIcon
+                    Text(String(localized: "profile.profilePhoto", defaultValue: "Profile Photo"))
+                        .font(.system(size: 16))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(height: 56)
+                .padding(.horizontal, 14)
             }
+            .tint(.primary)
             .photosPicker(isPresented: $showAvatarPhotoPicker, selection: $selectedPhoto, matching: .images)
 
-            if isEditingName {
-                TextField(String(localized: "profile.yourName", defaultValue: "Your name"), text: $userName)
-                    .font(.system(size: 17, weight: .medium))
-                    .multilineTextAlignment(.center)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 200)
-                    .onSubmit { isEditingName = false }
-            } else {
-                Button {
-                    isEditingName = true
-                } label: {
-                    if userName.isEmpty {
-                        Text(String(localized: "profile.addName", defaultValue: "Add your name"))
-                            .font(.system(size: 17))
-                            .italic()
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(userName)
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.primary)
-                    }
+            Divider().padding(.leading, 58)
+
+            // Preview of current background
+            ZStack {
+                if let bg = headerBackgroundStorage.backgroundImage {
+                    Image(uiImage: bg)
+                        .resizable()
+                        .scaledToFill()
+                } else if let preset = headerBackgroundStorage.selectedPreset, !preset.isDefault {
+                    preset.gradient
+                } else {
+                    Image("BackgroundDaylight")
+                        .resizable()
+                        .scaledToFill()
                 }
             }
-        }
-        .padding(.vertical, 8)
-    }
-
-    // MARK: - Header Photo Card
-
-    private var headerPhotoCard: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .bottom) {
-                Group {
-                    if let bg = headerBackgroundStorage.backgroundImage {
-                        Image(uiImage: bg)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image("BackgroundDaylight")
-                            .resizable()
-                            .scaledToFill()
-                    }
-                }
-                .frame(height: 160)
-                .frame(maxWidth: .infinity)
-                .clipped()
-            }
+            .frame(height: 140)
+            .frame(maxWidth: .infinity)
+            .clipped()
 
             Divider()
 
+            // Change Header row
             Button {
-                showHeaderPhotoDialog = true
+                showWallpaperSheet = true
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge("ProfileDay", color: .purple)
+                    iconBadge("ProfileDay", color: theme.accent)
                     Text(String(localized: "profile.headerPhoto", defaultValue: "Header Photo"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
@@ -246,27 +197,119 @@ struct ProfileView: View {
                 .padding(.horizontal, 14)
             }
             .buttonStyle(.plain)
-            .confirmationDialog(
-                String(localized: "profile.headerPhotoOptions", defaultValue: "Header Photo"),
-                isPresented: $showHeaderPhotoDialog,
-                titleVisibility: .visible
-            ) {
-                Button(String(localized: "profile.chooseFromGallery", defaultValue: "Choose from Gallery")) {
-                    showBackgroundPicker = true
-                }
-                if headerBackgroundStorage.backgroundImage != nil {
-                    Button(String(localized: "profile.resetToDefault", defaultValue: "Reset to Default"), role: .destructive) {
-                        headerBackgroundStorage.delete()
-                    }
-                }
-            }
         }
         .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.cardStroke, lineWidth: 1))
-        .sheet(isPresented: $showBackgroundPicker) {
-            HeaderBackgroundPickerSheet(headerBackgroundStorage: headerBackgroundStorage)
+        .sheet(isPresented: $showWallpaperSheet) {
+            wallpaperPickerSheet
         }
+        .sheet(isPresented: $showBackgroundPicker) {
+            HeaderBackgroundPickerSheet(
+                headerBackgroundStorage: headerBackgroundStorage,
+                initialImage: galleryImage
+            )
+            .onDisappear { galleryImage = nil }
+        }
+        .photosPicker(isPresented: $showGalleryPicker, selection: $galleryPhotoItem, matching: .images)
+        .onChange(of: galleryPhotoItem) { _, item in
+            loadGalleryPhoto(item)
+        }
+    }
+
+    // MARK: - Wallpaper Picker Sheet
+
+    private var wallpaperPickerSheet: some View {
+        VStack(spacing: 0) {
+            // Drag indicator
+            Capsule()
+                .fill(.secondary.opacity(0.4))
+                .frame(width: 36, height: 5)
+                .padding(.top, 8)
+
+            Text(String(localized: "profile.chooseWallpaper", defaultValue: "Choose Wallpaper"))
+                .font(.headline)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
+
+            // Preset grid — 3 columns, taller cards with names
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+            LazyVGrid(columns: columns, spacing: 10) {
+                ForEach(WallpaperPreset.allCases) { preset in
+                    wallpaperPresetThumbnail(preset)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+
+            // Choose from Gallery
+            Button {
+                showWallpaperSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    showGalleryPicker = true
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 16))
+                    Text(String(localized: "profile.chooseFromGallery", defaultValue: "Choose from Gallery"))
+                        .font(.system(size: 16, weight: .medium))
+                }
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(theme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.cardStroke, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+
+            Spacer()
+        }
+        .background((theme.isDayTime ? Color(.systemGroupedBackground) : .darkBackground).ignoresSafeArea())
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
+    }
+
+    private func wallpaperPresetThumbnail(_ preset: WallpaperPreset) -> some View {
+        let isSelected = (headerBackgroundStorage.selectedPreset == preset) ||
+            (preset.isDefault && headerBackgroundStorage.selectedPreset == nil && headerBackgroundStorage.backgroundImage == nil)
+        return Button {
+            headerBackgroundStorage.selectPreset(preset)
+            AnalyticsService.track(.wallpaperChanged, metadata: ["type": "preset", "preset": preset.rawValue])
+        } label: {
+            VStack(spacing: 6) {
+                ZStack {
+                    if preset.isDefault {
+                        Image("BackgroundDaylight")
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        preset.gradient
+                    }
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                    }
+                }
+                .frame(height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? theme.accent : .clear, lineWidth: 2.5)
+                )
+
+                Text(preset.displayName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isSelected ? theme.accent : .secondary)
+                    .lineLimit(1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Main Settings Card
@@ -306,21 +349,21 @@ struct ProfileView: View {
                 }
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge("ProfileNight", color: .indigo)
+                    iconBadge("ProfileNight", color: theme.accent)
                     Text(String(localized: "profile.theme", defaultValue: "Theme"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
                     Spacer()
                     Text(themeDisplayName)
                         .font(.system(size: 16))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.primary)
                 }
                 .frame(height: 48)
             }
-            .tint(theme.accent)
+            .tint(.primary)
 
             rowDivider
 
@@ -337,27 +380,24 @@ struct ProfileView: View {
                 }
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge(systemName: "globe", color: .blue)
-                    Text(String(localized: "profile.language", defaultValue: "Language"))
+                    iconBadge(systemName: "globe", color: theme.accent)
+                    Text(String(localized: "profile.speechLanguage", defaultValue: "Speech Language"))
                         .font(.system(size: 16))
-                        .foregroundStyle(.primary)
                     Spacer()
                     Text(selectedLocale.shortDisplayName)
                         .font(.system(size: 16))
-                        .foregroundStyle(.secondary)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.tertiary)
                 }
                 .frame(height: 48)
             }
-            .tint(theme.accent)
+            .tint(.primary)
 
             rowDivider
 
             // Reminder toggle row
             HStack(spacing: 12) {
-                iconBadge("ProfileReminder", color: .orange)
+                iconBadge("ProfileReminder", color: theme.accent)
                 Text(String(localized: "profile.dreamReminder", defaultValue: "Dream Reminder"))
                     .font(.system(size: 16))
                 Spacer()
@@ -381,20 +421,20 @@ struct ProfileView: View {
                     }
                 } label: {
                     HStack(spacing: 12) {
-                        iconBadge("ProfileDay", color: .purple)
+                        iconBadge("ProfileDay", color: theme.accent)
                         Text(String(localized: "profile.timeToBed", defaultValue: "Time to Bed"))
                             .font(.system(size: 16))
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(reminderDate, style: .time)
                             .font(.system(size: 16))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.primary)
                             .rotationEffect(.degrees(showTimePicker ? 90 : 0))
                     }
-                    .frame(height: 48)
+                    .frame(height: 56)
                 }
                 .buttonStyle(.plain)
 
@@ -407,6 +447,7 @@ struct ProfileView: View {
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .frame(height: 150)
+                    .padding(.top, 12)
                     .onChange(of: reminderDate) { _, newDate in
                         let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
                         reminderHour = components.hour ?? 7
@@ -461,7 +502,7 @@ struct ProfileView: View {
                 showArchive = true
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge("BoxIcon", color: .primary)
+                    iconBadge("BoxIcon", color: theme.accent)
                     Text(String(localized: "profile.archive", defaultValue: "Archive"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
@@ -482,7 +523,7 @@ struct ProfileView: View {
         card {
             Link(destination: URL(string: "mailto:demidovdmitry07@gmail.com")!) {
                 HStack(spacing: 12) {
-                    iconBadge("ProfileContact", color: .green)
+                    iconBadge("ProfileContact", color: theme.accent)
                     Text(String(localized: "profile.contactUs", defaultValue: "Contact Us"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
@@ -505,7 +546,7 @@ struct ProfileView: View {
                 requestReview()
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge("ProfileRate", color: .yellow)
+                    iconBadge("ProfileRate", color: theme.accent)
                     Text(String(localized: "profile.rateApp", defaultValue: "Rate the App"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
@@ -524,7 +565,7 @@ struct ProfileView: View {
                 showPrivacyPolicy = true
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge("ProfilePrivacy", color: .blue)
+                    iconBadge("ProfilePrivacy", color: theme.accent)
                     Text(String(localized: "profile.privacyPolicy", defaultValue: "Privacy Policy"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
@@ -543,7 +584,7 @@ struct ProfileView: View {
                 showTermsOfUse = true
             } label: {
                 HStack(spacing: 12) {
-                    iconBadge("ProfileTerms", color: .gray)
+                    iconBadge("ProfileTerms", color: theme.accent)
                     Text(String(localized: "profile.termsOfUse", defaultValue: "Terms of Use"))
                         .font(.system(size: 16))
                         .foregroundStyle(.primary)
@@ -563,7 +604,7 @@ struct ProfileView: View {
     private var dataAndAboutCard: some View {
         card {
             HStack(spacing: 12) {
-                iconBadge("ProfileVersion", color: .secondary)
+                iconBadge("ProfileVersion", color: theme.accent)
                 Text(String(localized: "profile.version", defaultValue: "Version"))
                     .font(.system(size: 16))
                 Spacer()
@@ -587,6 +628,27 @@ struct ProfileView: View {
                     .frame(width: 18, height: 18)
                     .foregroundStyle(color)
             }
+    }
+
+    private var avatarIcon: some View {
+        Group {
+            if let image = avatarStorage.avatarImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 36, height: 36)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(theme.accent.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                    .overlay {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(theme.accent)
+                    }
+            }
+        }
     }
 
     private func iconBadge(systemName: String, color: Color) -> some View {
@@ -736,4 +798,15 @@ struct ProfileView: View {
         }
     }
 
+    private func loadGalleryPhoto(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let uiImage = UIImage(data: data) {
+                galleryImage = uiImage
+                galleryPhotoItem = nil
+                showBackgroundPicker = true
+            }
+        }
+    }
 }
